@@ -18,8 +18,9 @@ import { ContentTypeField } from '../../../models';
 import { NodeSelectorItem } from '../controls/NodeSelector';
 import LookupTable from '../../../models/LookupTable';
 import ContentType from '../../../models/ContentType';
-import { getPluginControlValueSerializer } from '../controls/registry';
-import { preservedElements, systemFieldsNotInType, xmlAttributePrefix, XmlKeys } from './formConsts';
+import { getPluginControlValueSerializer, getRegisteredControlContribution } from '../controls/registry';
+import { freezeForPlugin } from './pluginHooks';
+import { preservedElements, systemFieldsNotInType, XmlKeys } from './formConsts';
 import { BuiltInControlType } from './controlMap';
 import { RepeatItem } from '../controls/Repeat';
 import { XMLBuilder, XmlBuilderOptions } from 'fast-xml-parser';
@@ -27,16 +28,20 @@ import type { DescriptorControlType } from '../../ContentTypeManagement/controlM
 import { nnou } from '../../../utils/object';
 import { escapeXml } from '../../../utils/xml';
 import { AwsFile } from '../controls/AWSFileUpload';
-import type { ValueSerializer } from './controlValueTypes';
-
-const cdataPropName = '__cdata__';
-const textNodeName = '#text';
+import {
+	XML_ATTRIBUTE_PREFIX,
+	XML_CDATA_KEY,
+	XML_ITEM_LIST_ATTRIBUTE,
+	XML_LIST_ITEM_KEY,
+	XML_TEXT_KEY,
+	type ValueSerializer
+} from './controlValueTypes';
 
 export type { ValueSerializer } from './controlValueTypes';
 
 export const valueSerializersLookup: Record<BuiltInControlType | DescriptorControlType, ValueSerializer | undefined> = {
 	'auto-filename': undefined,
-	'aws-file-upload': (field, value) => prepareAwsFile(field, value as AwsFile),
+	'aws-file-upload': (value) => prepareAwsFile(value as AwsFile),
 	'checkbox-group': prepareArray,
 	checkbox: undefined,
 	boolean: undefined,
@@ -47,42 +52,41 @@ export const valueSerializersLookup: Record<BuiltInControlType | DescriptorContr
 	'file-name': undefined,
 	forcehttps: undefined,
 	'image-picker': undefined,
-	input: (field, value) => prepareString(field, value as string),
-	string: (field, value) => prepareString(field, value as string),
+	input: (value, { field }) => prepareString(field, value as string),
+	string: (value, { field }) => prepareString(field, value as string),
 	'internal-name': undefined,
 	label: undefined,
 	'locale-selector': undefined,
-	repeat: (field, value, contentTypesLookup) => prepareRepeat(field, value as RepeatItem[], contentTypesLookup),
-	'node-selector': (field, value, contentTypesLookup) =>
-		prepareNodeSelector(field, value as NodeSelectorItem[], contentTypesLookup),
+	repeat: (value, ctx) => prepareRepeat(ctx.field, value as RepeatItem[], ctx.contentTypesById),
+	'node-selector': (value, ctx) => prepareNodeSelector(value as NodeSelectorItem[], ctx.contentTypesById),
 	'numeric-input': undefined,
 	int: undefined,
 	'page-nav-order': undefined,
 	rte: prepareRTE,
-	textarea: (field, value) => prepareString(field, value as string),
+	textarea: (value, { field }) => prepareString(field, value as string),
 	time: undefined,
-	'transcoded-video-picker': (field, value) => (value ? prepareArray(field, value) : undefined),
+	'transcoded-video-picker': (value) => (value ? prepareArray(value) : undefined),
 	uuid: undefined,
 	'video-picker': undefined,
 	colorPicker: undefined,
 	'content-path-input': undefined,
-	contentTypes: (field, value) => prepareContentTypes(field, value as string[]),
-	'dropdown-static-values': (field, value) => prepareObjectArray(field, value as object[]),
+	contentTypes: (value) => prepareContentTypes(value as string[]),
+	'dropdown-static-values': (value) => prepareObjectArray(value as object[]),
 	'template-selector': undefined,
 	'type-image-selector': undefined,
 	'read-only-value': undefined,
-	range: (field, value) => prepareObject(field, value as object),
+	range: (value) => prepareObject(value as object),
 	'type-controller-selector': undefined,
-	'key-value-map': (field, value) => prepareObjectArray(field, value as object[]),
-	'type-destination-paths-selector': (field, value) => prepareObject(field, value as object),
+	'key-value-map': (value) => prepareObjectArray(value as object[]),
+	'type-destination-paths-selector': (value) => prepareObject(value as object),
 	'type-allowed-roles-selector': undefined,
 	'path-with-macro-creator': undefined,
 	'merge-strategy-selector': undefined,
-	'datasource:image': (field, value) => prepareStringArray(field, value as string[]),
-	'datasource:video': (field, value) => prepareStringArray(field, value as string[]),
-	'datasource:audio': (field, value) => prepareStringArray(field, value as string[]),
-	'datasource:item': (field, value) => prepareStringArray(field, value as string[]),
-	'datasource:transcoded-video': (field, value) => prepareStringArray(field, value as string[]),
+	'datasource:image': (value) => prepareStringArray(value as string[]),
+	'datasource:video': (value) => prepareStringArray(value as string[]),
+	'datasource:audio': (value) => prepareStringArray(value as string[]),
+	'datasource:item': (value) => prepareStringArray(value as string[]),
+	'datasource:transcoded-video': (value) => prepareStringArray(value as string[]),
 	'datasource:image:singleSelection': undefined,
 	'datasource:video:singleSelection': undefined,
 	'datasource:audio:singleSelection': undefined,
@@ -92,8 +96,8 @@ export const valueSerializersLookup: Record<BuiltInControlType | DescriptorContr
 	'input-email': undefined,
 	'input-link': undefined,
 	'input-phone': undefined,
-	'delete-dependencies': (field, value) => (value == null ? undefined : prepareObject(field, value as object)),
-	'copy-dependencies': (field, value) => (value == null ? undefined : prepareObject(field, value as object)),
+	'delete-dependencies': (value) => (value == null ? undefined : prepareObject(value as object)),
+	'copy-dependencies': (value) => (value == null ? undefined : prepareObject(value as object)),
 	'sort-dropdown': undefined
 };
 
@@ -119,11 +123,12 @@ function prepareValuesForXmlSerialising(
 		const fieldAttributes: Record<string, unknown> = {};
 		// Field type specific hinting...
 
-		const serializer = Object.hasOwn(valueSerializersLookup, fieldType)
-			? valueSerializersLookup[fieldType]
-			: getPluginControlValueSerializer(fieldType);
-		if (serializer) {
-			jObj[id] = serializer(field, value, contentTypesLookup);
+		const isBuiltIn = Object.hasOwn(valueSerializersLookup, fieldType);
+		const serializer = isBuiltIn ? valueSerializersLookup[fieldType] : getPluginControlValueSerializer(fieldType);
+		if (serializer && isBuiltIn) {
+			jObj[id] = serializer(value, { field, contentTypesById: contentTypesLookup });
+		} else if (serializer) {
+			jObj[id] = serializeWithPlugin(serializer, value, field, contentTypesLookup);
 		}
 		if (field?.properties?.tokenize?.value) {
 			fieldAttributes[createAttrHint('tokenized')] = true;
@@ -135,16 +140,40 @@ function prepareValuesForXmlSerialising(
 				nnou(current) && typeof current === 'object'
 					? { ...fieldAttributes, ...current }
 					: // The serializer may have made changes to 'value', so we need to use that instead of the original 'value'
-						{ ...fieldAttributes, [textNodeName]: jObj[id] };
+						{ ...fieldAttributes, [XML_TEXT_KEY]: jObj[id] };
 		}
 	});
 	return jObj;
 }
 
+/**
+ * Runs a plugin's serializer. A failure is not recovered from: any fallback would write XML that doesn't hold what the
+ * author entered. The save stops with an error that names the field and the plugin.
+ */
+function serializeWithPlugin(
+	serializer: ValueSerializer,
+	value: unknown,
+	field: ContentTypeField,
+	contentTypesById: LookupTable<ContentType>
+): unknown {
+	try {
+		return serializer(value, { field: freezeForPlugin(field), contentTypesById: freezeForPlugin(contentTypesById) });
+	} catch (error) {
+		const pluginId = getRegisteredControlContribution(field.type)?.pluginId;
+		console.error(`The valueSerializer of plugin "${pluginId}" for field "${field.id}" threw.`, error);
+		throw new Error(
+			`Couldn't serialize the field "${field.name ?? field.id}" (${field.id}): the valueSerializer of plugin ` +
+				`"${pluginId}" for control type "${field.type}" failed.` +
+				(error instanceof Error && error.message ? ` ${error.message}` : ''),
+			{ cause: error }
+		);
+	}
+}
+
 type XmlNuancedArrayFormat<T = unknown> = {
-	[P in `${typeof xmlAttributePrefix}item-list`]: true;
+	[P in typeof XML_ITEM_LIST_ATTRIBUTE]: true;
 } & {
-	item: T[];
+	[P in typeof XML_LIST_ITEM_KEY]: T[];
 };
 
 function prepareString(field: ContentTypeField, value: string): string {
@@ -153,13 +182,12 @@ function prepareString(field: ContentTypeField, value: string): string {
 }
 
 function prepareNodeSelector(
-	field: ContentTypeField,
 	value: NodeSelectorItem[],
 	contentTypesLookup: LookupTable<ContentType>
 ): XmlNuancedArrayFormat<NodeSelectorItem> {
 	return {
-		'@:item-list': true,
-		item: value.map((item) => {
+		[XML_ITEM_LIST_ATTRIBUTE]: true,
+		[XML_LIST_ITEM_KEY]: value.map((item) => {
 			if (item.component == null) {
 				return item;
 			}
@@ -186,47 +214,47 @@ function prepareRepeat(
 ): XmlNuancedArrayFormat {
 	const nestedFields = field.fields ?? ({} as LookupTable<ContentTypeField>);
 	return {
-		'@:item-list': true,
-		item: value.map((item) => prepareValuesForXmlSerialising(nestedFields, item, contentTypesLookup))
+		[XML_ITEM_LIST_ATTRIBUTE]: true,
+		[XML_LIST_ITEM_KEY]: value.map((item) => prepareValuesForXmlSerialising(nestedFields, item, contentTypesLookup))
 	};
 }
 
-function prepareArray<T = unknown>(field: ContentTypeField, value: T): { item: T } {
+function prepareArray<T = unknown>(value: T): { [XML_LIST_ITEM_KEY]: T } {
 	return {
 		// TODO: Unsure if all array-likes could/should have the item list attribute. It makes sense, though.
 		//  '@:item-list': true,
-		item: value
+		[XML_LIST_ITEM_KEY]: value
 	};
 }
 
-function prepareRTE<T = unknown>(field: ContentTypeField, value: T): { [cdataPropName]: T } {
+function prepareRTE<T = unknown>(value: T): { [XML_CDATA_KEY]: T } {
 	// TODO: CDATA wrap based on config
-	return { [cdataPropName]: value };
+	return { [XML_CDATA_KEY]: value };
 }
 
-function prepareStringArray(field: ContentTypeField, value: string[]): string {
+function prepareStringArray(value: string[]): string {
 	return value.join(',');
 }
 
-function prepareContentTypes(field: ContentTypeField, value: string[] | '*'): string {
+function prepareContentTypes(value: string[] | '*'): string {
 	if (value === '*') return '*';
 	return value?.join(',') ?? '';
 }
 
-function prepareObjectArray(field: ContentTypeField, value: object[]): string {
+function prepareObjectArray(value: object[]): string {
 	return JSON.stringify(value);
 }
 
-function prepareObject(field: ContentTypeField, value: object): string {
+function prepareObject(value: object): string {
 	return JSON.stringify(value);
 }
 
-function prepareAwsFile(field: ContentTypeField, value: AwsFile) {
-	return { item: value };
+function prepareAwsFile(value: AwsFile) {
+	return { [XML_LIST_ITEM_KEY]: value };
 }
 
 function createAttrHint(attributeName: string): string {
-	return `${xmlAttributePrefix}${attributeName}`;
+	return `${XML_ATTRIBUTE_PREFIX}${attributeName}`;
 }
 
 // TODO: Move to utils/xml.ts?
@@ -236,9 +264,9 @@ export function getXmlBuilder(options?: Partial<XmlBuilderOptions>): XMLBuilder 
 		indentBy: '\t',
 		ignoreAttributes: false,
 		suppressBooleanAttributes: false,
-		attributeNamePrefix: xmlAttributePrefix,
-		cdataPropName,
-		textNodeName,
+		attributeNamePrefix: XML_ATTRIBUTE_PREFIX,
+		cdataPropName: XML_CDATA_KEY,
+		textNodeName: XML_TEXT_KEY,
 		...options
 	});
 }

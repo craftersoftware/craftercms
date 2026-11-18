@@ -71,11 +71,6 @@ export function saveSuccessFollowUps<Notification, FollowUp>(
  * Maps a content-form launch onto Forms Engine props. Field scope is applied by the
  * form's visibility model (`fieldIds` / `repeatIndex`); this function does not look
  * at the content type.
- *
- * `index` and the save-result `draft` / `action` are part of this contract. #9213's
- * `ShowContentFormProps` does not have them yet; add them there instead of dropping
- * them here. `showContentFormAction` should call this instead of hardcoding
- * `'saveAndClose'` and `fieldToScroll: selectedFields[0]`.
  */
 export function formsEnginePropsFromLaunch(props: ContentFormLaunchInput): FormsEngineLaunchTarget {
 	const fieldIds = selectedFieldList(props.selectedFields);

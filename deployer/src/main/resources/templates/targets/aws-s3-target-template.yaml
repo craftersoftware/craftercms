@@ -99,6 +99,13 @@ target:
       - processorName: fileBasedDeploymentEventProcessor
         includeFiles: ['^/config/studio/content-types/.*$']
         eventName: 'events.deployment.rebuildGraphQL'
+      - processorName: s3ContentStoreManifestProcessor
+        region: ${aws.region}
+        accessKey: ${aws.accessKey}
+        secretKey: ${aws.secretKey}
+        endpoint: {{aws.s3.endpoint}}
+        pathStyleAccess: {{aws.s3.path_style_access}}
+        url: {{aws.s3.url}}
       - processorName: s3DeploymentEventsProcessor
         region: ${aws.region}
         accessKey: ${aws.accessKey}

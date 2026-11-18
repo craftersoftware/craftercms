@@ -30,6 +30,7 @@ import type LookupTable from '../../models/LookupTable';
 import type { ContentType, SerializeToXmlContentTypeStructure } from '../../models/ContentType';
 import { createLookupTable, noOp, pluckProps } from '../../utils/object';
 import {
+	FieldUpdate,
 	FormsEngineFormApiContextProps,
 	FormsEngineItemMetaContextProps,
 	StableFormContextProps,
@@ -37,6 +38,7 @@ import {
 } from '../FormsEngine/lib/formsEngineContext';
 import {
 	buildSectionExpandedStateAtoms,
+	createChangedFieldIdsAtom,
 	getAdditionalFieldsIdsFromDescriptor,
 	resolveControlDescriptors,
 	setFieldAtoms,
@@ -47,6 +49,7 @@ import { RefObject } from 'react';
 import { Subject } from 'rxjs';
 import { atom } from 'jotai';
 import { createFormVisibilityAtoms } from '../FormsEngine/lib/formVisibility';
+import { createFormLockReleaseSession } from '../FormsEngine/lib/unlockOnClose';
 import { createParsedValueForField } from '../FormsEngine/lib/valueRetrievers';
 import { toBooleanString, toColor } from '../../utils/string';
 import { getXmlBuilder, valueSerializersLookup } from '../FormsEngine/lib/valueSerializers';
@@ -171,6 +174,19 @@ export const systemFieldsIdsMap: Partial<Record<BuiltInControlType, readOnlyFiel
 	'page-nav-order': 'placeInNav'
 	// 'locale-selector: 'locale-selector' // This one doesn't have a pre-set id
 };
+
+/** True when the control may only live at the content-type root (`metadata.rootOnly`). */
+export function isRootOnlyControl(descriptor?: DescriptorContentType | null): boolean {
+	return Boolean(descriptor?.metadata?.rootOnly);
+}
+
+/** True when an existing field may only live at the content-type root: its control is rootOnly, or it uses a reserved system field id (system fields can be stored as plain input/checkbox). */
+export function isFieldRootOnly(
+	field: Pick<ContentTypeField, 'id'>,
+	descriptor?: DescriptorContentType | null
+): boolean {
+	return isRootOnlyControl(descriptor) || (readOnlyFieldsIds as string[]).includes(field.id);
+}
 
 export function createTypeFormValuesObject(type: ContentType): ContentTypeValuesObject {
 	return pluckProps(type, false, ...typePropsToEdit) as ContentTypeValuesObject;
@@ -301,16 +317,18 @@ export function reverseTypeFieldValuesObject(
 				}
 				const fieldDescriptor = datasourceFields[property];
 				if (!fieldDescriptor) {
-					// TODO: remove - development purposes
-					console.log('Warning: property not found in descriptor', property, field.id);
-					// Drop unknown/obsolete property not present in descriptor
+					// Drop unknown/obsolete property not present in descriptor. The stored property is no longer defined by the
+					// control, so there is nothing to serialize it with; it is dropped on purpose, and silently.
+					// Known lossy collision: a stored property named like one of commonControlFieldsDescriptors (title, id,
+					// description, help, defaultValue) is also a form value, so it reaches this branch and is deleted on save.
+					// Tracked under #9288 (RT-1).
 					continue;
 				}
 				properties[property] = { ...mergedProperties[property] };
 				// Serialize field properties
 				const serializer = valueSerializersLookup[fieldDescriptor.type];
 				properties[property].value = serializer
-					? serializer(fieldDescriptor, values[property])
+					? serializer(values[property], { field: fieldDescriptor, contentTypesById: {} })
 					: (values[property] as never);
 			}
 		} else if (property === 'validations') {
@@ -355,6 +373,13 @@ export function reverseTypeFieldValuesObject(
 	return fieldWithReversedValues;
 }
 
+export type DescriptorContentTypeMetadata = {
+	suffixes?: string[];
+	additionalFields?: string[];
+	/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
+	rootOnly?: boolean;
+};
+
 export type PartialContentType = Pick<ContentType, 'id' | 'name' | 'description' | 'sections' | 'fields'> & {
 	dataSources?: DataSource[];
 };
@@ -366,12 +391,7 @@ export type DescriptorContentType = Pick<ContentType, 'id'> & {
 	sections: DescriptorSection[];
 	fields: LookupTable<DescriptorField>;
 	type?: 'image' | 'item' | 'audio' | 'flash' | 'video' | 'transcoded-video';
-	metadata?: {
-		suffixes?: string[];
-		additionalFields?: string[];
-		/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
-		rootOnly?: boolean;
-	};
+	metadata?: DescriptorContentTypeMetadata;
 };
 
 export type DescriptorSection = Omit<ContentTypeSection, 'title' | 'description'> & {
@@ -395,7 +415,7 @@ export type DescriptorContentTypeFieldValidation = Omit<ContentTypeFieldValidati
 
 export type DescriptorFieldValidations = Record<DescriptorFieldValidationKeys, DescriptorContentTypeFieldValidation>;
 
-export interface TypeBuilderControl extends Omit<ControlProps, 'field'> {
+export interface TypeBuilderControl<V = unknown> extends Omit<ControlProps<V>, 'field'> {
 	field: ContentTypeField & {
 		validations: Partial<DescriptorFieldValidations>;
 	};
@@ -426,6 +446,13 @@ export function createEmptyTypeStructure(mixin?: Partial<ContentType>): ContentT
 	};
 }
 
+/**
+ * Id of the "Basic Properties" section that field and data source panels prepend to the descriptor's own sections.
+ * It must differ from the descriptors' `properties` section id, since section ids key the accordions and their
+ * expanded state.
+ */
+export const commonPropertiesSectionId = 'commonProperties';
+
 export function createVirtualTypeForField(
 	controlDescriptor: DescriptorContentType,
 	formatMessage: IntlShape['formatMessage']
@@ -439,7 +466,7 @@ export function createVirtualTypeForField(
 			},
 			sections: [
 				{
-					id: 'properties',
+					id: commonPropertiesSectionId,
 					color: null,
 					title: 'Basic Properties',
 					description: '',
@@ -482,7 +509,7 @@ export function createVirtualTypeForDataSource(
 			},
 			sections: [
 				{
-					id: 'properties',
+					id: commonPropertiesSectionId,
 					color: null,
 					title: 'Basic Properties',
 					description: '',
@@ -497,6 +524,7 @@ export function createVirtualTypeForDataSource(
 	return createEmptyTypeStructure(translatedDataSourceDescriptor);
 }
 
+/** Builds a section, filling in the defaults. An id is generated when the given data has none. */
 export function createVirtualSection<K extends ContentTypeSection | DescriptorSection>(
 	sectionData: Partial<K> & Pick<K, 'title' | 'fields'>
 ): K {
@@ -504,10 +532,10 @@ export function createVirtualSection<K extends ContentTypeSection | DescriptorSe
 		typeof sectionData.title === 'object' ? sectionData.title.defaultMessage : sectionData.title
 	);
 	return {
-		id: sectionData?.id || nanoid(),
 		description: '',
 		expandByDefault: true,
 		...sectionData,
+		id: sectionData?.id || nanoid(),
 		color: sectionData?.color ?? toColor(title)
 	} as K;
 }
@@ -540,11 +568,16 @@ export const fooStableGlobalContext: StableGlobalContextProps = Object.freeze<St
 		setStateCache: noOp
 	},
 	rootFormActions: {
-		save: () => Promise.resolve(),
-		setSaveAsDraft: noOp
-	}
+		save: () => Promise.resolve()
+	},
+	lockReleaseSession: createFormLockReleaseSession<StableFormContextProps>()
 });
 
+/**
+ * A form context for a content type's own definition, as the Type Builder edits it: one value and validity atom per type
+ * field, a changed-ids atom of its own, and `originalValues` as the checkpoint. `mixin.fieldUpdates$` lets the caller
+ * share an existing stream of {@link FieldUpdate}s; otherwise a new one is created.
+ */
 export function createVirtualTypeFormContext(
 	type: ContentType,
 	values: LookupTable<unknown>,
@@ -558,9 +591,9 @@ export function createVirtualTypeFormContext(
 	const formValues: LookupTable<unknown> = {};
 	context.atoms.valueByFieldId = {};
 	context.atoms.validationByFieldId = {};
-	context.changedFieldIds = new Set();
+	context.changedFieldIds = createChangedFieldIdsAtom();
 	context.originalValues = values;
-	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject();
+	context.fieldUpdates$ = mixin?.fieldUpdates$ ?? new Subject<FieldUpdate>();
 	Object.values(contentTypeFields).forEach((field) => {
 		formValues[field.id] = createParsedValueForField(values[field.id], field, contentTypesLookup);
 		setFieldAtoms(contextRef, type, type.fields, field.id, context.atoms, formValues[field.id], validatorsData);
@@ -614,6 +647,8 @@ export const createStableFormContextProps = (
 			tableOfContentsDrawerOpen: undefined,
 			closeAfterSave: undefined,
 			minimizeAfterSave: undefined,
+			releaseLockOnClose: undefined,
+			saveAsDraft: undefined,
 			// Field validation atoms always read this, even where no form controller attaches.
 			relevanceVersion: atom(0),
 			...createFormVisibilityAtoms()
@@ -626,7 +661,9 @@ export const createStableFormContextProps = (
 		props: null,
 		state: null,
 		affectedPluginControlFields: [],
-		formControllerState: null
+		formControllerState: null,
+		// The virtual form has no content item. It also leaves `dataSourceServices` unset, so each control builds its own.
+		getItem: () => null
 	};
 	if (createRootTypeSections) {
 		Object.assign(

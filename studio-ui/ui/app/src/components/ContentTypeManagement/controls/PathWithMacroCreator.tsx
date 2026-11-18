@@ -36,9 +36,7 @@ import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { useDispatch } from 'react-redux';
 
-export interface PathWithMacroCreatorProps extends TypeBuilderControl {
-	value: string;
-}
+export type PathWithMacroCreatorProps = TypeBuilderControl<string>;
 
 export const macroCreatorLookupTable = {
 	objectId: {
@@ -155,7 +153,7 @@ export function PathWithMacroCreator(props: PathWithMacroCreatorProps) {
 					spellCheck={false}
 					endAdornment={
 						<>
-							<Tooltip title={<FormattedMessage defaultMessage="Select path" />}>
+							<Tooltip title={formatMessage({ defaultMessage: 'Select path' })}>
 								<IconButton
 									aria-label={formatMessage({ defaultMessage: 'Select path' })}
 									onClick={() => onOpenPathSelectionDialog()}
@@ -163,7 +161,7 @@ export function PathWithMacroCreator(props: PathWithMacroCreatorProps) {
 									<SearchRoundedIcon />
 								</IconButton>
 							</Tooltip>
-							<Tooltip title={<FormattedMessage defaultMessage="Add macro" />}>
+							<Tooltip title={formatMessage({ defaultMessage: 'Add macro' })}>
 								<IconButton
 									aria-label={formatMessage({ defaultMessage: 'Add macro' })}
 									onClick={() => dialogState.onOpen()}

@@ -16,6 +16,7 @@
 
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
+import DialogContentText from '@mui/material/DialogContentText';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import DialogContent from '@mui/material/DialogContent';
 import TextField from '@mui/material/TextField';
@@ -23,7 +24,8 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import React, { CSSProperties, PropsWithChildren, useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { login, loginComplete, logout } from '../../state/actions/auth';
+import { login, loginComplete, logout, sharedWorkerExtendSession } from '../../state/actions/auth';
+import { messageSharedWorker } from '../../state/actions/system';
 import loginGraphicUrl from '../../assets/authenticate.svg';
 import { isBlank } from '../../utils/string';
 import Typography from '@mui/material/Typography';
@@ -35,9 +37,13 @@ import ErrorState from '../ErrorState/ErrorState';
 import { useSelection } from '../../hooks/useSelection';
 import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
-import palette from '../../styles/palette';
-import { WarningRounded } from '@mui/icons-material';
 import { INCORRECT_CREDENTIALS_ERROR_CODE } from '../../state/reducers/auth';
+import { SESSION_TIMEOUT_WARNING_MS } from '../../utils/constants';
+import { useSessionTimeoutWarning } from '../../hooks/useSessionTimeoutWarning';
+import { getXSRFToken } from '../../utils/auth';
+import CredentialsErrorBanner from '../CredentialsErrorBanner/CredentialsErrorBanner';
+
+const authMonitorCredentialsErrorId = 'authMonitorCredentialsError';
 
 const translations = defineMessages({
 	sessionExpired: {
@@ -86,15 +92,118 @@ export function AuthMonitor() {
 		}
 	}, [active, dispatch, formatMessage, username]);
 	return (
-		<Dialog open={!active} id="authMonitorDialog" aria-labelledby="craftercmsReLoginDialog">
-			<AuthMonitorBody
-				isSSO={isSSO}
-				username={username}
-				logoutUrl={logoutUrl}
-				authoringUrl={authoringBase}
-				dispatch={dispatch}
-				formatMessage={formatMessage}
-			/>
+		<>
+			<SessionTimeoutWarning />
+			<Dialog open={!active} id="authMonitorDialog" aria-labelledby="craftercmsReLoginDialog">
+				<AuthMonitorBody
+					isSSO={isSSO}
+					username={username}
+					logoutUrl={logoutUrl}
+					authoringUrl={authoringBase}
+					dispatch={dispatch}
+					formatMessage={formatMessage}
+				/>
+			</Dialog>
+		</>
+	);
+}
+
+// WCAG 2.1 SC 2.2.1 Timing Adjustable: warns before the session expires and lets the user extend it. The number of
+// extensions is limited (server side), so the last warning only tells the user to save their work.
+function SessionTimeoutWarning() {
+	const dispatch = useDispatch();
+	const { active, sessionExpiresAt, canExtendSession } = useSelection((state) => state.auth);
+	const { visible, secondsLeft, dismiss } = useSessionTimeoutWarning(
+		active,
+		sessionExpiresAt,
+		SESSION_TIMEOUT_WARNING_MS
+	);
+	// The extension requested by the user, for the session expiry and extension cap in effect at that moment. Only a new
+	// session expiry (or the cap being reached) means the extend landed, so a routine token refresh that lands first
+	// must not re-enable the button. The timeout below covers a failed request.
+	const [extendRequest, setExtendRequest] = useState<{
+		sessionExpiresAt: number;
+		canExtendSession: boolean;
+		failed: boolean;
+	}>(null);
+	const currentRequest =
+		extendRequest?.sessionExpiresAt === sessionExpiresAt && extendRequest?.canExtendSession === canExtendSession
+			? extendRequest
+			: null;
+	const extending = currentRequest != null && !currentRequest.failed;
+	const extendFailed = currentRequest?.failed === true;
+	useEffect(() => {
+		if (extending) {
+			const timeout = setTimeout(() => {
+				setExtendRequest((request) => request && { ...request, failed: true });
+			}, 10000);
+			return () => clearTimeout(timeout);
+		}
+	}, [extending]);
+	const onStaySignedIn = () => {
+		if (!extending) {
+			setExtendRequest({ sessionExpiresAt, canExtendSession, failed: false });
+			dispatch(messageSharedWorker(sharedWorkerExtendSession({ xsrfToken: getXSRFToken() })));
+		}
+	};
+	return (
+		<Dialog
+			// Remounts when the user runs out of extensions so the new warning is announced.
+			key={canExtendSession ? 'extendable' : 'final'}
+			open={visible}
+			// Escape or clicking outside keeps the user working rather than leaving them with a dismissed warning.
+			onClose={canExtendSession ? onStaySignedIn : dismiss}
+			role="alertdialog"
+			aria-labelledby="sessionTimeoutWarningTitle"
+			aria-describedby="sessionTimeoutWarningMessage"
+		>
+			<DialogTitle id="sessionTimeoutWarningTitle">
+				<FormattedMessage id="authMonitor.sessionExpiringTitle" defaultMessage="Your session is about to expire" />
+			</DialogTitle>
+			<DialogContent sx={{ width: '400px' }}>
+				<DialogContentText id="sessionTimeoutWarningMessage">
+					{canExtendSession ? (
+						<FormattedMessage
+							id="authMonitor.sessionExpiringMessage"
+							defaultMessage="For your security, your session will expire in {seconds, plural, one {# second} other {# seconds}}. Select Stay signed in to keep working."
+							values={{ seconds: secondsLeft }}
+						/>
+					) : (
+						<FormattedMessage
+							id="authMonitor.sessionExpiringFinalMessage"
+							defaultMessage="For your security, your session will expire in {seconds, plural, one {# second} other {# seconds}} and it can't be extended any more. Close this message and save your work, then log in again."
+							values={{ seconds: secondsLeft }}
+						/>
+					)}
+				</DialogContentText>
+				<Typography variant="body2" role="status">
+					{extending && (
+						<FormattedMessage id="authMonitor.sessionExtendingMessage" defaultMessage="Extending your session…" />
+					)}
+				</Typography>
+				{extendFailed && (
+					<Typography variant="body2" role="alert" sx={{ marginTop: (theme) => theme.spacing(1) }}>
+						<FormattedMessage
+							id="authMonitor.sessionExtendFailedMessage"
+							defaultMessage="Your session could not be extended. Select Stay signed in to try again."
+						/>
+					</Typography>
+				)}
+			</DialogContent>
+			<DialogActions>
+				<Button color="primary" variant="text" onClick={() => dispatch(logout())}>
+					<FormattedMessage id="authMonitor.logOutButtonLabel" defaultMessage="Log Out" />
+				</Button>
+				{canExtendSession ? (
+					<Button autoFocus color="primary" variant="contained" aria-disabled={extending} onClick={onStaySignedIn}>
+						<FormattedMessage id="authMonitor.staySignedInButtonLabel" defaultMessage="Stay signed in" />
+					</Button>
+				) : (
+					<Button autoFocus color="primary" variant="contained" onClick={dismiss}>
+						<FormattedMessage id="words.close" defaultMessage="Close" />
+					</Button>
+				)}
+			</DialogActions>
 		</Dialog>
 	);
 }
@@ -111,6 +220,7 @@ interface AuthMonitorBodyProps {
 function AuthMonitorBody(props: AuthMonitorBodyProps) {
 	const { authoringUrl, username, isSSO, dispatch, formatMessage } = props;
 	const { error, isFetching } = useSelection((state) => state.auth);
+	const credentialsError = error?.code === INCORRECT_CREDENTIALS_ERROR_CODE;
 	const [password, setPassword] = useState<string>('');
 	const [ssoButtonClicked, setSSOButtonClicked] = useState(false);
 	const styles: CSSProperties = isFetching ? { visibility: 'hidden' } : {};
@@ -133,28 +243,13 @@ function AuthMonitorBody(props: AuthMonitorBodyProps) {
 			<DialogContent sx={{ width: '400px' }}>
 				<>
 					{error ? (
-						error.code === INCORRECT_CREDENTIALS_ERROR_CODE ? (
-							<Typography
-								variant="body2"
-								role="alert"
-								sx={(theme) => ({
-									backgroundColor: palette.red.tint,
-									color: palette.white,
-									marginBottom: theme.spacing(2),
-									padding: theme.spacing(1),
-									borderRadius: theme.spacing(1),
-									border: `1px solid ${palette.red.main}`,
-									display: 'flex',
-									placeContent: 'center',
-									lineHeight: 1.7,
-									'& .MuiSvgIcon-root': {
-										marginRight: theme.spacing(0.5),
-										color: palette.white
-									}
-								})}
+						credentialsError ? (
+							<CredentialsErrorBanner
+								id={authMonitorCredentialsErrorId}
+								sx={{ marginBottom: (theme) => theme.spacing(2) }}
 							>
-								<WarningRounded /> {formatMessage(translations.incorrectPasswordMessage)}
-							</Typography>
+								{formatMessage(translations.incorrectPasswordMessage)}
+							</CredentialsErrorBanner>
 						) : (
 							<ApiResponseErrorState error={error} sxs={{ image: { width: 150 } }} />
 						)
@@ -180,6 +275,8 @@ function AuthMonitorBody(props: AuthMonitorBodyProps) {
 							onSubmit={onSubmit}
 							password={password}
 							onSetPassword={setPassword}
+							invalidCredentials={credentialsError}
+							credentialsErrorId={authMonitorCredentialsErrorId}
 						/>
 					)}
 				</>

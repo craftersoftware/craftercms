@@ -24,12 +24,6 @@
    <quickCreatePath/>
    <properties>
       <property>
-         <name>placeInNav</name>
-         <label>Show In Nav</label>
-         <value>true</value>
-         <type>boolean</type>
-      </property>
-      <property>
          <name>display-template</name>
          <label>Display Template</label>
          <value>/templates/web/item-explorer.ftl</value>
@@ -40,12 +34,6 @@
          <label>No Template Required</label>
          <value/>
          <type>boolean</type>
-      </property>
-      <property>
-         <name>descriptor-mapper</name>
-         <label>Descriptor Mapper</label>
-         <value>hierarchical-mapper</value>
-         <type>string</type>
       </property>
    </properties>
    <sections>
@@ -260,7 +248,6 @@
    </sections>
    <datasources/>
    <previewable>true</previewable>
-   <noThumbnail>true</noThumbnail>
    <paths>
       <includes>
          <pattern>/site/website/.*</pattern>

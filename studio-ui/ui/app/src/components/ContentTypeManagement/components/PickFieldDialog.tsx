@@ -76,6 +76,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 	const [selectedField, setSelectedField] = useState<PartialContentType>(undefined);
 	const [selectedView, setSelectedView] = useState<number>(0);
 	const [position, setPosition] = useState<number>(typesCurrentList?.length ?? 0);
+	const { formatMessage } = useIntl();
 
 	const onSecondaryAction = (e: React.MouseEvent) => {
 		if (selectedView === 0) {
@@ -125,7 +126,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 									alignItems: 'center'
 								}}
 							>
-								<Tooltip title={<FormattedMessage defaultMessage="Back to control selection" />}>
+								<Tooltip title={formatMessage({ defaultMessage: 'Back to control selection' })}>
 									<IconButton onClick={() => setSelectedView(0)}>
 										<ArrowBackRoundedIcon />
 									</IconButton>
@@ -304,11 +305,9 @@ export function SelectField(props: {
 				<SearchBar keyword={searchTerm} onChange={handleSearchChange} autoFocus={true} sx={{ flexGrow: 1 }} />
 				<Tooltip
 					title={
-						sortOrder === 'ascending' ? (
-							<FormattedMessage defaultMessage="Sort by name (ascending)" />
-						) : (
-							<FormattedMessage defaultMessage="Sort by name (descending)" />
-						)
+						sortOrder === 'ascending'
+							? formatMessage({ defaultMessage: 'Sort by name (ascending)' })
+							: formatMessage({ defaultMessage: 'Sort by name (descending)' })
 					}
 				>
 					<Button

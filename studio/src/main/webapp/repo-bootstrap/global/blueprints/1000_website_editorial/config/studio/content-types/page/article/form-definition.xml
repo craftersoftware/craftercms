@@ -876,7 +876,6 @@
       </datasource>
    </datasources>
    <previewable>true</previewable>
-   <noThumbnail>false</noThumbnail>
    <paths>
 		<includes>
          <pattern>^/site/website/articles/.*</pattern>

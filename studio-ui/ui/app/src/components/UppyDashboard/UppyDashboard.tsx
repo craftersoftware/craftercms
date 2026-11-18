@@ -34,6 +34,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
 import type { DashboardOptions } from 'uppy';
 import { extractErrorPayload } from '../../utils/ajax';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 const translations = defineMessages({
 	cancelPending: {
@@ -334,7 +335,7 @@ export function UppyDashboard(props: UppyDashboardProps) {
 					position: 'relative'
 				},
 				'& .uppy-dashboard-item-validating': {
-					color: 'rgba(0, 0, 0, 0.54)'
+					color: theme.palette.text.secondary
 				},
 				'& .uppy-dashboard-item-preview': {
 					width: '120px',
@@ -476,6 +477,7 @@ export function UppyDashboard(props: UppyDashboardProps) {
 					backgroundColor: 'transparent',
 					outline: 0,
 					border: 0,
+					'&:focus-visible': getFocusRingSx(),
 					margin: 0,
 					borderRadius: 0,
 					padding: 0,

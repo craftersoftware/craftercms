@@ -19,9 +19,7 @@ import React, { useId } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import { TypeBuilderControl } from '../utils';
 
-export interface ReadOnlyValueProps extends TypeBuilderControl {
-	value: string;
-}
+export type ReadOnlyValueProps = TypeBuilderControl<string>;
 
 /**
  * Displays a read-only value in an input field.

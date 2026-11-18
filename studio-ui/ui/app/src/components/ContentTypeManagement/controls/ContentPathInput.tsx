@@ -24,9 +24,7 @@ import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { TypeBuilderControl } from '../utils';
 
-export interface ContentPathInputProps extends TypeBuilderControl {
-	value: string;
-}
+export type ContentPathInputProps = TypeBuilderControl<string>;
 
 /**
  * Enables path selection through the PathSelectionDialog, while also allowing manual input.

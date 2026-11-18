@@ -20,7 +20,7 @@ import { ItemMetaContext } from '../lib/formsEngineContext';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import ItemTypeIcon from '../../ItemTypeIcon';
-import Collapse from '@mui/material/Collapse';
+import { formHeaderTitleMinHeight } from './formHeaderMetrics';
 
 const itemTypeTranslations = defineMessages({
 	component: { defaultMessage: 'Component' },
@@ -28,18 +28,20 @@ const itemTypeTranslations = defineMessages({
 	taxonomy: { defaultMessage: 'Taxonomy' }
 });
 
-export function CreateModeHeader({ path, collapse = false }: { path: string; collapse?: boolean }) {
+export function CreateModeHeader({ path, titleId }: { path: string; titleId?: string }) {
 	const { formatMessage } = useIntl();
 	const { contentType } = useContext(ItemMetaContext);
 	const itemType = contentType.type;
 	return (
 		<Container sx={{ py: 1 }}>
 			<Typography
+				id={titleId}
 				variant="h6"
 				component="h2"
 				sx={{
 					display: 'flex',
-					alignItems: 'center'
+					alignItems: 'center',
+					minHeight: formHeaderTitleMinHeight
 				}}
 			>
 				<ItemTypeIcon item={{ systemType: itemType, mimeType: 'application/xml' }} sx={{ color: 'info.main', mr: 1 }} />
@@ -52,9 +54,7 @@ export function CreateModeHeader({ path, collapse = false }: { path: string; col
 					}}
 				/>
 			</Typography>
-			<Collapse in={!collapse}>
-				<Typography color="textSecondary" variant="body2" children={path} />
-			</Collapse>
+			<Typography color="textSecondary" variant="body2" children={path} />
 		</Container>
 	);
 }

@@ -17,7 +17,6 @@
 
 <page>
 	<content-type>/page/catalog</content-type>
-	<placeInNav>true</placeInNav>
 	<display-template>/templates/web/catalog.ftl</display-template>
 	<merge-strategy>inherit-levels</merge-strategy>
 	<placeInNav>false</placeInNav>

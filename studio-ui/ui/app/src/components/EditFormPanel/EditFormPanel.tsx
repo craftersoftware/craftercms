@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 import ToolPanel from '../ToolPanel/ToolPanel';
 import CloseRounded from '@mui/icons-material/CloseRounded';
 import Typography from '@mui/material/Typography';
@@ -33,7 +33,7 @@ import { usePreviewState } from '../../hooks/usePreviewState';
 import ContentInstance from '../../models/ContentInstance';
 import { pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
-import { createComponentId, pickShowContentFormAction } from '../../utils/system';
+import { createComponentId, showContentFormAction } from '../../utils/system';
 import { popCodeEditorDialog } from '../../state/actions/dialogs';
 
 interface EditFormPanelProps {
@@ -42,6 +42,7 @@ interface EditFormPanelProps {
 }
 
 interface EditFormPanelBodyProps {
+	titleId: string;
 	onDismiss: () => void;
 	selected: GuestData['selected'];
 	models: GuestData['models'];
@@ -85,8 +86,9 @@ const getEditDialogProps = (props: {
 			authoringBase,
 			site,
 			path: parentPath,
-			isHidden: true,
 			modelId: selectedId,
+			// This is the embedded scenario. Passing it since is what the FE expects.
+			isEmbedded: true,
 			...targeting
 		};
 	}
@@ -110,6 +112,7 @@ const translations = defineMessages({
 export function EditFormPanel(props: EditFormPanelProps) {
 	const { showToolsPanel, guest } = usePreviewState();
 	const { selected, models, hierarchyMap, modelIdByPath } = guest ?? {};
+	const titleId = useId();
 	const getAnchorPosition = () => {
 		let iframe = document.getElementById('crafterCMSPreviewIframe');
 		let bounding = iframe.getBoundingClientRect();
@@ -125,26 +128,24 @@ export function EditFormPanel(props: EditFormPanelProps) {
 			onClose={props.onDismiss}
 			anchorReference="anchorPosition"
 			anchorPosition={props.open ? getAnchorPosition() : null}
+			slotProps={{ list: { 'aria-labelledby': titleId } }}
 		>
-			<div>
-				{selected ? (
-					<EditFormPanelBody
-						models={models}
-						selected={selected}
-						hierarchyMap={hierarchyMap}
-						modelIdByPath={modelIdByPath}
-						onDismiss={props.onDismiss}
-					/>
-				) : (
-					''
-				)}
-			</div>
+			{selected ? (
+				<EditFormPanelBody
+					titleId={titleId}
+					models={models}
+					selected={selected}
+					hierarchyMap={hierarchyMap}
+					modelIdByPath={modelIdByPath}
+					onDismiss={props.onDismiss}
+				/>
+			) : null}
 		</Menu>
 	);
 }
 
 function EditFormPanelBody(props: EditFormPanelBodyProps) {
-	const { onDismiss, selected, models, modelIdByPath, hierarchyMap } = props;
+	const { titleId, onDismiss, selected, models, modelIdByPath, hierarchyMap } = props;
 	const dispatch = useDispatch();
 	const contentTypesBranch = useSelection((state) => state.contentTypes);
 	const site = useActiveSiteId();
@@ -202,7 +203,7 @@ function EditFormPanelBody(props: EditFormPanelBodyProps) {
 			const selection = selected[0];
 			const selectedFields = selection?.fieldId.length ? selection.fieldId : null;
 			dispatch(
-				pickShowContentFormAction(
+				showContentFormAction(
 					getEditDialogProps({
 						authoringBase,
 						hierarchyMap,
@@ -240,8 +241,8 @@ function EditFormPanelBody(props: EditFormPanelBodyProps) {
 		// TODO: Implement Multi-mode...
 		return (
 			<>
-				<ToolPanel BackIcon={CloseRounded} title="Not Implemented.">
-					<Typography>This condition is not implemented yet.</Typography>
+				<ToolPanel BackIcon={CloseRounded} title={formatMessage({ defaultMessage: 'Not Implemented.' })}>
+					<Typography>{formatMessage({ defaultMessage: 'This condition is not implemented yet.' })}</Typography>
 				</ToolPanel>
 			</>
 		);
@@ -249,7 +250,7 @@ function EditFormPanelBody(props: EditFormPanelBodyProps) {
 
 	return (
 		<>
-			<Typography variant="caption" style={{ padding: '0 16px 5px' }} component="p">
+			<Typography id={titleId} variant="caption" style={{ padding: '0 16px 5px' }} component="p">
 				{title}
 			</Typography>
 			<MenuItem onClick={() => openDialog('form')}>{formatMessage(translations.openComponentForm)}</MenuItem>

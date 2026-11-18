@@ -46,9 +46,7 @@ import { SxProps } from '@mui/system';
 import FormsEngineField from '../components/FormsEngineField';
 import { ColourFormat, toTargetFormat } from '../../../utils/color';
 
-export interface ColorPickerProps extends ControlProps {
-	value: string;
-}
+export type ColorPickerProps = ControlProps<string>;
 
 const pickers: Record<ColourFormat, { true: ElementType; false: ElementType }> = {
 	rgb: { true: RgbaStringColorPicker, false: RgbStringColorPicker },
@@ -146,9 +144,9 @@ export function ColorPicker(props: ColorPickerProps) {
 	);
 }
 
-function throttle(func: (...args: unknown[]) => void, delay: number = 500) {
+function throttle<A extends unknown[]>(func: (...args: A) => void, delay: number = 500) {
 	let lastCall = 0;
-	return function (...args: unknown[]) {
+	return function (...args: A) {
 		const now = Date.now();
 		if (now - lastCall >= delay) {
 			lastCall = now;

@@ -23,9 +23,7 @@ import { TypeBuilderControl } from '../utils';
 import { EmptyState } from '../../EmptyState';
 import contentTypes from '../../../state/epics/contentTypes';
 
-export interface DataSourceMultiSelectorProps extends TypeBuilderControl {
-	value: string[];
-}
+export type DataSourceMultiSelectorProps = TypeBuilderControl<string[]>;
 
 /**
  * Allows the selection of multiple data sources that are compatible with the field type, using a checkbox group layout.

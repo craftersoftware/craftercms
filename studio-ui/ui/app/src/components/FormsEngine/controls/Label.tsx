@@ -18,7 +18,7 @@ import type { ControlProps } from '../types';
 import { getPropertyValue } from '../lib/formUtils';
 import DOMPurify from 'dompurify';
 
-export function Label(props: ControlProps) {
+export function Label(props: ControlProps<string>) {
 	const { field } = props;
 
 	// region properties/validations

@@ -15,20 +15,28 @@
  */
 
 import { type ComponentType, use } from 'react';
+import type { SxProps, Theme } from '@mui/material/styles';
 import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField, FormDefinitionPlugin } from '../../../models/ContentType';
 import type PluginDescriptor from '../../../models/PluginDescriptor';
 import type LookupTable from '../../../models/LookupTable';
 import { buildFileUrl, importPlugin } from '../../../services/plugin';
-import { getRegisteredControlContribution } from '../controls/registry';
+import { getRegisteredControlContribution, type RegisteredControlContribution } from '../controls/registry';
 import type { DataSourceBinding } from '../dataSources/types';
-import type { ControlProps } from '../types';
+import type { AnyValue, ControlProps } from '../types';
 import { XmlKeys } from './formConsts';
 
 export interface LoadedControlPlugin {
 	/** Resolved control Component + bindings; `url` is the plugin file URL used for cache/errors. */
-	Component: ComponentType<ControlProps>;
+	Component: ComponentType<ControlProps<AnyValue>>;
 	bindings: readonly DataSourceBinding[];
+	/**
+	 * Whether the host wraps `Component` in `FormsEngineField`. `false` for a control that opted out and for the
+	 * load-error placeholder, which wraps itself.
+	 */
+	fieldChrome: boolean;
+	/** `sx` for the default wrapper. */
+	fieldSx?: SxProps<Theme>;
 	url: string;
 }
 
@@ -243,6 +251,46 @@ export function buildControlPluginUrl(siteId: string, plugin: FormDefinitionPlug
 	return buildFileUrl(siteId, plugin.type, plugin.name, plugin.filename, plugin.pluginId);
 }
 
+function errorPlugin(errorComponent: ComponentType<ControlProps>, url: string): LoadedControlPlugin {
+	// The placeholder wraps itself in FormsEngineField, so the host must not wrap it again.
+	return { Component: errorComponent, bindings: [], fieldChrome: false, url };
+}
+
+/**
+ * Maps a loaded descriptor and the contribution registered for `controlType` to the control the form renders.
+ * A missing contribution, or one owned by another plugin than the loaded bundle, resolves to `errorComponent`.
+ */
+export function toLoadedControlPlugin(
+	descriptor: Pick<PluginDescriptor, 'id'>,
+	contribution: RegisteredControlContribution | undefined,
+	controlType: string,
+	url: string,
+	errorComponent: ComponentType<ControlProps>
+): LoadedControlPlugin {
+	if (!contribution) {
+		console.error(
+			`Plugin "${descriptor.id}" loaded from "${url}" does not contribute control type "${controlType}". ` +
+				`Add it to PluginDescriptor.controls.`
+		);
+		return errorPlugin(errorComponent, url);
+	}
+	// Compare against the descriptor we just loaded — not the form-definition locator id.
+	if (contribution.pluginId !== descriptor.id) {
+		console.error(
+			`Control type "${controlType}" is registered by plugin "${contribution.pluginId}", but the bundle at ` +
+				`"${url}" has PluginDescriptor.id "${descriptor.id}". Refusing to use the mismatched contribution.`
+		);
+		return errorPlugin(errorComponent, url);
+	}
+	return {
+		Component: contribution.Component,
+		bindings: contribution.bindings,
+		fieldChrome: contribution.fieldChrome ?? true,
+		fieldSx: contribution.fieldSx,
+		url
+	};
+}
+
 /**
  * Resolves a plugin control for `controlType` (`field.type`).
  *
@@ -294,26 +342,10 @@ export function loadControlPluginModule(
 	}
 
 	const result = loading
-		.then((descriptor) => {
-			const contribution = getRegisteredControlContribution(controlType);
-			if (!contribution) {
-				console.error(
-					`Plugin "${descriptor.id}" loaded from "${url}" does not contribute control type "${controlType}". ` +
-						`Add it to PluginDescriptor.controls.`
-				);
-				return { Component: errorComponent, bindings: [], url };
-			}
-			// Compare against the descriptor we just loaded — not the form-definition locator id.
-			if (contribution.pluginId !== descriptor.id) {
-				console.error(
-					`Control type "${controlType}" is registered by plugin "${contribution.pluginId}", but the bundle at ` +
-						`"${url}" has PluginDescriptor.id "${descriptor.id}". Refusing to use the mismatched contribution.`
-				);
-				return { Component: errorComponent, bindings: [], url };
-			}
-			return { Component: contribution.Component, bindings: contribution.bindings, url };
-		})
-		.catch(() => ({ Component: errorComponent, bindings: [], url }));
+		.then((descriptor) =>
+			toLoadedControlPlugin(descriptor, getRegisteredControlContribution(controlType), controlType, url, errorComponent)
+		)
+		.catch(() => errorPlugin(errorComponent, url));
 
 	loadedControlPluginCache.set(cacheKey, result);
 	return result;

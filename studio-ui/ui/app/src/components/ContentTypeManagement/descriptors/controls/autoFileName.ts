@@ -22,7 +22,10 @@ export const autoFileNameDescriptor: DescriptorContentType = {
 	name: defineMessage({ defaultMessage: 'Auto Filename' }),
 	description: defineMessage({ defaultMessage: 'Automatically generated filename' }),
 	sections: [],
-	fields: {}
+	fields: {},
+	metadata: {
+		rootOnly: true
+	}
 };
 
 export default autoFileNameDescriptor;

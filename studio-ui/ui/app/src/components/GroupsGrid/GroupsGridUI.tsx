@@ -24,7 +24,7 @@ import React from 'react';
 import { PagedArray } from '../../models/PagedArray';
 import Pagination from '../Pagination';
 import Group from '../../models/Group';
-import GlobalAppGridRow from '../GlobalAppGridRow';
+import GlobalAppGridRow, { GlobalAppGridRowAction } from '../GlobalAppGridRow';
 import GlobalAppGridCell from '../GlobalAppGridCell';
 import Box from '@mui/material/Box';
 import { EmptyState } from '../EmptyState';
@@ -67,9 +67,11 @@ export function GroupsGridUI(props: GroupsGridUIProps) {
 							groups.map((group, i) => (
 								<GlobalAppGridRow key={group.id} onClick={() => onRowClicked(group)}>
 									<GlobalAppGridCell align="left" className="width25">
-										<Typography variant="body2" noWrap title={group.name}>
-											{group.name}
-										</Typography>
+										<GlobalAppGridRowAction>
+											<Typography variant="body2" noWrap title={group.name}>
+												{group.name}
+											</Typography>
+										</GlobalAppGridRowAction>
 									</GlobalAppGridCell>
 									<GlobalAppGridCell align="left">
 										<Typography variant="body2" sx={{ wordWrap: 'break-word' }}>

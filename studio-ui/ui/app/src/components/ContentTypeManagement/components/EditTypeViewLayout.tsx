@@ -16,7 +16,7 @@
 
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import IconButton, { IconButtonProps } from '@mui/material/IconButton';
 import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import Typography from '@mui/material/Typography';
@@ -26,20 +26,24 @@ import React, { forwardRef, useRef, useState } from 'react';
 import Layout, { LayoutProps } from './Layout';
 import Menu, { MenuProps } from '@mui/material/Menu';
 import MenuItem, { MenuItemProps } from '@mui/material/MenuItem';
+import MultiChoiceSaveButton, { CommonSaveOptions } from '../../MultiChoiceSaveButton';
 
-export type EditAppLayoutAction = 'exit' | 'save' | 'viewXml' | 'diff' | 'history' | 'rollback';
+export type EditAppLayoutAction = 'exit' | CommonSaveOptions | 'viewXml' | 'diff' | 'history' | 'rollback';
 
 type MenuItemOrButtonEvent = Parameters<MenuItemProps['onClick']>[0] | Parameters<ButtonProps['onClick']>[0];
 
 export interface EditAppLayoutProps extends Omit<LayoutProps, 'toolbarContent'> {
-	onActionClick(e: MenuItemOrButtonEvent, action: EditAppLayoutAction): void | Promise<void>;
+	onActionClick(e: MenuItemOrButtonEvent | Event, action: EditAppLayoutAction): void | Promise<void>;
 	disableSave?: boolean;
 	isNew?: boolean;
+	mountMode?: 'dialog' | 'page';
 }
 
 const actionsMap: Record<EditAppLayoutAction, EditAppLayoutAction> = {
 	exit: 'exit',
 	save: 'save',
+	saveAndClose: 'saveAndClose',
+	saveAndMinimize: 'saveAndMinimize',
 	viewXml: 'viewXml',
 	diff: 'diff',
 	history: 'history',
@@ -48,6 +52,7 @@ const actionsMap: Record<EditAppLayoutAction, EditAppLayoutAction> = {
 
 export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>((props, ref) => {
 	const [open, setOpen] = useState(false);
+	const { formatMessage } = useIntl();
 	const anchorElRef = useRef(undefined);
 	const handleOpenMenuButton: IconButtonProps['onClick'] = () => setOpen(true);
 	const handleClose: MenuProps['onClose'] = () => setOpen(false);
@@ -56,6 +61,7 @@ export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>
 		const action = e.currentTarget.getAttribute('data-action-id') as EditAppLayoutAction;
 		props.onActionClick?.(e, action);
 	};
+	const isDialog = props.mountMode === 'dialog';
 	return (
 		<Layout
 			{...props}
@@ -68,7 +74,7 @@ export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>
 							alignItems: 'center'
 						}}
 					>
-						<Tooltip title={<FormattedMessage defaultMessage="Done" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Done' })}>
 							<IconButton data-action-id={actionsMap.exit} onClick={handleMenuItemClick} sx={{ mr: 1 }}>
 								<ArrowBackRounded />
 							</IconButton>
@@ -87,15 +93,28 @@ export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>
 							alignItems: 'center'
 						}}
 					>
-						<Button
-							variant="contained"
-							sx={{ mr: 1 }}
-							data-action-id={actionsMap.save}
-							onClick={handleMenuItemClick}
-							disabled={props.disableSave}
-						>
-							<FormattedMessage defaultMessage="Save" />
-						</Button>
+						{isDialog ? (
+							<Box sx={{ mr: 1 }}>
+								<MultiChoiceSaveButton
+									disabled={props.disableSave}
+									disablePortal={false}
+									options={['save', 'saveAndClose', 'saveAndMinimize']}
+									defaultSelected="save"
+									storageKey="contentTypeEditor"
+									onClick={(e, type) => props.onActionClick?.(e, type)}
+								/>
+							</Box>
+						) : (
+							<Button
+								variant="contained"
+								sx={{ mr: 1 }}
+								data-action-id={actionsMap.save}
+								onClick={handleMenuItemClick}
+								disabled={props.disableSave}
+							>
+								<FormattedMessage defaultMessage="Save" />
+							</Button>
+						)}
 						<IconButton ref={anchorElRef} onClick={handleOpenMenuButton}>
 							<MoreVertRounded />
 						</IconButton>

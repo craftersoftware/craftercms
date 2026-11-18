@@ -22,14 +22,17 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import PublishingPackage from './PublishingPackage';
 import { fetchPackages, fetchPublishingTargets } from '../../services/publishing';
 import { CurrentFilters, PublishPackage, Selected } from '../../models/Publishing';
+import PagedArray from '../../models/PagedArray';
 import FilterDropdown, { stateMessages } from './FilterDropdown';
 import { setRequestForgeryToken } from '../../utils/auth';
 import TablePagination from '@mui/material/TablePagination';
 import EmptyState from '../EmptyState/EmptyState';
+import PoliteStatus from '../PoliteStatus/PoliteStatus';
 import Typography from '@mui/material/Typography';
 import HighlightOffIcon from '@mui/icons-material/HighlightOffRounded';
 import RefreshIcon from '@mui/icons-material/RefreshRounded';
 import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
 import ApiResponseErrorState from '../ApiResponseErrorState';
 import { useSpreadState } from '../../hooks/useSpreadState';
 import {
@@ -105,11 +108,11 @@ const messages = defineMessages({
 	},
 	previous: {
 		id: 'publishingDashboard.previous',
-		defaultMessage: 'Previous page'
+		defaultMessage: 'Previous Page'
 	},
 	next: {
 		id: 'publishingDashboard.next',
-		defaultMessage: 'Next page'
+		defaultMessage: 'Next Page'
 	}
 });
 
@@ -167,7 +170,7 @@ function renderCount(selected: Selected) {
 }
 
 function PublishingQueue(props: PublishingQueueProps) {
-	const [packages, setPackages] = useState<PublishPackage[]>(null);
+	const [packages, setPackages] = useState<PagedArray<PublishPackage>>(null);
 	const [isFetchingPackages, setIsFetchingPackages] = useState(false);
 	const [selected, setSelected] = useState<Selected>({});
 	const selectedPackages: PublishPackage[] = packages?.filter((pkg) => selected[pkg.id]) ?? [];
@@ -185,6 +188,17 @@ function PublishingQueue(props: PublishingQueueProps) {
 	const [currentFilters, setCurrentFilters] = useState(currentFiltersInitialState);
 	const page = currentFilters.offset / currentFilters.limit;
 	const { formatMessage } = useIntl();
+	// Announce what the loaded response contains, not the filters requested for a page that is still loading.
+	let queueRange = '';
+	if (packages && !isFetchingPackages) {
+		queueRange =
+			packages.total > 0
+				? formatMessage(
+						{ defaultMessage: '{from}-{to} of {count}' },
+						{ from: packages.offset + 1, to: packages.offset + packages.length, count: packages.total }
+					)
+				: formatMessage(messages.noPackagesTitle);
+	}
 	const { siteId, readOnly } = props;
 	const hasReadyForLivePackages =
 		(packages || []).filter((item: PublishPackage) => isReady(item.packageState)).length > 0;
@@ -378,7 +392,14 @@ function PublishingQueue(props: PublishingQueueProps) {
 						color="textSecondary"
 					>
 						{formatMessage(messages.packagesSelected, { count: count })}
-						<HighlightOffIcon sx={{ marginLeft: '5px', cursor: 'pointer' }} onClick={clearSelected} />
+						<IconButton
+							size="small"
+							aria-label={formatMessage({ defaultMessage: 'Clear selection' })}
+							onClick={clearSelected}
+							sx={{ marginLeft: '5px' }}
+						>
+							<HighlightOffIcon fontSize="small" />
+						</IconButton>
 					</Typography>
 				)}
 				<Button variant="outlined" sx={{ m: 1 }} onClick={() => getPackages(siteId)}>
@@ -456,6 +477,7 @@ function PublishingQueue(props: PublishingQueueProps) {
 					)}
 				</div>
 			)}
+			<PoliteStatus message={queueRange} />
 			<TablePagination
 				rowsPerPageOptions={[3, 5, 10]}
 				component="div"

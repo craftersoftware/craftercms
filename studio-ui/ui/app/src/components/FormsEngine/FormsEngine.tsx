@@ -26,6 +26,7 @@ import React, {
 	useCallback,
 	useContext,
 	useEffect,
+	useId,
 	useLayoutEffect,
 	useMemo,
 	useRef,
@@ -39,7 +40,7 @@ import {
 	FormsEngineFormContextApi,
 	FormsEngineGlobalApiContextProps,
 	FormsEngineItemMetaContextProps,
-	ItemContext,
+	FormItemKeyContext,
 	ItemMetaContext,
 	RenamedPathContext,
 	StableFormContext,
@@ -73,9 +74,12 @@ import LookupTable from '../../models/LookupTable';
 import { RepeatItem } from './controls/Repeat';
 import SecondaryButton from '../SecondaryButton';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
+import { useFormItemGate, useFormEntryProvisioning } from './lib/useFormEntryWiring';
+import { useFormItemPath } from './lib/formItem';
 import { Fade } from '@mui/material';
 import AlertTitle from '@mui/material/AlertTitle';
 import { pushDialog } from '../../state/actions/dialogStack';
+import { showErrorDialog } from '../../state/actions/dialogs';
 import useFetchContentItems from '../../hooks/useFetchContentItems';
 import ErrorBoundary from '../ErrorBoundary';
 import { debounceTime } from 'rxjs/operators';
@@ -100,6 +104,7 @@ import {
 	generateDefaultChangesComment,
 	generateDefaultCreationComment,
 	getAdditionalFieldsIdsFromDescriptor,
+	getAdditionalFieldIds,
 	resolveControlDescriptors,
 	getCurrentChildFormStateSummary,
 	isEmbeddedForm,
@@ -112,11 +117,16 @@ import {
 	prepareEmbeddedItemForm,
 	scrollToFieldWhenSettled,
 	setFieldAtoms,
+	applyValuesCheckpoint,
 	useStackSubmitting,
 	useUnlockOnClose,
-	useValidateFormProps
+	useValidateFormProps,
+	withPathFileName
 } from './lib/formUtils';
-import { renderFieldControl } from './lib/controlHelpers';
+import { renderFieldControl } from './lib/renderControl';
+import { createFormLockReleaseSession, prepareStackedFormPop, releaseLockToggleFailed } from './lib/unlockOnClose';
+import { FormValidationAnnouncerContext } from './lib/fieldA11y';
+import FormValidationLiveRegion, { type FormValidationLiveRegionHandle } from './components/FormValidationLiveRegion';
 import {
 	ContentTypeNotFoundError,
 	ItemNotFoundError,
@@ -128,8 +138,8 @@ import FormLayout from './components/FormLayout';
 import TableOfContents, { FieldScopeNotice } from './components/TableOfContents';
 import CreateModeHeader from './components/CreateModeHeader';
 import RepeatModeHeader from './components/RepeatModeHeader';
-import EditModeHeader from './components/EditModeHeader';
-import SaveCard from './components/SaveCard';
+import EditModeHeader, { EditModeMetadata, formHeaderContainerName } from './components/EditModeHeader';
+import SaveCard, { ReleaseLockOnCloseControl } from './components/SaveCard';
 import SectionAccordion from './components/SectionAccordion';
 import useSaveForm from './lib/useSaveForm';
 import { FormPrepError } from './components/FormPrepError';
@@ -143,15 +153,7 @@ import { displayWithPendingChangesConfirm } from '../../utils/ui';
 import useActiveUser from '../../hooks/useActiveUser';
 import FormBackToTop from './components/FormBackToTop';
 import { createComponentId } from '../../utils/system';
-import {
-	workflowEventApprove,
-	workflowEventCancel,
-	workflowEventDirectPublish,
-	workflowEventReject,
-	workflowEventSubmit
-} from '../../state/actions/system';
-import { getHostToHostBus } from '../../utils/subjects';
-import { fetchAffectedPackages } from '../../services/workflow';
+import { useAffectedPackagesRefetch } from './lib/useAffectedPackagesRefetch';
 import useMount from '../../hooks/useMount';
 import { nnou, nou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
@@ -177,14 +179,28 @@ import {
 	repeatFormLock,
 	revealField,
 	showValidationError,
+	resolveSaveDraft,
 	selectedItemSavePlan,
 	stackEntryFlagsAtom,
 	stackedFormCloseAction,
 	stackedFormsClosedByReload
 } from './lib/formVisibility';
-import { repeatItemFormProps, stackedRepeatItemAfterClose, writeItemToParent } from './lib/repeatItemForm';
+import {
+	currentRepeatItemIndex,
+	repeatItemFormProps,
+	stackedRepeatItemAfterClose,
+	writeItemToParent
+} from './lib/repeatItemForm';
+import { carryReplacedItem, repeatItemKeysFor } from './lib/repeatItemKeys';
 import ValidationErrorsAlert from './components/ValidationErrorsAlert';
 import { useInvalidFieldIds } from './lib/useInvalidFieldIds';
+import { useMinimumSaveRequirements } from './lib/useMinimumSaveRequirements';
+import {
+	blockingFieldName,
+	firstBlockingFieldId,
+	minimumRequirementsNotice,
+	validationAlertVariant
+} from './lib/minimumSaveRequirements';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -196,6 +212,8 @@ export interface BaseProps extends Partial<UpdateModeProps & RepeatModeProps & C
 	readonly?: boolean;
 	/** Whether the form is rendered in a dialog. Causes various layout adjustments. **/
 	isDialog?: boolean;
+	/** Id for the root form's visible title, so the dialog that hosts the form can be named by it. */
+	titleId?: string;
 	onClose?: EnhancedDialogProps['onClose'];
 	/** Closes a stacked form after its own save. Does not restore selected-fields edits. */
 	onCommittedClose?(): void;
@@ -268,7 +286,6 @@ type RootFormActions = StableGlobalContextProps['rootFormActions'];
 /** Writes the latest parent save into the stack's mutable slot. The slot is not React state. */
 function publishRootFormActions(actions: RootFormActions, refs: { current: RootFormActions }) {
 	actions.save = (draft) => refs.current.save(draft);
-	actions.setSaveAsDraft = (value) => refs.current.setSaveAsDraft(value);
 }
 
 // Entry point for the form engine. It validates the props and continues if valid.
@@ -279,7 +296,7 @@ function FormGuard(props: FormsEngineProps) {
 		if (typeof e !== 'symbol') {
 			console.error(e);
 		}
-		return <FormPrepError error={e} />;
+		return <FormPrepError error={e} titleId={props.titleId} />;
 	}
 	return createElement(GlobalFormsState, props);
 }
@@ -293,9 +310,9 @@ function GlobalFormsState(props: FormsEngineProps) {
 			api: null,
 			formsStackData: [createFormStackData({ props })],
 			rootFormActions: {
-				save: () => Promise.resolve(),
-				setSaveAsDraft: () => undefined
-			}
+				save: () => Promise.resolve()
+			},
+			lockReleaseSession: createFormLockReleaseSession<StableFormContextProps>()
 		};
 	}
 	stableGlobalContextRef.current.api = useMemo<FormsEngineGlobalApiContextProps>(() => {
@@ -314,8 +331,26 @@ function GlobalFormsState(props: FormsEngineProps) {
 				setCount(1);
 			},
 			popForm() {
-				const stack = stableGlobalContextRef.current.formsStackData;
-				runFormControllerCleanup(stack[stack.length - 1]);
+				const ctx = stableGlobalContextRef.current;
+				const stack = ctx.formsStackData;
+				const removed = stack[stack.length - 1];
+				if (!removed) return;
+				// The mounted top releases itself on unmount. Remember its parent first: root reload
+				// pops the parent before that unmount. A covered entry has no bootstrap and releases now.
+				const next = prepareStackedFormPop({
+					stack,
+					mounted: ctx.lockReleaseSession.getMountedEntry(),
+					session: ctx.lockReleaseSession,
+					parentReadonly: (parent) => {
+						const atoms = stackEntryAtoms(parent);
+						return atoms ? store.get(atoms.readonly) : false;
+					},
+					releaseCovered: (entry) => {
+						ctx.lockReleaseSession.releaseUnmounted(entry);
+					}
+				});
+				ctx.lockReleaseSession.setMountedEntry(next.mounted);
+				runFormControllerCleanup(removed);
 				stack.pop();
 				setCount(-1);
 			},
@@ -347,7 +382,7 @@ function GlobalFormsState(props: FormsEngineProps) {
 	);
 }
 
-// Fetches the requirements for the form and sets up various contexts.
+/** Fetches the requirements for the form and sets up various contexts. */
 function FormBootstrap(props: FormsEngineProps) {
 	// When creating a new item. If we save the form, and do not close it, we need to update the 'mode' from create to update, using the path of the created item.
 	// effectiveProps are the props that are used to render the form, considering the scenario mentioned above.
@@ -358,6 +393,8 @@ function FormBootstrap(props: FormsEngineProps) {
 		return { ...rest, update: { path: savedCreatePath } };
 	}, [props, savedCreatePath]);
 	const { create, update, repeat, readonly: readonlyProp, stackIndex = 0, isDialog } = effectiveProps;
+	// Only the root form's title can name the dialog, so a stacked form's loading and error states do not get the id.
+	const titleId = stackIndex === 0 ? effectiveProps.titleId : undefined;
 	const siteId = useActiveSiteId();
 	const dispatch = useDispatch();
 	const contentTypesById = useContentTypes();
@@ -376,6 +413,12 @@ function FormBootstrap(props: FormsEngineProps) {
 	// deps (via ref) so that a re-render doesn't re-prep the form and discard in-memory edits.
 	const effectRefs = useUpdateRefs({ contentTypesById, username, effectiveProps });
 	const stableFormContextRef = useRef<StableFormContextProps>(formsStackData[stackIndex]);
+	// Lives for the whole form session, including reload and minimize. Unmount is a real close.
+	useUnlockOnClose({
+		stackIndex,
+		stableFormContextRef,
+		formsStackData
+	});
 	// The drawer mounts only the top stacked form. When a child is closed, this instance remounts
 	// for the parent slot; skip full prep if that slot already has atoms so in-memory edits survive.
 	const prepStartedRef = useRef(false);
@@ -400,36 +443,58 @@ function FormBootstrap(props: FormsEngineProps) {
 			if (!valueAtom) return;
 			rollbackAtom(valueAtom, initialValues[fieldId]);
 		};
+		// Rollback restores a previous value. Tag the write so blur does not treat it as the author's edit.
+		const duringRollback = (run: () => void) => {
+			const ctx = stableFormContextRef.current;
+			const previous = ctx.valueWriteOrigin;
+			ctx.valueWriteOrigin = 'rollback';
+			try {
+				run();
+			} finally {
+				ctx.valueWriteOrigin = previous;
+			}
+		};
 		const api: FormsEngineFormApiContextProps = {
 			rollback() {
-				const initialValues = getInitialValues();
-				Object.keys(initialValues).forEach((fieldId) => {
-					internalRollbackValue(initialValues, fieldId);
+				duringRollback(() => {
+					const initialValues = getInitialValues();
+					Object.keys(initialValues).forEach((fieldId) => {
+						internalRollbackValue(initialValues, fieldId);
+					});
 				});
 			},
 			rollbackField(fieldId: string) {
-				internalRollbackValue(getInitialValues(), fieldId);
+				// Tag the write so blur does not treat the restored values as the author's edit.
+				duringRollback(() => {
+					const initialValues = getInitialValues();
+					internalRollbackValue(initialValues, fieldId);
+					// Additional fields (e.g. orderDefault_f, {id}_tz) share the parent's chrome; roll them back together.
+					const { itemMeta, props } = stableFormContextRef.current;
+					const contentTypeFields = itemMeta?.contentType?.fields;
+					const repeatFieldId = props?.repeat?.fieldId;
+					// Repeat-item forms edit child fields of the repeat group, not top-level content-type fields.
+					const field = repeatFieldId
+						? contentTypeFields?.[repeatFieldId]?.fields?.[fieldId]
+						: contentTypeFields?.[fieldId];
+					if (!field) return;
+					for (const additionalFieldId of getAdditionalFieldIds(field, customControls)) {
+						internalRollbackValue(initialValues, additionalFieldId);
+					}
+				});
 			},
 			setValuesCheckpoint(values: LookupTable<unknown>) {
-				stableFormContextRef.current.originalValues = values;
-				stableFormContextRef.current.changedFieldIds.clear();
+				applyValuesCheckpoint(stableFormContextRef.current, values, store.set);
 			}
 		};
 		return api;
-	}, [store]);
+	}, [store, customControls]);
 
-	const liveUpdatedItem = useSelection((state) =>
-		// If we're in create mode, there's no item yet. If updating, we can get the path from props or parent props in the case of repeat mode.
-		create
-			? null
-			: state.content.itemsByPath[effectiveUpdatePath ?? formsStackData[stackIndex - 1]?.props?.update?.path]
-	);
+	// If we're in create mode, there's no item yet. If updating, we can get the path from props or parent props in the case of repeat mode.
+	const itemKey = create ? null : (effectiveUpdatePath ?? formsStackData[stackIndex - 1]?.props?.update?.path ?? null);
+	const hasLiveItem = useFormItemGate({ itemKey, create: Boolean(create), repeat: Boolean(repeat), setReady });
+	useFormEntryProvisioning(stableFormContextRef, { itemKey, siteId, formsApi: api });
 
 	api.updateProps(stackIndex, effectiveProps);
-
-	useEffect(() => {
-		if (!create && !repeat && !liveUpdatedItem) setReady(false);
-	}, [liveUpdatedItem, create, repeat]);
 
 	useEffect(() => {
 		contentTypesById && setContentTypesLoaded(true);
@@ -467,7 +532,12 @@ function FormBootstrap(props: FormsEngineProps) {
 			pluginPreloadFailures: ControlPluginPreloadFailure[] = []
 		) => {
 			stableFormContextRef.current.atoms = atoms;
-			stableFormContextRef.current.originalValues = values;
+			// A repeat item form is a nested scope: it passes no path, like `setFieldAtoms`. A create form has none yet: `''`.
+			stableFormContextRef.current.originalValues = withPathFileName(
+				values,
+				atoms,
+				isChildForm && repeat?.fieldId ? undefined : (itemMeta.path ?? '')
+			);
 			stableFormContextRef.current.itemMeta = itemMeta;
 			stableFormContextRef.current.affectedPluginControlFields = (() => {
 				const affected = collectAffectedPluginControlFields(
@@ -536,6 +606,7 @@ function FormBootstrap(props: FormsEngineProps) {
 			preloadControlPluginsForFields(siteId, repeatFieldsForLaunch, seedValues, contentTypesById).then((failures) => {
 				if (disposed) return;
 				const validatorsData = {
+					nested: true,
 					siteId,
 					contentTypesById,
 					resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId)
@@ -616,7 +687,12 @@ function FormBootstrap(props: FormsEngineProps) {
 			const readonly = readonlyProp ?? isParentReadonly;
 			const parentLockResult = store.get(parentAtoms.lockResult);
 			const isParentLocked = parentLockResult.locked;
-			const invokePrepareFn = (locked: boolean, lockError: ApiResponse, affectedPackages: PublishPackage[]) => {
+			const invokePrepareFn = (
+				locked: boolean,
+				lockError: ApiResponse,
+				affectedPackages: PublishPackage[],
+				lockedPath: string | null
+			) => {
 				preloadControlPluginsForFields(
 					siteId,
 					contentType.fields,
@@ -630,6 +706,7 @@ function FormBootstrap(props: FormsEngineProps) {
 						locked,
 						lockError,
 						affectedPackages,
+						lockedPath,
 						fieldIds: effectRefs.current.effectiveProps.fieldIds,
 						repeatIndex: effectRefs.current.effectiveProps.repeatIndex,
 						update,
@@ -644,13 +721,14 @@ function FormBootstrap(props: FormsEngineProps) {
 				});
 			};
 			if (readonly === isParentReadonly) {
-				invokePrepareFn(isParentLocked, parentLockResult.lockError, parentLockResult.affectedPackages);
+				// Sharing the parent's lock. Do not record a path this form would release.
+				invokePrepareFn(isParentLocked, parentLockResult.lockError, parentLockResult.affectedPackages, null);
 				return () => {
 					disposed = true;
 				};
 			} else {
 				const sub = internalLockContentService(siteId, update.path).subscribe((result) => {
-					invokePrepareFn(result.locked, result.lockError, result.affectedPackages);
+					invokePrepareFn(result.locked, result.lockError, result.affectedPackages, result.lockedPath ?? null);
 				});
 				return () => {
 					disposed = true;
@@ -668,7 +746,8 @@ function FormBootstrap(props: FormsEngineProps) {
 			const lockResultAtom = atom<FormsEngineEditContextProps>({
 				locked: false,
 				lockError: null,
-				affectedPackages: null
+				affectedPackages: null,
+				lockedPath: null
 			});
 			const atoms: FormsEngineAtoms = createFormsEngineAtoms(
 				effectRefs.current.username,
@@ -709,7 +788,8 @@ function FormBootstrap(props: FormsEngineProps) {
 							atoms,
 							value,
 							validatorsData,
-							isAdditional
+							isAdditional,
+							''
 						);
 					},
 					customControls
@@ -774,7 +854,8 @@ function FormBootstrap(props: FormsEngineProps) {
 					const lockResultAtom = atom<FormsEngineEditContextProps>({
 						locked: requirements.locked,
 						lockError: requirements.lockError,
-						affectedPackages: requirements.affectedPackages
+						affectedPackages: requirements.affectedPackages,
+						lockedPath: requirements.locked ? (requirements.lockedPath ?? requirements.item.path) : null
 					});
 					const atoms = createFormsEngineAtoms(
 						effectRefs.current.username,
@@ -815,7 +896,8 @@ function FormBootstrap(props: FormsEngineProps) {
 									atoms,
 									value,
 									validatorsData,
-									isAdditional
+									isAdditional,
+									requirements.item.path
 								);
 							},
 							customControls
@@ -863,18 +945,18 @@ function FormBootstrap(props: FormsEngineProps) {
 	]);
 
 	if (prepError) {
-		return <FormPrepError error={prepError} />;
+		return <FormPrepError error={prepError} titleId={titleId} />;
 	} else if (
 		ready &&
 		hasFormAtoms(stableFormContextRef.current) &&
 		// Create doesn't need the liveUpdateItem, but otherwise, it should be preset before proceeding to rendering a form
-		(create || repeat || liveUpdatedItem)
+		(create || repeat || hasLiveItem)
 	) {
 		const readyEntry = stableFormContextRef.current;
 		return (
 			<FormsEngineFormContextApi.Provider value={contextApi}>
 				<StableFormContext.Provider value={readyEntry}>
-					<ItemContext.Provider value={liveUpdatedItem}>
+					<FormItemKeyContext.Provider value={itemKey}>
 						<ItemMetaContext.Provider value={itemMeta}>
 							<RenamedPathContext.Provider
 								value={{ renamedPath, setRenamedPath, reloadNonce, triggerReload, setSavedCreatePath }}
@@ -882,7 +964,7 @@ function FormBootstrap(props: FormsEngineProps) {
 								{createElement(FormOrchestrator, effectiveProps)}
 							</RenamedPathContext.Provider>
 						</ItemMetaContext.Provider>
-					</ItemContext.Provider>
+					</FormItemKeyContext.Provider>
 				</StableFormContext.Provider>
 			</FormsEngineFormContextApi.Provider>
 		);
@@ -890,6 +972,7 @@ function FormBootstrap(props: FormsEngineProps) {
 		return (
 			<LoadingState
 				sx={{ height: getTargetHeight(isDialog, isFullScreen, theme) }}
+				titleId={titleId}
 				title={<FormattedMessage defaultMessage="Please wait" />}
 				subtitle={<FormattedMessage defaultMessage="Gathering content information" />}
 			/>
@@ -897,7 +980,7 @@ function FormBootstrap(props: FormsEngineProps) {
 	}
 }
 
-// Sets up the UI and renders the form.
+/** Sets up the UI and renders the form. */
 function FormOrchestrator(props: FormsEngineProps) {
 	// region const {...} = props
 	const {
@@ -912,12 +995,16 @@ function FormOrchestrator(props: FormsEngineProps) {
 		onClose: onCloseProp
 	} = props;
 	// endregion
+	// Stacked forms are drawn over the root form, so only the root form's title can name the dialog.
+	const titleId = stackIndex === 0 ? props.titleId : undefined;
 
 	const theme = useTheme();
 	const { formatMessage } = useIntl();
+	const validationAlertId = useId();
 	const dispatch = useDispatch();
 	const activeSite = useActiveSite();
 	const siteId = activeSite.id;
+	const customControls = useSelection((state) => state.uiConfig.controls);
 	const containerRef = useRef<HTMLDivElement>(undefined);
 	const {
 		isFullScreen = false,
@@ -928,7 +1015,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const { api: contextApi, formsStackData, rootFormActions } = useContext(StableGlobalContext);
 	const stableFormContext = useContext(StableFormContext);
 	const formContextApi = useContext(FormsEngineFormContextApi);
-	const item = useContext(ItemContext);
+	const itemPath = useFormItemPath();
 	const { contentType, sourceMap, pathInSite } = useContext(ItemMetaContext);
 	const { fieldUpdates$, changedFieldIds, atoms, formControllerState } = stableFormContext;
 	const irrelevantFieldPaths = formControllerState?.irrelevantFieldPaths ?? null;
@@ -1031,15 +1118,15 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const effectRefs = useUpdateRefs({
 		// Comments name every changed field, including ones the launch scope is hiding.
 		commentFields: isRepeatMode ? repeatOwnedFields : Object.values(contentTypeFields),
+		customControls,
 		versionCommentAtom: stableFormContext.atoms.versionComment,
-		fileNameAtom: stableFormContext.atoms.fileName,
-		lockStatus
+		fileNameAtom: stableFormContext.atoms.fileName
 	});
 	// Holds the create mode comment generated last, so that a comment written by the user isn't overwritten. Starts off
 	// with the default comment the version comment atom was created with.
 	const lastCreationCommentRef = useRef(generateDefaultCreationComment('', formatMessage));
-	const [collapseHeader, setCollapseHeader] = useState(false);
-	const [saveAsDraftAction, setSaveAsDraftAction] = useState(false);
+	const liveRegionRef = useRef<FormValidationLiveRegionHandle>(null);
+	const announceValidation = useCallback((message: string) => liveRegionRef.current?.announce(message), []);
 
 	useMount(() => {
 		// If 'update.changeTypeId' has content, it means the content type has changed, so we set pending changes to true
@@ -1052,7 +1139,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	// Pending changes publish immediately. The version comment stays on the 300ms debounce.
 	useEffect(() => {
 		const pendingSub = fieldUpdates$.subscribe(() => {
-			const pending = changedFieldIds.size > 0;
+			const pending = store.get(changedFieldIds).size > 0;
 			setHasPendingChanges(pending);
 			// The dialog reads its own flag. Publish it here so a dismiss in the same turn still sees the edit.
 			if (!isStackedForm) {
@@ -1085,8 +1172,9 @@ function FormOrchestrator(props: FormsEngineProps) {
 			const newMessage = generateDefaultChangesComment(
 				contentType.fields,
 				effectRefs.current.commentFields,
-				changedFieldIds,
-				store.get(versionCommentAtom).trim()
+				store.get(changedFieldIds),
+				store.get(versionCommentAtom).trim(),
+				effectRefs.current.customControls
 			);
 			if (newMessage) store.set(versionCommentAtom, newMessage);
 		});
@@ -1152,58 +1240,34 @@ function FormOrchestrator(props: FormsEngineProps) {
 
 	// Live invalid ids. The first read is immediate; later edits wait out the pause in the hook,
 	// so the alert's count is not rewritten on every keystroke.
-	const localInvalidFieldIds = useInvalidFieldIds(
+	const localInvalid = useInvalidFieldIds(
 		atoms.validationByFieldId,
 		irrelevantFieldPaths,
 		repeat?.fieldId,
 		fieldUpdates$
 	);
-	const invalidForm = localInvalidFieldIds.length > 0;
-	const parentInvalidFieldIds = useInvalidFieldIds(
+	const parentInvalid = useInvalidFieldIds(
 		parentAtoms?.validationByFieldId,
 		parentEntry?.formControllerState?.irrelevantFieldPaths,
 		undefined,
 		parentEntry?.fieldUpdates$
 	);
-
-	// Unlock content when the form is closed.
-	useUnlockOnClose({
-		...props,
-		saveAsDraft: saveAsDraftAction,
-		invalidForm,
-		itemSavedAsDraft: Boolean(item?.savedAsDraft)
-	});
-
+	// What the save refuses to write without. A selected-fields item form saves through its parent,
+	// so it reports the parent's requirements, by the parent's own mode.
+	const localMinimum = useMinimumSaveRequirements(atoms, { isRepeatMode, isEmbedded }, fieldUpdates$);
+	const parentMinimum = useMinimumSaveRequirements(
+		itemMode === 'selected' ? parentAtoms : null,
+		{
+			isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
+			isEmbedded: isEmbeddedForm(parentEntry?.props ?? {})
+		},
+		parentEntry?.fieldUpdates$
+	);
 	// region Workflow item updates
-	useEffect(() => {
-		const events = [
-			workflowEventSubmit.type,
-			workflowEventDirectPublish.type,
-			workflowEventApprove.type,
-			workflowEventReject.type,
-			workflowEventCancel.type
-		];
-
-		const hostToHost$ = getHostToHostBus();
-		const subscription = hostToHost$.subscribe(({ type }) => {
-			if (!item || !events.includes(type)) return;
-			fetchAffectedPackages(siteId, item.path).subscribe({
-				next(packages) {
-					setLockStatus({
-						...effectRefs.current.lockStatus,
-						affectedPackages: packages
-					});
-				},
-				error({ response }) {
-					console.error(response);
-				}
-			});
-		});
-
-		return () => {
-			subscription.unsubscribe();
-		};
-	}, [effectRefs, item, setLockStatus, siteId]);
+	useAffectedPackagesRefetch(siteId, itemPath, (affectedPackages) =>
+		// Merge into the live lock record so a rename's path is not dropped.
+		setLockStatus((current) => ({ ...current, affectedPackages }))
+	);
 
 	// Freeze formMainContent (content scroller) and formContainer (hosts the absolute drawer) while the ToC drawer is open.
 	// --scroll-top must live on formContainer so both drawers can inherit it.
@@ -1228,7 +1292,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const popTopStackedForm = (restoreOpenedItem: boolean) => {
 		const childEntry = formsStackData[formsStackData.length - 1];
 		const childMode = childEntry?.itemFormMode ? store.get(childEntry.itemFormMode) : null;
-		// The child form item unlocking should be getting done by the FormOrchestrator of the unmounting form via useUnlockOnClose hook.
+		// The child form releases its own lock from the unmounting form's useUnlockOnClose hook.
 		childEntry?.props.stackIndex === 0 && (containerRef.current.style.overflowY = '');
 		if (restoreOpenedItem && childEntry) {
 			const repeat = childEntry.props.repeat;
@@ -1238,14 +1302,22 @@ function FormOrchestrator(props: FormsEngineProps) {
 			if (itemsAtom) {
 				const current = store.get(itemsAtom);
 				const parentList = repeat?.fieldId ? parentEntry?.originalValues?.[repeat.fieldId] : undefined;
+				const itemKeys = repeatItemKeysFor<unknown>(itemsAtom);
+				// The launch index can be behind the stored array. -1 (the item is gone) skips the restore.
+				const resolvedIndex = Array.isArray(current)
+					? currentRepeatItemIndex(current, repeat?.index, repeat?.values, itemKeys)
+					: repeat?.index;
 				const next = stackedRepeatItemAfterClose({
 					wasSelectedItemForm: childEntry.itemFormMode != null,
 					items: Array.isArray(current) ? current : undefined,
-					index: repeat?.index,
+					index: resolvedIndex === -1 ? undefined : resolvedIndex,
 					checkpoint: childEntry.originalValues ?? undefined,
 					parentCheckpoint: Array.isArray(parentList) ? parentList : undefined
 				});
-				if (next) store.set(itemsAtom, next);
+				if (next) {
+					carryReplacedItem(itemKeys, current as unknown[], next as unknown[], resolvedIndex);
+					store.set(itemsAtom, next);
+				}
 			}
 		}
 		contextApi.popForm();
@@ -1291,16 +1363,23 @@ function FormOrchestrator(props: FormsEngineProps) {
 		const doEditEnablement = (restoreValues: boolean = false) => {
 			// TODO: Re-fetch content when enabling edit? Or monitor changes and auto-reload?
 			setEnablingEditInProgress(true);
+			const previous = store.get(atoms.lockResult);
+			// Release the path that is actually locked. A saved rename has moved it off item.path.
+			const targetPath = (!enableEdit && previous.lockedPath) || stableFormContext.getItem().path;
 			const service = enableEdit ? internalLockContentService : internalUnlockContentService;
-			service(siteId, item.path).subscribe((lockResult) => {
+			service(siteId, targetPath).subscribe((lockResult) => {
 				setEnablingEditInProgress(false);
 				setHasPendingChanges(false);
 				if (restoreValues) formContextApi.rollback();
 				setLockStatus({
 					locked: lockResult.locked,
 					lockError: lockResult.lockError,
-					affectedPackages: lockResult?.affectedPackages ?? null
+					affectedPackages: lockResult?.affectedPackages ?? null,
+					lockedPath: lockResult.locked ? (lockResult.lockedPath ?? targetPath) : null
 				});
+				if (!enableEdit && releaseLockToggleFailed(lockResult)) {
+					dispatch(showErrorDialog({ error: lockResult.lockError }));
+				}
 				callback?.(lockResult);
 			});
 		};
@@ -1336,7 +1415,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	});
 
 	// Published after paint layout, not during render. The refs stay current, so a click reads this save.
-	const rootActionRefs = useUpdateRefs({ save: saveFn, setSaveAsDraft: setSaveAsDraftAction });
+	const rootActionRefs = useUpdateRefs({ save: saveFn });
 	useLayoutEffect(() => {
 		if (stackIndex !== 0) return;
 		// Stable mutable registry for the item form, not React state. Read .current when Save is clicked.
@@ -1382,6 +1461,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 				values: items[visibleLaunch.index] as Record<string, unknown>,
 				fieldIds: visibleLaunch.fieldIds,
 				getItems: () => (store.get(valueAtom) as Record<string, unknown>[]) ?? [],
+				keys: repeatItemKeysFor(valueAtom),
 				setItems: (next) => store.set(valueAtom, next)
 			}),
 			// A whole item uses the parent Save card too. The pencil and Add leave this unset.
@@ -1396,24 +1476,38 @@ function FormOrchestrator(props: FormsEngineProps) {
 		if (itemMode !== 'selected' || !parentAtoms || repeat?.index === undefined) return;
 		const valueAtom = parentAtoms.valueByFieldId[repeat.fieldId];
 		if (!valueAtom) return;
-		const index = repeat.index;
+		const itemKeys = repeatItemKeysFor<Record<string, unknown>>(valueAtom);
 		const write = () => {
 			const current = store.get(valueAtom);
 			if (!Array.isArray(current)) return;
+			// The item may have moved since launch. If it is gone there is nothing to write into.
+			const index = currentRepeatItemIndex(current, repeat.index, repeat.values, itemKeys);
+			if (index === undefined || index === -1) return;
 			const next = writeItemToParent(current, index, extractAtomValues(store, atoms.valueByFieldId));
-			if (next !== current) store.set(valueAtom, next);
+			if (next === current) return;
+			carryReplacedItem(itemKeys, current, next, index);
+			store.set(valueAtom, next);
 		};
 		write();
 		const subscription = fieldUpdates$.subscribe(write);
 		return () => subscription.unsubscribe();
-	}, [atoms.valueByFieldId, fieldUpdates$, itemMode, parentAtoms, repeat?.fieldId, repeat?.index, store]);
+	}, [
+		atoms.valueByFieldId,
+		fieldUpdates$,
+		itemMode,
+		parentAtoms,
+		repeat?.fieldId,
+		repeat?.index,
+		repeat?.values,
+		store
+	]);
 
 	const parentFieldOrder = useMemo(
 		() => parentEntry?.itemMeta.contentType.sections?.flatMap((section) => section.fields) ?? [],
 		[parentEntry]
 	);
 	const validationErrors = validationErrorsAlert({
-		localInvalidFieldIds,
+		localInvalidFieldIds: localInvalid,
 		localSectionOrder: isRepeatMode ? repeatFieldIdList : countFieldIds,
 		localIrrelevant: irrelevantFieldPaths,
 		localParentPath: repeat?.fieldId,
@@ -1421,7 +1515,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 		openRepeatFieldId: repeat?.fieldId,
 		parent: parentEntry
 			? {
-					invalidFieldIds: parentInvalidFieldIds,
+					invalidFieldIds: parentInvalid,
 					sectionOrder: parentFieldOrder,
 					irrelevantFieldPaths: parentEntry.formControllerState?.irrelevantFieldPaths
 				}
@@ -1438,7 +1532,34 @@ function FormOrchestrator(props: FormsEngineProps) {
 		return fields?.[validationErrors.fieldId]?.name;
 	})();
 	const useParentSaveCard = itemMode === 'selected' && parentAtoms != null;
+	const missingMinimum = useParentSaveCard ? parentMinimum : localMinimum;
+	const minimumContentType = useParentSaveCard ? parentEntry?.itemMeta.contentType : contentType;
+	const minimumNotice = minimumRequirementsNotice(missingMinimum, minimumContentType?.fields);
+	const alertVariant = validationAlertVariant({
+		missing: missingMinimum,
+		errorCount: validationErrors?.count ?? 0
+	});
+	const blockingFieldId = minimumNotice
+		? firstBlockingFieldId(missingMinimum, useParentSaveCard ? parentFieldOrder : countFieldIds)
+		: undefined;
 	const showValidationField = () => {
+		if (alertVariant === 'minimumRequirements') {
+			if (!blockingFieldId) return;
+			if (!useParentSaveCard) {
+				const reveal = showValidationError({
+					visibility: store.get(atoms.formVisibility),
+					fieldId: blockingFieldId,
+					irrelevantFieldPaths,
+					parentPath: repeat?.fieldId
+				});
+				commitFormVisibility(store.set, atoms, reveal.state, reveal.fieldId);
+				return;
+			}
+			const reveal = revealField(store.get(parentAtoms.formVisibility), blockingFieldId);
+			commitFormVisibility(store.set, parentAtoms, reveal.state, reveal.fieldId);
+			contextApi.popForm();
+			return;
+		}
 		if (!validationErrors) return;
 		if (validationErrors.where === 'local') {
 			const reveal = showValidationError({
@@ -1455,14 +1576,34 @@ function FormOrchestrator(props: FormsEngineProps) {
 		commitFormVisibility(store.set, parentAtoms, reveal.state, reveal.fieldId);
 		contextApi.popForm();
 	};
-	const saveFromSelectedItem = async (_event: unknown, draft?: boolean) => {
+	// A non-draft Save on an invalid form. The reveal scrolls to the first error and focuses it, and the field
+	// exposes its own error. The live region gives only the count, so the error is not spoken twice.
+	const handleInvalidSave = () => {
+		const count = validationErrors?.count ?? 0;
+		showValidationField();
+		announceValidation(
+			count > 0
+				? formatMessage(
+						{
+							defaultMessage:
+								'Cannot save yet. {count, plural, one {# field needs attention} other {# fields need attention}}'
+						},
+						{ count }
+					)
+				: formatMessage({ defaultMessage: 'Cannot save until all form requirements are satisfied.' })
+		);
+	};
+	const saveFromSelectedItem = async (_event: unknown, draft?: boolean | 'auto') => {
 		if (!parentAtoms || !parentEntry) return;
+		const choice = draft ?? false;
+		const rememberedDraft = store.get(parentAtoms.saveAsDraft) === true;
 		const [itemInvalidFieldIds, parentInvalidNow] = await Promise.all([
 			readInvalidFieldIds(store, atoms.validationByFieldId, irrelevantFieldPaths, repeat?.fieldId),
 			readInvalidFieldIds(store, parentAtoms.validationByFieldId, parentEntry.formControllerState?.irrelevantFieldPaths)
 		]);
 		const plan = selectedItemSavePlan({
-			draft: draft === true,
+			draft: choice,
+			saveAsDraft: rememberedDraft,
 			itemVisibility: store.get(atoms.formVisibility),
 			itemInvalidFieldIds,
 			itemFieldOrder: repeatFieldIdList,
@@ -1483,9 +1624,16 @@ function FormOrchestrator(props: FormsEngineProps) {
 			contextApi.popForm();
 			return 'revealed' as const;
 		}
-		// SaveCard already set the root draft flag. Read save at click time.
-		return rootFormActions.save(draft);
+		// The plan already folded `auto` into a boolean from this fresh read. Pass that, not the label.
+		return rootFormActions.save(
+			resolveSaveDraft(choice, itemInvalidFieldIds.length > 0 || parentInvalidNow.length > 0, rememberedDraft)
+		);
 	};
+
+	// Same gate as the Release Lock button. Create, a new repeat item, and an embedded form
+	// on the parent's lock do not show it. The button itself ignores the keep-lock preference.
+	const showReleaseLockControl =
+		!isCreateMode && (!isRepeatMode || Boolean(repeat?.values)) && !(isEmbedded && isStackedForm);
 
 	// If not on a dialog or the prop is not provided, there's no need to handle the close. The form is running in a standalone mode.
 	const handleClose: ButtonProps['onClick'] = (e) => {
@@ -1498,7 +1646,6 @@ function FormOrchestrator(props: FormsEngineProps) {
 	};
 
 	const [mainContent, setMainContent] = useState<HTMLDivElement | null>(null);
-	const sentinelRef = useRef<HTMLDivElement>(null);
 	const cancelFieldScrollRef = useRef<(() => void) | null>(null);
 	const pendingFieldScrollRef = useRef<{ sectionId: string; start: () => void } | null>(null);
 
@@ -1510,45 +1657,6 @@ function FormOrchestrator(props: FormsEngineProps) {
 		if (!root) return;
 		cancelFieldScrollRef.current = scrollToFieldWhenSettled(root, fieldId, { focus });
 	}, []);
-
-	// Collapse when the sentinel (~60px) scrolls out of view. The header is a sibling of this scroll
-	// root, so collapsing it grows clientHeight and can pull the sentinel back — only collapse when
-	// overflow exceeds the header height plus the sentinel offset, which that growth can't eat into.
-	useEffect(() => {
-		const sentinel = sentinelRef.current;
-		if (!mainContent || !sentinel) return;
-
-		let isIntersecting = true;
-		const checkThreshold = () => {
-			const header = mainContent.parentElement?.querySelector<HTMLElement>('[data-area-id="formHeader"]');
-			const overflow = mainContent.scrollHeight - mainContent.clientHeight;
-			// Collapsing frees up to the header's height; scrollTop must still clear the sentinel's offset afterwards.
-			const sentinelOffset = sentinel.offsetTop;
-			setCollapseHeader(!isIntersecting && overflow > (header?.offsetHeight ?? 0) + sentinelOffset);
-		};
-
-		const intersectionObserver = new IntersectionObserver(
-			([entry]) => {
-				isIntersecting = entry.isIntersecting;
-				checkThreshold();
-			},
-			{ root: mainContent, threshold: 0, rootMargin: '0px' }
-		);
-		intersectionObserver.observe(sentinel);
-
-		// Re-check the same threshold when section content or the scroll root resizes (e.g. collapsing a
-		// SectionAccordion, or the dialog/viewport changing mainContent.clientHeight). The intersection
-		// observer alone won't fire for that, so collapseHeader could otherwise get stuck.
-		const resizeObserver = new ResizeObserver(checkThreshold);
-		const contentContainer = sentinel.nextElementSibling;
-		if (contentContainer) resizeObserver.observe(contentContainer);
-		resizeObserver.observe(mainContent);
-
-		return () => {
-			intersectionObserver.disconnect();
-			resizeObserver.disconnect();
-		};
-	}, [mainContent]);
 
 	const pendingScrollFieldId = useAtomValue(atoms.pendingScrollFieldId);
 	const pendingScrollFocus = useAtomValue(atoms.pendingScrollFocus);
@@ -1638,18 +1746,23 @@ function FormOrchestrator(props: FormsEngineProps) {
 		setItemLaunchEntering(false);
 	}, []);
 
+	const minimizeLabel = formatMessage({ defaultMessage: 'Minimize' });
+	const closeLabel = formatMessage({ defaultMessage: 'Close' });
+	const fullscreenLabel = isFullScreen
+		? formatMessage({ defaultMessage: 'Exit full screen' })
+		: formatMessage({ defaultMessage: 'Enter full screen' });
+
 	const bodyFragment = (
 		<FormLayout
 			stackIndex={stackIndex}
 			containerRef={containerRef}
-			sentinelRef={sentinelRef}
 			mainContentRefCallback={mainContentRefCallback}
 			hasStackedForms={hasStackedForms}
 			// If the form is rendered in/as a dialog, take up the whole screen minus
 			// top/bottom margins (2 top, 2 bottom). If not a dialog, take up the whole screen.
 			targetHeight={getTargetHeight(isDialog, isFullScreen, theme)}
 			headerFragment={
-				<Box id="header" sx={{ minHeight: 50 }}>
+				<Box id="header" sx={{ minHeight: 50, containerType: 'inline-size', containerName: formHeaderContainerName }}>
 					<Box
 						component={Container}
 						sx={{
@@ -1664,21 +1777,21 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Typography>
 						<Box sx={[isDialog && { position: 'absolute', top: theme.spacing(1), right: theme.spacing(1) }]}>
 							{props.onMinimize && (
-								<Tooltip title={<FormattedMessage defaultMessage="Minimize" />}>
+								<Tooltip title={minimizeLabel}>
 									<IconButton size="small" onClick={props.onMinimize}>
 										<MinimizeIconRounded />
 									</IconButton>
 								</Tooltip>
 							)}
 							{(props.onCancelFullScreen || props.onFullScreen) && (
-								<Tooltip title={<FormattedMessage defaultMessage="Maximize" />}>
+								<Tooltip title={fullscreenLabel}>
 									<IconButton size="small" onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}>
 										{isFullScreen ? <CloseFullscreenOutlined /> : <MaximiseIcon fontSize="small" />}
 									</IconButton>
 								</Tooltip>
 							)}
 							{handleClose && (
-								<Tooltip title={<FormattedMessage defaultMessage="Close" />}>
+								<Tooltip title={closeLabel}>
 									<IconButton size="small" onClick={handleClose}>
 										<Close />
 									</IconButton>
@@ -1687,11 +1800,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Box>
 					</Box>
 					{isRepeatMode ? (
-						<RepeatModeHeader repeat={repeat} collapse={collapseHeader} />
+						<RepeatModeHeader repeat={repeat} titleId={titleId} />
 					) : isCreateMode ? (
-						<CreateModeHeader path={Boolean(create?.path) ? pathInSite : undefined} collapse={collapseHeader} />
+						<CreateModeHeader path={Boolean(create?.path) ? pathInSite : undefined} titleId={titleId} />
 					) : (
-						<EditModeHeader isEmbedded={isEmbedded} collapse={collapseHeader} />
+						<EditModeHeader isEmbedded={isEmbedded} titleId={titleId} />
 					)}
 				</Box>
 			}
@@ -1708,7 +1821,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 						<Grid size={useCollapsedToC ? 'auto' : 'grow'}>
 							<StickyBox data-area-id="stickySidebar" sx={{ height: 'auto' }}>
 								{useCollapsedToC ? (
-									<IconButton size="small" onClick={handleOpenDrawerSidebar}>
+									<IconButton
+										size="small"
+										onClick={handleOpenDrawerSidebar}
+										aria-label={formatMessage({ defaultMessage: 'Open table of contents' })}
+									>
 										<MenuRounded />
 									</IconButton>
 								) : (
@@ -1730,7 +1847,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 												dispatch(
 													pushDialog({
 														component: createComponentId('ViewPackagesDialog'),
-														props: { item } as ViewPackagesDialogProps
+														props: { item: stableFormContext.getItem() } as ViewPackagesDialogProps
 													})
 												);
 											}}
@@ -1780,38 +1897,50 @@ function FormOrchestrator(props: FormsEngineProps) {
 									)}
 								</Paper>
 							) : (
-								visibleSections.map((section, sectionIndex) => (
-									<SectionAccordion
-										key={section.id}
-										section={section}
-										slotProps={{
-											transition: {
-												onEntered: () => {
-													const pending = pendingFieldScrollRef.current;
-													if (pending?.sectionId === section.id) {
-														pending.start();
-														pendingFieldScrollRef.current = null;
+								<>
+									{!isCreateMode && <EditModeMetadata />}
+									{visibleSections.map((section, sectionIndex) => (
+										<SectionAccordion
+											key={section.id}
+											section={section}
+											slotProps={{
+												transition: {
+													onEntered: () => {
+														const pending = pendingFieldScrollRef.current;
+														if (pending?.sectionId === section.id) {
+															pending.start();
+															pendingFieldScrollRef.current = null;
+														}
 													}
 												}
+											}}
+											renderControl={(fieldId, fieldIndex) =>
+												renderFieldControl(
+													contentTypeFields[fieldId],
+													stableFormContext.atoms.valueByFieldId,
+													sectionIndex === 0 && fieldIndex === 0,
+													readonly,
+													contentType
+												)
 											}
-										}}
-										renderControl={(fieldId, fieldIndex) =>
-											renderFieldControl(
-												contentTypeFields[fieldId],
-												stableFormContext.atoms.valueByFieldId,
-												sectionIndex === 0 && fieldIndex === 0,
-												readonly,
-												contentType
-											)
-										}
-									/>
-								))
+										/>
+									))}
+								</>
 							)}
 							{/* Spacer & back to top */}
 							<FormBackToTop containerRef={containerRef} getScrollContainer={getScrollContainer} />
 						</Grid>
 						<Grid size="grow">
-							<StickyBox className="space-y" sx={{ height: 'auto' }}>
+							<StickyBox
+								className="space-y"
+								sx={{
+									height: 'auto',
+									// overflow-y:auto computes overflow-x to auto and clips the paper shadow.
+									// The negative margin moves that edge out; the padding puts the content back.
+									mx: -1,
+									px: 1
+								}}
+							>
 								{readonly ? (
 									<>
 										<Alert severity="info" variant="outlined" icon={<EditOffOutlined />}>
@@ -1828,11 +1957,15 @@ function FormOrchestrator(props: FormsEngineProps) {
 									</>
 								) : (
 									<>
-										{validationErrors && (
+										{alertVariant && (
 											<ValidationErrorsAlert
-												count={validationErrors.count}
-												fieldName={validationFieldName}
+												count={validationErrors?.count ?? 0}
+												fieldName={
+													minimumNotice ? blockingFieldName(minimumNotice, blockingFieldId) : validationFieldName
+												}
+												minimumRequirements={minimumNotice ?? undefined}
 												onShow={showValidationField}
+												id={validationAlertId}
 											/>
 										)}
 										<SaveCard
@@ -1840,27 +1973,31 @@ function FormOrchestrator(props: FormsEngineProps) {
 											isStackedForm={useParentSaveCard ? false : isStackedForm}
 											isRepeatMode={useParentSaveCard ? false : isRepeatMode}
 											atoms={useParentSaveCard ? parentAtoms : undefined}
-											setSaveAsDraft={useParentSaveCard ? rootFormActions.setSaveAsDraft : setSaveAsDraftAction}
+											validationErrorCount={validationErrors?.count ?? 0}
+											minimumRequirements={minimumNotice ?? undefined}
 											onSave={useParentSaveCard ? saveFromSelectedItem : (_event, draft) => saveFn(draft)}
+											onInvalidSave={handleInvalidSave}
+											validationAlertId={alertVariant ? validationAlertId : undefined}
 										/>
-										{!isCreateMode && // There's no locking on create mode
-											(!isRepeatMode || (isRepeatMode && repeat.values)) && // No point in the "unlock" button for new repeat items
-											!(isEmbedded && isStackedForm) && ( // For embedded components, only allow releasing the lock if it's the top form.
-												<SecondaryButton
-													fullWidth
-													variant="outlined"
-													onClick={() => updateEditEnablement(false)}
-													loading={enablingEditInProgress}
-												>
-													<FormattedMessage defaultMessage="Release Lock" />
-												</SecondaryButton>
-											)}
+										{showReleaseLockControl && (
+											<SecondaryButton
+												fullWidth
+												variant="outlined"
+												onClick={() => updateEditEnablement(false)}
+												loading={enablingEditInProgress}
+											>
+												<FormattedMessage defaultMessage="Release Lock" />
+											</SecondaryButton>
+										)}
 									</>
 								)}
 								{handleClose && (
 									<Button fullWidth variant="outlined" disabled={enablingEditInProgress} onClick={handleClose}>
 										<FormattedMessage defaultMessage="Close" />
 									</Button>
+								)}
+								{!readonly && showReleaseLockControl && (
+									<ReleaseLockOnCloseControl atoms={useParentSaveCard ? parentAtoms : undefined} />
 								)}
 							</StickyBox>
 						</Grid>
@@ -1958,7 +2095,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 	return (
 		// TODO: The transition doesn't seem to be carried out. Check forwarding the style prop.
 		// The Fade provides some transitioning for the stacked forms that show without the Slide transition since the Drawer is already open and there's only one.
-		isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment
+		<FormValidationAnnouncerContext.Provider value={announceValidation}>
+			{isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment}
+			<FormValidationLiveRegion ref={liveRegionRef} />
+		</FormValidationAnnouncerContext.Provider>
 	);
 }
 

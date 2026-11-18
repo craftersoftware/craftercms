@@ -34,9 +34,7 @@ import Skeleton from '@mui/material/Skeleton';
 import { useDataSourceListOptions } from '../dataSourceHooks/useDataSourceListOptions';
 import type { DataSourceListItem } from '../dataSources/types';
 
-export interface CheckboxGroupProps extends ControlProps {
-	value: Array<{ key: string; value_smv: string }>;
-}
+export type CheckboxGroupProps = ControlProps<Array<{ key: string; value_smv: string }>>;
 
 export function CheckboxGroup(props: CheckboxGroupProps) {
 	const theme = useTheme();
@@ -169,7 +167,7 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
 					control={
 						<Checkbox
 							disabled={readonly}
-							color="info"
+							color="primary"
 							indeterminate={someInViewSelected}
 							checked={allInViewSelected}
 							onChange={checkAll}
@@ -238,7 +236,7 @@ const buildOption = (
 		control={
 			<Checkbox
 				disabled={readonly}
-				color="info"
+				color="primary"
 				checked={checkedValuesLookup[option.key] ?? false}
 				onChange={onChange}
 				value={option.key}

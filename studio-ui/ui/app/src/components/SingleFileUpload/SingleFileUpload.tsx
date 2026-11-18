@@ -17,7 +17,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Uppy, XHRUpload, Form } from 'uppy';
 import ProgressBar from '@uppy/progress-bar';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, useIntl } from 'react-intl';
 import 'uppy/dist/uppy.css';
 import '@uppy/progress-bar/dist/style.css';
 import { getGlobalHeaders } from '../../utils/ajax';
@@ -426,7 +426,7 @@ export function SingleFileUpload(props: SingleFileUploadProps) {
 						icon={false}
 						severity="error"
 						action={
-							<Tooltip title={<FormattedMessage defaultMessage="Retry" />}>
+							<Tooltip title={formatMessage({ defaultMessage: 'Retry' })}>
 								<IconButton
 									onClick={() => retryUpload()}
 									size="small"

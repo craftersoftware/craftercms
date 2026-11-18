@@ -44,6 +44,7 @@ import org.craftercms.commons.entitlements.validator.EntitlementValidator;
 import org.craftercms.commons.plugin.PluginDescriptorReader;
 import org.craftercms.commons.plugin.exception.PluginException;
 import org.craftercms.commons.plugin.model.PluginDescriptor;
+import org.craftercms.commons.rest.ManagementToken;
 import org.craftercms.commons.upgrade.exception.UpgradeException;
 import org.craftercms.studio.api.v1.constant.StudioConstants;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.MODULE_STUDIO;
@@ -57,6 +58,7 @@ import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepository
 import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepositoryException;
 import org.craftercms.studio.api.v1.exception.repository.RemoteRepositoryNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
+import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.content.ContentMonitor;
 import org.craftercms.studio.api.v2.dal.AuditLog;
 import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
@@ -102,7 +104,9 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.BLOB_STORES
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.BLUE_PRINTS_PATH;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_ENVIRONMENT_ACTIVE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_GLOBAL_SYSTEM_SITE;
+import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_PREVIEW_DESTROY_CONTEXT_URL;
+import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_STAGING_ID_SUFFIX;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.GLOBAL_REPO_PATH;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.REPO_BASE_PATH;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.REPO_BLUEPRINTS_DESCRIPTOR_FILENAME;
@@ -147,6 +151,7 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	private final RetryingDatabaseOperationFacade retryingDatabaseOperationFacade;
 	private final Deployer deployer;
 	private ConfigurationService configurationService;
+	private ServicesConfig servicesConfig;
 	private final AuditService auditService;
 	private final TaskManager taskManager;
 	private final EntitlementValidator entitlementValidator;
@@ -509,19 +514,31 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	 * @throws ServiceLayerException if the request fails or response status code is not 200
 	 */
 	protected void destroySitePreviewContext(String siteId) throws ServiceLayerException {
-		String requestUrl = studioConfiguration.getProperty(CONFIGURATION_SITE_PREVIEW_DESTROY_CONTEXT_URL)
-			.replaceAll(StudioConstants.CONFIG_SITENAME_VARIABLE, siteId);
+		HttpRequest request = buildDestroyPreviewContextRequest(siteId);
 
 		try {
-			HttpResponse<String> response = HttpClient.newHttpClient().send(HttpRequest.newBuilder()
-				.uri(URI.create(requestUrl))
-				.build(), HttpResponse.BodyHandlers.ofString());
+			HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
 			if (response.statusCode() != 200) {
 				throw new ServiceLayerException(format("Failed to destroy site preview context for site '%s'", siteId));
 			}
 		} catch (IOException | InterruptedException e) {
 			throw new ServiceLayerException(format("Failed to destroy site preview context for site '%s'", siteId), e);
 		}
+	}
+
+	/**
+	 * Builds the preview-context destroy request. The management token is sent in
+	 * {@link ManagementToken#HEADER_NAME} and is not placed in the URL.
+	 */
+	protected HttpRequest buildDestroyPreviewContextRequest(String siteId) {
+		String requestUrl = studioConfiguration.getProperty(CONFIGURATION_SITE_PREVIEW_DESTROY_CONTEXT_URL)
+			.replaceAll(StudioConstants.CONFIG_SITENAME_VARIABLE, siteId);
+		HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(requestUrl));
+		String token = studioConfiguration.getProperty(CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN);
+		if (StringUtils.isNotEmpty(token)) {
+			builder.header(ManagementToken.HEADER_NAME, token);
+		}
+		return builder.build();
 	}
 
 	@Override
@@ -650,6 +667,26 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 		List<Site> allSites = siteDao.getAllSites();
 		allSites.forEach(this::checkBootstrappingState);
 		return allSites;
+	}
+
+	@Override
+	public List<String> getDeliverableSiteIds() {
+		List<String> deliverableSiteIds = new ArrayList<>();
+		String stagingSiteIdSuffix = studioConfiguration.getProperty(CONFIGURATION_SITE_STAGING_ID_SUFFIX);
+		for (String siteId : siteDao.getDeliverableSiteIds()) {
+			deliverableSiteIds.add(siteId);
+			try {
+				if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+					deliverableSiteIds.add(siteId + stagingSiteIdSuffix);
+				}
+			} catch (SiteNotFoundException e) {
+				// Here we know the site exists, so this should not really happen
+				logger.trace("Unable to read the staging flag for site '{}'", siteId, e);
+			} catch (Exception e) {
+				logger.warn("Failed to check if site '{}' is a staging site", siteId, e);
+			}
+		}
+		return deliverableSiteIds;
 	}
 
 	/**
@@ -1045,5 +1082,11 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	@Lazy
 	public void setContentMonitor(ContentMonitor contentMonitor) {
 		this.contentMonitor = contentMonitor;
+	}
+
+	@Autowired
+	@Lazy
+	public void setServicesConfig(ServicesConfig servicesConfig) {
+		this.servicesConfig = servicesConfig;
 	}
 }

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useState, useLayoutEffect } from 'react';
+import { useState, useLayoutEffect } from 'react';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Button from '@mui/material/Button';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -23,8 +23,9 @@ import Paper from '@mui/material/Paper';
 import ClickAwayListener from '@mui/material/ClickAwayListener';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
 import Popper from '@mui/material/Popper';
-import { SplitButtonUIProps } from './utils';
+import { optionColor, SplitButtonUIProps } from './utils';
 
 export function SplitButtonUI(props: SplitButtonUIProps) {
 	const {
@@ -39,7 +40,8 @@ export function SplitButtonUI(props: SplitButtonUIProps) {
 		handleClose,
 		handleMenuItemClick,
 		loading,
-		fullWidth
+		fullWidth,
+		describedBy
 	} = props;
 
 	// Store the width of the anchor element (ButtonGroup) if fullWidth is true
@@ -53,23 +55,32 @@ export function SplitButtonUI(props: SplitButtonUIProps) {
 		}
 	}, [fullWidth, anchorRef, open]);
 
+	const selectedColor = optionColor(options[selectedIndex]);
+
 	return (
 		<>
 			<ButtonGroup
 				disabled={disabled}
 				variant="contained"
-				color="primary"
+				color={selectedColor}
 				ref={anchorRef}
 				aria-label="split button"
 				fullWidth={fullWidth}
 			>
-				<Button color="primary" variant="contained" loading={loading} onClick={handleClick}>
+				<Button
+					color={selectedColor}
+					variant="contained"
+					loading={loading}
+					startIcon={options[selectedIndex]?.icon}
+					onClick={handleClick}
+					aria-describedby={describedBy}
+				>
 					{options[selectedIndex].label}
 				</Button>
 				{options.length > 1 && (
 					<Button
-						disabled={loading}
-						color="primary"
+						disabled={disabled || loading}
+						color={selectedColor}
 						size="small"
 						aria-controls={open ? 'split-button-menu' : undefined}
 						aria-expanded={open ? 'true' : undefined}
@@ -88,7 +99,7 @@ export function SplitButtonUI(props: SplitButtonUIProps) {
 				role={undefined}
 				transition
 				disablePortal={disablePortal}
-				sx={{ zIndex: 2 }}
+				sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
 			>
 				{({ TransitionProps, placement }) => (
 					<Grow
@@ -103,9 +114,17 @@ export function SplitButtonUI(props: SplitButtonUIProps) {
 									{options.map((option, index) => (
 										<MenuItem
 											key={option.label}
+											disabled={disabled || loading}
 											selected={index === selectedIndex}
 											onClick={(event) => handleMenuItemClick(event, index)}
 										>
+											{option.icon ? (
+												<ListItemIcon
+													sx={option.color ? (theme) => ({ color: theme.palette[option.color].main }) : undefined}
+												>
+													{option.icon}
+												</ListItemIcon>
+											) : null}
 											{option.label}
 										</MenuItem>
 									))}

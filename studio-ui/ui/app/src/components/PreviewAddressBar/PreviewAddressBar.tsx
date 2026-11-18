@@ -38,12 +38,14 @@ import { usePreviewNavigation } from '../../hooks/usePreviewNavigation';
 import CircularProgress from '@mui/material/CircularProgress';
 import usePreviewState from '../../hooks/usePreviewState';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import Alert, { alertClasses } from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import ErrorOutlineOutlined from '@mui/icons-material/ErrorOutlineOutlined';
 import useEnv from '../../hooks/useEnv';
 import { Subscription } from 'rxjs';
 import { showItemMegaMenu } from '../../state/actions/dialogs';
+import DraftChip from '../DraftChip';
 
 export interface AddressBarProps {
 	site: string;
@@ -162,7 +164,7 @@ export function PreviewAddressBar(props: AddressBarProps) {
 		<>
 			<PreviewBackButton />
 			<PreviewForwardButton />
-			<Tooltip title={noSiteSet ? '' : <FormattedMessage defaultMessage="Reload this page (r)" />}>
+			<Tooltip title={noSiteSet ? '' : formatMessage({ defaultMessage: 'Reload this page (r)' })}>
 				<IconButton
 					onClick={noSiteSet ? undefined : onRefresh}
 					size="large"
@@ -177,6 +179,9 @@ export function PreviewAddressBar(props: AddressBarProps) {
 				elevation={focus ? 2 : 0}
 				sx={(theme) => ({
 					width: '300px',
+					maxWidth: '100%',
+					minWidth: 0,
+					flex: '0 1 auto',
 					borderRadius: 8,
 					padding: '2px 2px 2px 10px',
 					display: 'flex',
@@ -189,12 +194,30 @@ export function PreviewAddressBar(props: AddressBarProps) {
 				})}
 			>
 				{!focus && item && (
-					<Box
-						sx={{ width: '100%', overflow: 'hidden', cursor: 'pointer', display: 'flex' }}
+					<ButtonBase
+						sx={{
+							width: '100%',
+							minWidth: 0,
+							overflow: 'hidden',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'flex-start',
+							textAlign: 'left',
+							gap: 0.75
+						}}
 						onClick={() => setFocus(true)}
+						aria-label={formatMessage({ defaultMessage: 'Edit address for {label}' }, { label: item.label })}
 					>
-						<ItemDisplay item={item} sxs={{ root: { maxWidth: '100%' } }} showNavigableAsLinks={false} />
-					</Box>
+						<ItemDisplay
+							item={item}
+							showNavigableAsLinks={false}
+							sxs={{
+								root: { minWidth: 0, flex: '0 1 auto', overflow: 'hidden' },
+								label: { minWidth: 0 }
+							}}
+						/>
+						{item.savedAsDraft && <DraftChip size="small" sx={{ flexShrink: 0 }} />}
+					</ButtonBase>
 				)}
 				{(focus || !item) && (
 					<PagesSearchAhead
@@ -216,7 +239,7 @@ export function PreviewAddressBar(props: AddressBarProps) {
 						onBlur={() => setFocus(false)}
 					/>
 				)}
-				<Tooltip title={disableItemMenuButton ? '' : <FormattedMessage defaultMessage="Options (a)" />}>
+				<Tooltip title={disableItemMenuButton ? '' : formatMessage({ defaultMessage: 'Options (a)' })}>
 					<IconButton
 						onClick={onOptions}
 						disabled={disableItemMenuButton}

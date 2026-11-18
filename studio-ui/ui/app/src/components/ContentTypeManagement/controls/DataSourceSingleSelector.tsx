@@ -22,9 +22,7 @@ import Radio from '@mui/material/Radio';
 import { TypeBuilderControl } from '../utils';
 import { EmptyState } from '../../EmptyState';
 
-export interface DataSourceSingleSelectorProps extends TypeBuilderControl {
-	value: string;
-}
+export type DataSourceSingleSelectorProps = TypeBuilderControl<string>;
 
 /**
  * Allows the selection of a single data source compatible with the field type, using a radio group layout.

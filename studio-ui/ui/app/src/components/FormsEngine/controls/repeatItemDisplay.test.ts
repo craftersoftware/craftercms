@@ -25,6 +25,7 @@ import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
 
 const { xmlAttributePrefix } = await import('../lib/formConsts.ts');
+const { createRepeatItemKeys } = await import('../lib/repeatItemKeys.ts');
 const { getRepeatItemSummary, getRepeatItemTitle, repeatDisplayFieldIds, repeatSortItems } =
 	await import('./repeatItemDisplay.ts');
 
@@ -72,7 +73,7 @@ describe('repeat item display', () => {
 
 	it('reorders with the corrected title and keeps the stored item', () => {
 		const item = { unicode: 'U+0041', [attribute]: 'legacy', key: 'alpha', value: 'Alpha' };
-		const [entry] = repeatSortItems([item], fields);
+		const [entry] = repeatSortItems([item], fields, createRepeatItemKeys());
 		assert.equal(entry.value, 'alpha');
 		assert.equal(entry.data, item);
 	});

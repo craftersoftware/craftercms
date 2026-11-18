@@ -28,7 +28,6 @@ import {
 	closeCreateFolderDialog,
 	closeDeleteDialog,
 	closeDependenciesDialog,
-	closeEditDialog,
 	closeEditSiteDialog,
 	closeErrorDialog,
 	closeFolderMoveAlertDialog,
@@ -58,7 +57,6 @@ import {
 	showCreateFolderDialog,
 	showDeleteDialog,
 	showDependenciesDialog,
-	showEditDialog,
 	showEditSiteDialog,
 	showErrorDialog,
 	showFolderMoveAlertDialog,
@@ -83,7 +81,6 @@ import {
 	updateCreateFileDialog,
 	updateCreateFolderDialog,
 	updateDeleteDialog,
-	updateEditDialogConfig,
 	updateEditSiteDialog,
 	updatePreviewDialog,
 	updatePublishDialog,
@@ -131,16 +128,10 @@ const dialogsMap = {
 	[showBrokenReferencesDialog.type]: 'craftercms.components.BrokenReferencesDialog',
 	[showRenameAssetDialog.type]: 'craftercms.components.RenameAssetDialog',
 	[showDeleteDialog.type]: 'craftercms.components.DeleteDialog',
-	[showEditDialog.type]: 'craftercms.components.LegacyFormDialog',
 	[showFolderMoveAlertDialog.type]: 'craftercms.components.FolderMoveAlertDialog'
 };
 
-const allowMinimizeDialogs = [
-	showPreviewDialog.type,
-	showCodeEditorDialog.type,
-	showEditDialog.type,
-	showWidgetDialog.type
-];
+const allowMinimizeDialogs = [showPreviewDialog.type, showCodeEditorDialog.type, showWidgetDialog.type];
 const allowFullScreenDialogs = [showPreviewDialog.type, showCodeEditorDialog.type];
 
 const showDialogsEpics: CrafterCMSEpic[] = [
@@ -173,7 +164,6 @@ const showDialogsEpics: CrafterCMSEpic[] = [
 				showBrokenReferencesDialog.type,
 				showRenameAssetDialog.type,
 				showDeleteDialog.type,
-				showEditDialog.type,
 				showFolderMoveAlertDialog.type
 			),
 			withLatestFrom(state$),
@@ -187,8 +177,8 @@ const showDialogsEpics: CrafterCMSEpic[] = [
 				});
 
 				const isDialogOpen = Boolean(state.dialogStack.byId[dialogId]);
-				// If showEditDialog or showCodeEditorDialog is already open, do not open another one
-				if ((type === showEditDialog.type || type === showCodeEditorDialog.type) && isDialogOpen) return EMPTY;
+				// If showCodeEditorDialog is already open, do not open another one
+				if (type === showCodeEditorDialog.type && isDialogOpen) return EMPTY;
 
 				return pushDialog({
 					id: dialogId,
@@ -224,8 +214,7 @@ const showDialogsEpics: CrafterCMSEpic[] = [
 				updateBulkCancelPackageDialog.type,
 				updateBrokenReferencesDialog.type,
 				updateRenameAssetDialog.type,
-				updateDeleteDialog.type,
-				updateEditDialogConfig.type
+				updateDeleteDialog.type
 			),
 			withLatestFrom(state$),
 			map(([{ payload, type }]) => {
@@ -270,7 +259,6 @@ const showDialogsEpics: CrafterCMSEpic[] = [
 				closeBrokenReferencesDialog.type,
 				closeRenameAssetDialog.type,
 				closeDeleteDialog.type,
-				closeEditDialog.type,
 				closeFolderMoveAlertDialog.type
 			),
 			withLatestFrom(state$),

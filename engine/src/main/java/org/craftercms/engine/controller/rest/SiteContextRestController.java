@@ -17,8 +17,8 @@
 package org.craftercms.engine.controller.rest;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.lang3.StringUtils;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
+import org.craftercms.commons.http.ManagementTokenUtils;
 import org.craftercms.core.controller.rest.CrafterRestController;
 import org.craftercms.core.controller.rest.RestControllerBase;
 import org.craftercms.engine.event.SiteContextCreatedEvent;
@@ -27,7 +27,6 @@ import org.craftercms.engine.service.context.SiteContext;
 import org.craftercms.engine.service.context.SiteContextManager;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.beans.ConstructorProperties;
 import java.util.Collections;
@@ -66,15 +65,15 @@ public class SiteContextRestController extends RestControllerBase {
 	}
 
 	@GetMapping(value = URL_CONTEXT_ID, produces = APPLICATION_JSON_VALUE)
-	public Map<String, String> getContextId(@RequestParam String token) throws InvalidManagementTokenException {
-		validateToken(token);
+	public Map<String, String> getContextId(HttpServletRequest request) throws InvalidManagementTokenException {
+		validateToken(request);
 
 		return Collections.singletonMap(MODEL_ATTR_ID, SiteContext.getCurrent().getContext().getId());
 	}
 
 	@GetMapping(value = URL_DESTROY, produces = APPLICATION_JSON_VALUE)
-	public Map<String, Object> destroy(@RequestParam String token) throws InvalidManagementTokenException {
-		validateToken(token);
+	public Map<String, Object> destroy(HttpServletRequest request) throws InvalidManagementTokenException {
+		validateToken(request);
 
 		String siteName = SiteContext.getCurrent().getSiteName();
 
@@ -85,17 +84,17 @@ public class SiteContextRestController extends RestControllerBase {
 	}
 
 	@GetMapping(value = URL_REBUILD_ALL, produces = APPLICATION_JSON_VALUE)
-	public Map<String, Object> rebuildAll(@RequestParam String token) throws InvalidManagementTokenException {
-		validateToken(token);
+	public Map<String, Object> rebuildAll(HttpServletRequest request) throws InvalidManagementTokenException {
+		validateToken(request);
 		contextManager.startRebuildAll();
 
 		return createResponseMessage("Started rebuild of all site contexts");
 	}
 
 	@GetMapping(value = URL_REBUILD, produces = APPLICATION_JSON_VALUE)
-	public Map<String, Object> rebuild(HttpServletRequest request, @RequestParam String token)
+	public Map<String, Object> rebuild(HttpServletRequest request)
 		throws InvalidManagementTokenException {
-		validateToken(token);
+		validateToken(request);
 
 		SiteContext siteContext = SiteContext.getCurrent();
 		String siteName = siteContext.getSiteName();
@@ -112,9 +111,9 @@ public class SiteContextRestController extends RestControllerBase {
 	}
 
 	@GetMapping(value = URL_GRAPHQL + URL_REBUILD, produces = APPLICATION_JSON_VALUE)
-	public Map<String, Object> rebuildSchema(HttpServletRequest request, @RequestParam String token)
+	public Map<String, Object> rebuildSchema(HttpServletRequest request)
 		throws InvalidManagementTokenException {
-		validateToken(token);
+		validateToken(request);
 
 		SiteContext siteContext = SiteContext.getCurrent();
 		String siteName = siteContext.getSiteName();
@@ -131,15 +130,13 @@ public class SiteContextRestController extends RestControllerBase {
 	}
 
 	@GetMapping(value = URL_STATUS, produces = APPLICATION_JSON_VALUE)
-	public Map<String, Object> getStatus(@RequestParam String token) throws InvalidManagementTokenException {
-		validateToken(token);
+	public Map<String, Object> getStatus(HttpServletRequest request) throws InvalidManagementTokenException {
+		validateToken(request);
 
 		return createSingletonModifiableMap(MODEL_ATTR_STATUS, SiteContext.getCurrent().getState());
 	}
 
-	protected final void validateToken(final String requestToken) throws InvalidManagementTokenException {
-		if (!StringUtils.equals(requestToken, configuredToken)) {
-			throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
-		}
+	protected final void validateToken(HttpServletRequest request) throws InvalidManagementTokenException {
+		ManagementTokenUtils.validateToken(request, configuredToken);
 	}
 }

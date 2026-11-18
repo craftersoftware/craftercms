@@ -18,19 +18,19 @@ import React, { useId, useState } from 'react';
 import Box from '@mui/material/Box';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import TextField, { TextFieldProps } from '@mui/material/TextField';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import IconButton from '@mui/material/IconButton';
 import CompareArrowsOutlinedIcon from '@mui/icons-material/CompareArrowsOutlined';
 import Tooltip from '@mui/material/Tooltip';
 import { TypeBuilderControl } from '../utils';
 
-export interface RangeProps extends TypeBuilderControl {
-	value: {
-		exact: string;
-		min: string;
-		max: string;
-	};
+interface RangeValue {
+	exact: string;
+	min: string;
+	max: string;
 }
+
+export type RangeProps = TypeBuilderControl<RangeValue>;
 
 /**
  * Enables selection of a range of values through two text fields.
@@ -43,6 +43,7 @@ export interface RangeProps extends TypeBuilderControl {
 export function Range(props: RangeProps) {
 	const { value, field, setValue } = props;
 	const htmlId = useId();
+	const { formatMessage } = useIntl();
 	const maxLength = field.validations.maxLength?.value;
 	const minValue = value?.min ? (isNaN(parseInt(value.min)) ? 0 : parseInt(value.min)) : null;
 	const maxValue = value?.max ? (isNaN(parseInt(value.max)) ? 0 : parseInt(value.max)) : null;
@@ -78,7 +79,7 @@ export function Range(props: RangeProps) {
 						alignItems: 'center'
 					}}
 				>
-					<Tooltip title={<FormattedMessage defaultMessage="Switch mode" />}>
+					<Tooltip title={formatMessage({ defaultMessage: 'Switch mode' })}>
 						<IconButton onClick={switchRange}>
 							<CompareArrowsOutlinedIcon />
 						</IconButton>

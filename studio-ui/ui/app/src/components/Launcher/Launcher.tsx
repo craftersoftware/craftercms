@@ -25,7 +25,6 @@ import IconButton from '@mui/material/IconButton';
 import { useDispatch } from 'react-redux';
 import { getInitials } from '../../utils/string';
 import { changeSite } from '../../state/actions/sites';
-import palette from '../../styles/palette';
 import Avatar from '@mui/material/Avatar';
 import ExitToAppRoundedIcon from '@mui/icons-material/ExitToAppRounded';
 import Card from '@mui/material/Card';
@@ -140,9 +139,9 @@ const UserDisplaySection = ({ formatMessage, user, onLogout }) => (
 					<Avatar
 						aria-hidden="true"
 						sx={{
-							color: palette.white,
+							color: (theme) => theme.palette.error.contrastText,
 							textTransform: 'uppercase',
-							backgroundColor: palette.red.main
+							backgroundColor: (theme) => theme.palette.error.main
 						}}
 						children={getInitials(`${user.firstName} ${user.lastName}`)}
 					/>

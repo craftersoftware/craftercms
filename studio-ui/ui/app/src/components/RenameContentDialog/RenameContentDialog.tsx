@@ -33,11 +33,12 @@ export interface RenameContentDialogProps extends EnhancedDialogProps {
 	value?: string;
 	validRenameValue?: string; // Specifies a literal item name value (e.g. 'new-article') that is permitted for renaming content. If the user enters this value, it will be accepted even if it doesn't meet the usual validation criteria.
 	// e.g.: If validRenameValue is 'new-article', the user can enter 'new-article' even if it already exists. This allows renaming back to the original item name.
+	maxLength?: number;
 	onRenamed(name: string): void;
 }
 
 export function RenameContentDialog(props: RenameContentDialogProps) {
-	const { path, value, validRenameValue, onRenamed, ...dialogProps } = props;
+	const { path, value, validRenameValue, maxLength, onRenamed, ...dialogProps } = props;
 	const [dependantItems, setDependantItems] = useState<LightItem[]>([]);
 	const [fetchingDependantItems, setFetchingDependantItems] = useState(false);
 	const [error, setError] = useState(null);
@@ -97,6 +98,7 @@ export function RenameContentDialog(props: RenameContentDialogProps) {
 				path={path}
 				value={value}
 				validRenameValue={validRenameValue}
+				maxLength={maxLength}
 				fetchDependant={fetchDependant}
 				dependantItems={dependantItems}
 				fetchingDependantItems={fetchingDependantItems}

@@ -1,0 +1,55 @@
+// Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License version 3 as published by
+// the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+// The one Studio keyboard focus ring for the legacy SCSS. These values mirror
+// ui/app/src/styles/focusRing.ts (contrast table there); focusRing.test.ts fails if they drift.
+// It only defines variables and mixins, and its header is a silent comment, so it emits no CSS.
+// Any file can `@import 'focus-ring';` (or '../focus-ring') as often as it likes.
+
+$focus-ring-color-light: #0068da;
+$focus-ring-color-dark: #54a6ff;
+$focus-ring-width: 2px;
+$focus-ring-offset: 2px;
+
+// $inset: draw inside the element, for anything an ancestor clips.
+// $dark: `media` follows prefers-color-scheme, like _dark-mode.scss. Pass a selector such as
+//   '.ace_dark' when the dark surface is set by a class on an ancestor instead, or null for light only.
+// $important: add !important, for markup that third-party CSS also styles.
+@mixin focus-ring($inset: false, $dark: media, $important: false) {
+	$offset: if($inset, -$focus-ring-offset, $focus-ring-offset);
+	@if $important {
+		outline: $focus-ring-width solid $focus-ring-color-light !important;
+		outline-offset: $offset !important;
+	} @else {
+		outline: $focus-ring-width solid $focus-ring-color-light;
+		outline-offset: $offset;
+	}
+	@if $dark == media {
+		@media (prefers-color-scheme: dark) {
+			@include focus-ring-dark-color($important);
+		}
+	} @else if $dark {
+		@at-root #{selector-nest($dark, &)} {
+			@include focus-ring-dark-color($important);
+		}
+	}
+}
+
+@mixin focus-ring-dark-color($important: false) {
+	@if $important {
+		outline-color: $focus-ring-color-dark !important;
+	} @else {
+		outline-color: $focus-ring-color-dark;
+	}
+}

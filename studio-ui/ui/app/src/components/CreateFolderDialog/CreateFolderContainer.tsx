@@ -306,7 +306,7 @@ export function CreateFolderContainer(props: CreateFolderContainerProps) {
 									<FormControl fullWidth>
 										<TextFieldWithMax
 											value={cancelPackagesComment}
-											label={<FormattedMessage defaultMessage="Cancellation comment" />}
+											label={<FormattedMessage defaultMessage="Cancellation Comment" />}
 											fullWidth
 											multiline
 											onChange={(e) => setCancelPackagesComment(e.target.value)}

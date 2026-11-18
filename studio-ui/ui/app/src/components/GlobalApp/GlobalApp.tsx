@@ -16,9 +16,14 @@
 
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import LauncherGlobalNav from '../LauncherGlobalNav/LauncherGlobalNav';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
+import { sidebarFirstRowInset, sidebarFooterPadding } from '../ResizeableDrawer/sidebarSpacing';
 import {
 	createHashRouter,
 	createRoutesFromElements,
@@ -29,7 +34,8 @@ import {
 	useLocation
 } from 'react-router';
 import SiteManagement from '../SiteManagement';
-import { getLauncherSectionLink, urlMapping } from '../LauncherSection/utils';
+import { getLauncherSectionLink, messages as launcherMessages, urlMapping } from '../LauncherSection/utils';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 import EmptyState from '../EmptyState/EmptyState';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useGlobalAppState } from './GlobalAppContext';
@@ -38,10 +44,14 @@ import CrafterCMSLogo from '../../icons/CrafterCMSLogo';
 import LoadingState from '../LoadingState/LoadingState';
 import LauncherOpenerButton from '../LauncherOpenerButton';
 import { useGlobalNavigation } from '../../hooks/useGlobalNavigation';
+import { useEnv } from '../../hooks/useEnv';
 import GlobalAppToolbar from '../GlobalAppToolbar';
 import Skeleton from '@mui/material/Skeleton';
 import { globalMenuMessages } from '../../env/i18n-legacy';
 import { GlobalRoutes } from '../../env/routes';
+import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
+import SystemIcon from '../SystemIcon';
+import ApiResponseErrorState from '../ApiResponseErrorState';
 
 const routeWrapper = (module) => ({ ...module, Component: module.default });
 
@@ -103,6 +113,11 @@ export function GlobalApp(props: GlobalAppProps) {
 
 function RouteNotFound() {
 	const { pathname } = useLocation();
+	const { formatMessage } = useIntl();
+	const pageNotFound = formatMessage({ id: 'globalApp.pageNotFound', defaultMessage: 'Page not found' });
+	useEffect(() => {
+		document.title = studioDocumentTitle(pageNotFound);
+	}, [pageNotFound]);
 	return (
 		<Box
 			sx={{
@@ -121,7 +136,8 @@ function RouteNotFound() {
 						margin: 0
 					}
 				}}
-				title="404"
+				title={pageNotFound}
+				titleComponent="h1"
 				subtitle={
 					<FormattedMessage
 						id={'globalApp.routeNotFound'}
@@ -131,6 +147,69 @@ function RouteNotFound() {
 				}
 			/>
 		</Box>
+	);
+}
+
+function globalNavItemSelected(itemId: string, pathname: string): boolean {
+	const hash = urlMapping[itemId];
+	if (!hash) {
+		return false;
+	}
+	const path = hash.replace(/^#/, '');
+	// `/sites` remains as a backwards-compatible alias of Projects.
+	return pathname === path || (pathname === '/sites' && path === GlobalRoutes.Projects);
+}
+
+function GlobalSidebarNav() {
+	const { items, error } = useGlobalNavigation();
+	const { authoringBase } = useEnv();
+	const { pathname } = useLocation();
+	const { formatMessage } = useIntl();
+	if (error) {
+		return <ApiResponseErrorState error={error.response ?? error} />;
+	}
+	return (
+		<List
+			disablePadding
+			// Matches where the first Project Tools row starts (header top inset + header margin, 26px by default).
+			// On the list, not the drawer, so rows still span the sidebar edges and the selected bar stays flush.
+			sx={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0, pt: sidebarFirstRowInset }}
+		>
+			{/* Placeholder rows while the menu loads. Hidden from assistive tech so they aren't read as empty items. */}
+			{!items &&
+				[0, 1, 2, 3].map((i) => (
+					<ListItem key={i} aria-hidden="true" sx={{ px: 2 }}>
+						<Skeleton width="100%" height={36} />
+					</ListItem>
+				))}
+			{items?.map((item) => {
+				const selected = globalNavItemSelected(item.id, pathname);
+				const label = globalMenuMessages[item.id] ? formatMessage(globalMenuMessages[item.id]) : item.id;
+				return (
+					<ListItem key={item.id} disablePadding>
+						<ListItemButton
+							component="a"
+							href={getLauncherSectionLink(item.id, authoringBase)}
+							selected={selected}
+							aria-current={selected ? 'page' : undefined}
+						>
+							<ListItemIcon>
+								<SystemIcon icon={item.icon} svgIconProps={{ fontSize: 'small', color: 'action' }} />
+							</ListItemIcon>
+							<ListItemText primary={label} />
+						</ListItemButton>
+					</ListItem>
+				);
+			})}
+			<ListItem disablePadding>
+				<ListItemButton component="a" href="https://craftercms.com/docs" target="_blank" rel="noopener noreferrer">
+					<ListItemIcon>
+						<SystemIcon icon={{ id: 'craftercms.icons.Docs' }} svgIconProps={{ fontSize: 'small', color: 'action' }} />
+					</ListItemIcon>
+					<ListItemText primary={formatMessage(launcherMessages.docs)} />
+				</ListItemButton>
+			</ListItem>
+		</List>
 	);
 }
 
@@ -151,60 +230,48 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 	);
 	useEffect(() => {
 		const path = location.pathname;
-		const id = idByPathLookup?.[path];
-		document.title = `CrafterCMS - ${formatMessage(
-			globalMenuMessages[id] ?? {
-				id: 'globalApp.routeNotFound',
-				defaultMessage: 'Route not found'
-			}
-		)}`;
+		// `/` redirects to the first launcher item. Don't flash a 404 title while that settles.
+		if (path === '/') {
+			return;
+		}
+		const id = path === '/sites' ? 'home.globalMenu.sites' : idByPathLookup?.[path];
+		const descriptor = id ? globalMenuMessages[id] : undefined;
+		if (descriptor) {
+			document.title = studioDocumentTitle(formatMessage(descriptor));
+		}
 	}, [formatMessage, idByPathLookup, location.pathname]);
 	return (
 		<Paper sx={{ height: '100vh', width: '100%' }} elevation={0}>
+			<SkipToMainContent />
+			{/* The sidebar comes before main in the DOM so Tab follows the visual order: skip link, sidebar, content. */}
 			<ResizeableDrawer
+				landmark="nav"
+				landmarkLabel={formatMessage(launcherMessages.global)}
 				sxs={{
 					drawerPaper: {
-						top: '0',
-						padding: 2
+						top: '0'
 					},
 					drawerBody: {
 						height: '100%',
 						display: 'flex',
 						flexDirection: 'column',
-						justifyContent: 'space-between'
+						justifyContent: 'space-between',
+						overflow: 'hidden'
 					}
 				}}
 				open={openSidebar}
 				width={width}
 				onWidthChange={setWidth}
 			>
-				<LauncherGlobalNav
-					title=""
-					sectionSxs={{
-						nav: {
-							maxHeight: '100%',
-							overflow: 'auto'
-						}
+				<GlobalSidebarNav />
+				<Box
+					component="footer"
+					sx={{
+						padding: sidebarFooterPadding,
+						textAlign: 'center',
+						flexShrink: 0
 					}}
-					tileSxs={{
-						tile: {
-							width: '100%',
-							height: '35px',
-							flexDirection: 'row',
-							justifyContent: 'left',
-							margin: '0 0 5px'
-						},
-						iconAvatar: {
-							width: '25px',
-							height: '25px',
-							margin: '5px 10px'
-						},
-						title: {
-							textAlign: 'left'
-						}
-					}}
-				/>
-				<Box component="footer" sx={{ padding: '20px 0', textAlign: 'center' }}>
+				>
 					<CrafterCMSLogo width={100} sxs={{ root: { margin: '0 auto 10px auto' } }} />
 					<Typography
 						component="p"
@@ -221,14 +288,18 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 				</Box>
 			</ResizeableDrawer>
 			<Box
+				component="main"
+				id={STUDIO_MAIN_CONTENT_ID}
+				tabIndex={-1}
 				sx={[
+					mainLandmarkSx,
 					{
 						height: '100%',
-						width: '100%',
-						paddingLeft: openSidebar ? `${width}px` : 0
+						width: 'auto',
+						marginLeft: openSidebar ? `${width}px` : 0
 					},
 					(theme) => ({
-						transition: theme.transitions.create('padding-left', {
+						transition: theme.transitions.create('margin-left', {
 							easing: theme.transitions.easing.easeOut,
 							duration: theme.transitions.duration.enteringScreen
 						})

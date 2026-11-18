@@ -421,6 +421,13 @@
 		<constructor-arg name="store" ref="deploymentEventsStore"/>
 	</bean>
 
+	<bean id="s3ContentStoreManifestProcessor" parent="deploymentProcessor"
+	      class="org.craftercms.deployer.impl.processors.aws.S3ContentStoreManifestProcessor">
+		<constructor-arg name="threadPoolTaskExecutor" ref="s3ExecutorService"/>
+		<constructor-arg name="localRepoUrl" value="${target.localRepoPath}"/>
+		<constructor-arg name="blobExtension" value="${deployer.main.targets.config.blob.file.extension}"/>
+	</bean>
+
 	<bean id="s3DeploymentEventsProcessor" parent="deploymentProcessor"
 	      class="org.craftercms.deployer.impl.processors.aws.S3DeploymentEventsProcessor">
 		<constructor-arg name="threadPoolTaskExecutor" ref="s3ExecutorService"/>

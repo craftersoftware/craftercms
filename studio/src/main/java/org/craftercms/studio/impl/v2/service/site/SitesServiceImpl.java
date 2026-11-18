@@ -196,6 +196,11 @@ public class SitesServiceImpl implements SitesService {
 	}
 
 	@Override
+	public List<String> getDeliverableSiteIds() {
+		return sitesServiceInternal.getDeliverableSiteIds();
+	}
+
+	@Override
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_PUBLISH_STATUS)
 	public void updatePublishingStatus(String siteId, String status) {
 		sitesServiceInternal.updatePublishingStatus(siteId, status);

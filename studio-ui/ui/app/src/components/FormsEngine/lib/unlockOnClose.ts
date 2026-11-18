@@ -1,0 +1,370 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/** Body shown in the unlock error dialog. Matches `ApiResponse` without importing the app graph. */
+export interface UnlockErrorBody {
+	code?: number | string;
+	message?: string;
+	remedialAction?: string;
+	documentationUrl?: string;
+}
+
+/**
+ * What is known about the lock when a form is going away.
+ * Draft, invalid, and saved-as-draft are not inputs: closing releases the lock anyway.
+ * An unsaved file-name edit is not a rename — `lockedPath` stays the path that was locked.
+ * `releaseLockOnClose` is the user's "Release lock when closing" choice, read when the form goes away.
+ */
+export interface UnlockOnCloseState {
+	isRepeatMode: boolean;
+	isCreateMode: boolean;
+	readonly: boolean;
+	isEmbedded: boolean;
+	isStackedForm: boolean;
+	isParentReadonly: boolean;
+	siteId: string;
+	/**
+	 * When false, close and pagehide keep the lock. The Release Lock button does not use this.
+	 * Defaults to releasing when omitted.
+	 */
+	releaseLockOnClose?: boolean;
+	/** Path recorded from the successful lock, updated when a saved rename moves the lock. */
+	lockedPath: string | null;
+}
+
+export interface HeldLockRecord {
+	locked: boolean;
+	lockedPath?: string | null;
+}
+
+/**
+ * Whether this form should release a lock it holds.
+ * Repeat items share the parent lock. Create mode never takes one. Readonly did not take one
+ * (or already released it). An embedded form stacked on an editable parent uses that parent's lock.
+ * An embedded form stacked on a readonly parent locks the item itself and must release it.
+ */
+export function shouldUnlockItem(state: UnlockOnCloseState): boolean {
+	if (!state.lockedPath) return false;
+	// The user asked to keep the lock. Minimize never reaches this: the form stays mounted.
+	if (state.releaseLockOnClose === false) return false;
+	return (
+		!state.isRepeatMode &&
+		!state.isCreateMode &&
+		!state.readonly &&
+		// Not embedded: this form holds the lock.
+		(!state.isEmbedded ||
+			// Embedded but not stacked: it is the root form.
+			!state.isStackedForm ||
+			// Stacked on a readonly parent: this form took the lock and must put the parent back.
+			state.isParentReadonly)
+	);
+}
+
+/** Path to unlock, or null when this close must leave the lock alone. */
+export function lockPathToRelease(state: UnlockOnCloseState): string | null {
+	return shouldUnlockItem(state) ? state.lockedPath : null;
+}
+
+/**
+ * A saved move updates the same item row to `nextPath`. `locked_by` stays on that row, but
+ * `ItemDAO.moveItem` clears the USER_LOCKED state bit, so the server-side lock after a rename
+ * is weaker than a normal user lock. Unlock the new path. The old path no longer exists.
+ * Returns null when this form is not holding a lock.
+ */
+export function applySavedRenameToLock(
+	current: HeldLockRecord,
+	nextPath: string
+): Pick<HeldLockRecord, 'lockedPath'> | null {
+	if (!current.locked && !current.lockedPath) return null;
+	return { lockedPath: nextPath };
+}
+
+/**
+ * Pushing a deeper stacked form unmounts the covered form while its entry stays in the stack.
+ * That unmount must not release the lock. Popping the entry, or unmounting the top form, still does.
+ * pagehide is a real leave, so it is not skipped.
+ */
+export function keepLockOnStackedUnmount(args: {
+	via: 'pagehide' | 'unmount';
+	isStackedForm: boolean;
+	entryStillOnStack: boolean;
+	coveredByDeeperForm: boolean;
+}): boolean {
+	return args.via === 'unmount' && args.isStackedForm && args.entryStillOnStack && args.coveredByDeeperForm;
+}
+
+/**
+ * Root reload pops every stacked form. The mounted top releases itself on unmount.
+ * Covered entries have no bootstrap, so they are released here instead.
+ */
+export function entriesReleasedOnStackRemoval<T>(args: {
+	stack: readonly T[];
+	closeCount: number;
+	mounted: T | null;
+}): T[] {
+	const remaining = args.stack.slice();
+	const released: T[] = [];
+	const count = Math.min(Math.max(args.closeCount, 0), remaining.length);
+	for (let i = 0; i < count; i++) {
+		const entry = remaining.pop();
+		if (entry != null && entry !== args.mounted) released.push(entry);
+	}
+	return released;
+}
+
+/**
+ * One root-form session. A path may be locked again after it was released, so dedup is the
+ * stack entry (that acquisition), not the path. pagehide and unmount share the entry.
+ * Parent readonly is remembered before a mounted entry is popped: its unmount runs after
+ * root reload has already removed the parent.
+ * It also holds the two hooks the root and the mounted stacked form register while they are on screen,
+ * so the forms set them through methods instead of writing to the shared context.
+ */
+export interface FormLockReleaseSession<T extends object = object> {
+	rememberParentReadonly(entry: object, parentReadonly: boolean): void;
+	parentReadonly(entry: object, liveParentReadonly: boolean): boolean;
+	/** Sends the unlock on the first call for this entry. Later calls return null. */
+	releaseOnce(entry: object, state: UnlockOnCloseState, send: (path: string) => void): string | null;
+	/** The stacked bootstrap that is mounted, if any. It releases its own lock on unmount. */
+	getMountedEntry(): T | null;
+	setMountedEntry(entry: T | null): void;
+	/** Clears the mounted entry only if it is still `entry`, so a newer mount is not wiped by an older cleanup. */
+	clearMountedEntry(entry: T): void;
+	/** Registered by the root. Releases a removed entry that has no mounted bootstrap. */
+	setReleaseUnmounted(release: ((entry: T) => void) | null): void;
+	releaseUnmounted(entry: T): void;
+}
+
+export function createFormLockReleaseSession<T extends object = object>(): FormLockReleaseSession<T> {
+	const released = new WeakSet<object>();
+	const parentReadonlyByEntry = new WeakMap<object, boolean>();
+	let mountedEntry: T | null = null;
+	let releaseUnmounted: ((entry: T) => void) | null = null;
+	return {
+		rememberParentReadonly(entry, parentReadonly) {
+			if (!parentReadonlyByEntry.has(entry)) parentReadonlyByEntry.set(entry, parentReadonly);
+		},
+		parentReadonly(entry, liveParentReadonly) {
+			const remembered = parentReadonlyByEntry.get(entry);
+			return remembered !== undefined ? remembered : liveParentReadonly;
+		},
+		releaseOnce(entry, state, send) {
+			const path = lockPathToRelease(state);
+			if (!path) return null;
+			if (released.has(entry)) return null;
+			released.add(entry);
+			send(path);
+			return path;
+		},
+		getMountedEntry() {
+			return mountedEntry;
+		},
+		setMountedEntry(entry) {
+			mountedEntry = entry;
+		},
+		clearMountedEntry(entry) {
+			if (mountedEntry === entry) mountedEntry = null;
+		},
+		setReleaseUnmounted(release) {
+			releaseUnmounted = release;
+		},
+		releaseUnmounted(entry) {
+			releaseUnmounted?.(entry);
+		}
+	};
+}
+
+/**
+ * One pop during close or root reload, before the entry is removed.
+ * A covered entry is released now. The mounted top is only marked, because it unmounts later.
+ */
+export function prepareStackedFormPop<T extends object>(args: {
+	stack: readonly T[];
+	mounted: T | null;
+	session: FormLockReleaseSession;
+	parentReadonly(parent: T): boolean;
+	releaseCovered(entry: T): void;
+}): { mounted: T | null } {
+	const removed = args.stack[args.stack.length - 1];
+	if (!removed) return { mounted: args.mounted };
+	const [covered] = entriesReleasedOnStackRemoval({
+		stack: args.stack,
+		closeCount: 1,
+		mounted: args.mounted
+	});
+	if (covered) {
+		args.releaseCovered(covered);
+		return { mounted: args.mounted };
+	}
+	const index = args.stack.lastIndexOf(removed);
+	const parent = index > 0 ? args.stack[index - 1] : undefined;
+	args.session.rememberParentReadonly(removed, parent ? args.parentReadonly(parent) : false);
+	return { mounted: null };
+}
+
+/**
+ * "Release lock when closing". A stored choice wins because storage is shared across dialog stores.
+ * The form's atom covers a missing or unreadable value. Absent in both means release.
+ */
+export function resolveReleaseLockOnClose(
+	stored: boolean | null | undefined,
+	atomChoice: boolean | undefined
+): boolean {
+	return stored ?? atomChoice !== false;
+}
+
+/**
+ * The close decision input for one stack entry, from plain values the form already holds.
+ * `lockedPath` is the recorded lock, else the item's own path, and only while the lock is held.
+ * A form whose atoms are not ready yet is readonly, so it never unlocks.
+ */
+export function unlockStateForEntry(args: {
+	atomsReady: boolean;
+	index: number;
+	repeatFieldId?: string;
+	createPath?: string;
+	updateModelId?: string;
+	readonly: boolean;
+	locked: boolean;
+	recordedLockedPath?: string | null;
+	itemPath?: string | null;
+	parentReadonly: boolean;
+	siteId: string;
+	storedReleaseLockOnClose: boolean | null | undefined;
+	atomReleaseLockOnClose: boolean | undefined;
+}): UnlockOnCloseState {
+	return {
+		isRepeatMode: Boolean(args.repeatFieldId),
+		isCreateMode: Boolean(args.createPath),
+		readonly: args.atomsReady ? args.readonly : true,
+		isEmbedded: Boolean(args.updateModelId),
+		isStackedForm: args.index > 0,
+		isParentReadonly: args.parentReadonly,
+		siteId: args.siteId,
+		lockedPath: args.locked ? args.recordedLockedPath || args.itemPath || null : null,
+		releaseLockOnClose: resolveReleaseLockOnClose(args.storedReleaseLockOnClose, args.atomReleaseLockOnClose)
+	};
+}
+
+/**
+ * Everything the form session does when it goes away or the page is hidden, minus React.
+ * This form releases its own lock unless a deeper form only covers it. The root also releases the locks of
+ * covered stacked forms, which have no bootstrap of their own. Each stack entry sends at most once.
+ */
+export function releaseFormSessionLocks<T extends object>(args: {
+	via: 'pagehide' | 'unmount';
+	entry: T | null | undefined;
+	state: UnlockOnCloseState;
+	entryStillOnStack: boolean;
+	coveredByDeeperForm: boolean;
+	isRoot: boolean;
+	/** Stack entries between the root and the mounted top, with their close state. Read only for the root. */
+	readCovered(): Array<{ entry: T | null | undefined; state: UnlockOnCloseState }>;
+	session: FormLockReleaseSession | undefined;
+	send(entry: T, state: UnlockOnCloseState, path: string): void;
+}): void {
+	if (
+		keepLockOnStackedUnmount({
+			via: args.via,
+			isStackedForm: args.state.isStackedForm,
+			entryStillOnStack: args.entryStillOnStack,
+			coveredByDeeperForm: args.coveredByDeeperForm
+		})
+	) {
+		return;
+	}
+	const release = (entry: T, state: UnlockOnCloseState) => {
+		args.session?.releaseOnce(entry, state, (path) => args.send(entry, state, path));
+	};
+	if (args.entry) release(args.entry, args.state);
+	if (!args.isRoot) return;
+	for (const covered of args.readCovered()) {
+		if (covered.entry && lockPathToRelease(covered.state)) release(covered.entry, covered.state);
+	}
+}
+
+const storedAtomsByKey = new Map<string, unknown>();
+
+/** One atom per storage key. Stacked forms and the root then share the per-user value in one store. */
+export function sharedPerUserAtom<T>(key: string, create: () => T): T {
+	const existing = storedAtomsByKey.get(key);
+	if (existing !== undefined) return existing as T;
+	const created = create();
+	storedAtomsByKey.set(key, created);
+	return created;
+}
+
+/** Payload for the error dialog. Keeps the API body when the server sent one. */
+export function unlockErrorPayload(error: {
+	status?: number;
+	message?: string;
+	response?: { response?: UnlockErrorBody; message?: string } | UnlockErrorBody | null;
+}): UnlockErrorBody {
+	const response = error.response;
+	if (response && typeof response === 'object') {
+		const nested = (response as { response?: UnlockErrorBody }).response;
+		if (nested && typeof nested === 'object') return nested;
+		if ('message' in response || 'code' in response) return response as UnlockErrorBody;
+	}
+	return {
+		code: error.status,
+		message: error.message || 'An error occurred unlocking the item.'
+	};
+}
+
+/** Release Lock failed when the unlock call came back with an error. */
+export function releaseLockToggleFailed(result: { lockError?: UnlockErrorBody | null }): boolean {
+	return result.lockError != null;
+}
+
+/** `fetch` options for an unlock that must survive the document going away. */
+export function unlockKeepaliveInit(
+	siteId: string,
+	path: string,
+	headers: Record<string, string> = {}
+): { url: string; init: RequestInit } {
+	return {
+		url: `/studio/api/2/content/${siteId}/item_unlock_by_path`,
+		init: {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', ...headers },
+			body: JSON.stringify({ path }),
+			keepalive: true,
+			credentials: 'same-origin'
+		}
+	};
+}
+
+/**
+ * pagehide also fires when the page is frozen into the back/forward cache.
+ * The form is still open if the user comes back, so that case must not release the lock.
+ */
+export function shouldUnlockOnPageHide(event: { persisted?: boolean }): boolean {
+	return !event.persisted;
+}
+
+/** Best-effort unlock for pagehide. Failures are not surfaced; the page is going away. */
+export function postUnlockKeepalive(siteId: string, path: string, headers: Record<string, string> = {}): void {
+	if (typeof fetch !== 'function') return;
+	const { url, init } = unlockKeepaliveInit(siteId, path, headers);
+	try {
+		void fetch(url, init).catch(() => {
+			// The document is unloading. There is nowhere to report this.
+		});
+	} catch {
+		// fetch itself rejected synchronously.
+	}
+}

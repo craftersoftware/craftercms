@@ -1,0 +1,1080 @@
+[
+	{
+		"rule": "label-content-name-mismatch",
+		"screen": "create project",
+		"theme": "dark",
+		"nodes": [
+			"button[aria-labelledby=\"*\"] <button class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			"button[aria-labelledby=\"*\"] <button class=\"MuiButtonBase-root MuiCardActionArea-root\">"
+		]
+	},
+	{
+		"rule": "label-content-name-mismatch",
+		"screen": "create project",
+		"theme": "light",
+		"nodes": [
+			"button[aria-labelledby=\"*\"] <button class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			"button[aria-labelledby=\"*\"] <button class=\"MuiButtonBase-root MuiCardActionArea-root\">"
+		]
+	},
+	{
+		"rule": "aria-input-field-name",
+		"screen": "dashboard",
+		"theme": "dark",
+		"nodes": [
+			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
+			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
+		]
+	},
+	{
+		"rule": "label",
+		"screen": "dashboard",
+		"theme": "dark",
+		"nodes": [
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(1) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(10) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(11) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(12) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(13) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(14) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(15) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(16) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(17) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(18) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(19) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(2) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(20) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(21) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(22) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(23) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(24) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(25) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(26) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(27) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(28) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(29) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(3) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(30) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(31) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(32) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(33) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(34) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(35) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(36) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(37) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(38) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(39) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(4) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(40) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(41) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(42) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(43) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(44) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(45) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(46) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(47) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(48) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(49) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(5) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(50) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(6) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(7) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(8) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(9) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">"
+		]
+	},
+	{
+		"rule": "list",
+		"screen": "dashboard",
+		"theme": "dark",
+		"nodes": [".mui-* <ul class=\"MuiList-padding MuiList-root\">"]
+	},
+	{
+		"rule": "nested-interactive",
+		"screen": "dashboard",
+		"theme": "dark",
+		"nodes": [
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(3) > .mui-*.MuiCard-root.MuiPaper-rounded > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(4) > .mui-*.MuiCard-root.MuiPaper-rounded > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(5) > .mui-*.MuiCard-root.MuiPaper-rounded > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(6) > .mui-*.MuiCard-root.MuiPaper-rounded > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(7) > .mui-*.MuiCard-root.MuiPaper-rounded > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(1) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(10) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(11) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(12) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(13) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(14) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(15) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(16) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(17) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(18) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(19) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(2) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(20) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(21) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(22) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(23) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(24) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(25) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(26) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(27) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(28) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(29) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(3) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(30) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(31) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(32) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(33) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(34) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(35) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(36) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(37) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(38) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(39) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(4) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(40) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(41) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(42) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(43) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(44) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(45) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(46) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(47) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(48) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(49) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(5) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(50) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(6) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(7) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(8) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(9) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-* > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">"
+		]
+	},
+	{
+		"rule": "aria-input-field-name",
+		"screen": "dashboard",
+		"theme": "light",
+		"nodes": [
+			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
+			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
+		]
+	},
+	{
+		"rule": "label",
+		"screen": "dashboard",
+		"theme": "light",
+		"nodes": [
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(1) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(10) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(11) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(12) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(13) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(14) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(15) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(16) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(17) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(18) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(19) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(2) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(20) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(21) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(22) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(23) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(24) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(25) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(26) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(27) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(28) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(29) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(3) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(30) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(31) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(32) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(33) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(34) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(35) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(36) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(37) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(38) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(39) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(4) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(40) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(41) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(42) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(43) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(44) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(45) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(46) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(47) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(48) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(49) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(5) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(50) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(6) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(7) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(8) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(9) > .MuiListItemIcon-root.mui-* > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">"
+		]
+	},
+	{
+		"rule": "list",
+		"screen": "dashboard",
+		"theme": "light",
+		"nodes": [".mui-* <ul class=\"MuiList-padding MuiList-root\">"]
+	},
+	{
+		"rule": "nested-interactive",
+		"screen": "dashboard",
+		"theme": "light",
+		"nodes": [
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(3) > .mui-*.MuiCard-root.MuiPaper-rounded > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(4) > .mui-*.MuiCard-root.MuiPaper-rounded > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(5) > .mui-*.MuiCard-root.MuiPaper-rounded > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(6) > .mui-*.MuiCard-root.MuiPaper-rounded > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(7) > .mui-*.MuiCard-root.MuiPaper-rounded > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(1) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(10) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(11) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(12) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(13) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(14) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(15) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(16) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(17) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(18) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(19) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(2) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(20) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(21) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(22) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(23) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(24) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(25) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(26) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(27) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(28) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(29) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(3) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(30) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(31) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(32) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(33) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(34) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(35) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(36) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(37) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(38) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(39) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(4) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(40) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(41) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(42) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(43) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(44) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(45) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(46) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(47) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(48) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(49) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(5) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(50) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(6) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(7) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(8) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(9) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-* > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">"
+		]
+	},
+	{
+		"rule": "color-contrast",
+		"screen": "edit form",
+		"theme": "light",
+		"nodes": [".Mui-selected > .mui-*.MuiBox-root[data-after-saving-label=\"\"] <span class=\"MuiBox-root\">"]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Assets",
+		"theme": "dark",
+		"nodes": [
+			"li:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			"li:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Assets",
+		"theme": "light",
+		"nodes": [
+			"li:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			"li:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Audience Targeting",
+		"theme": "dark",
+		"nodes": [
+			"li:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			"li:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Audience Targeting",
+		"theme": "light",
+		"nodes": [
+			"li:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			"li:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Create Content",
+		"theme": "dark",
+		"nodes": [
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Create Content",
+		"theme": "light",
+		"nodes": [
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Device Simulator",
+		"theme": "dark",
+		"nodes": [
+			"li:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			"li:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Device Simulator",
+		"theme": "light",
+		"nodes": [
+			"li:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			"li:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Drop Targets",
+		"theme": "dark",
+		"nodes": [
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListSubheader-root <li class=\"MuiListSubheader-gutters MuiListSubheader-root MuiListSubheader-sticky\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Drop Targets",
+		"theme": "light",
+		"nodes": [
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListSubheader-root <li class=\"MuiListSubheader-gutters MuiListSubheader-root MuiListSubheader-sticky\">"
+		]
+	},
+	{
+		"rule": "aria-input-field-name",
+		"screen": "edit mode tools panel > Existing Content",
+		"theme": "dark",
+		"nodes": [
+			".mui-* <div role=\"combobox\" class=\"MuiInputBase-input MuiOutlinedInput-input MuiSelect-outlined MuiSelect-select\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Existing Content",
+		"theme": "dark",
+		"nodes": [
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "aria-input-field-name",
+		"screen": "edit mode tools panel > Existing Content",
+		"theme": "light",
+		"nodes": [
+			".mui-* <div role=\"combobox\" class=\"MuiInputBase-input MuiOutlinedInput-input MuiSelect-outlined MuiSelect-select\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Existing Content",
+		"theme": "light",
+		"nodes": [
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Page Explorer",
+		"theme": "dark",
+		"nodes": [
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Page Explorer",
+		"theme": "light",
+		"nodes": [
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Search",
+		"theme": "dark",
+		"nodes": [
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Search",
+		"theme": "light",
+		"nodes": [
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "aria-prohibited-attr",
+		"screen": "edit mode tools panel > Settings",
+		"theme": "dark",
+		"nodes": [
+			".MuiSwitch-colorDefault <span class=\"Mui-checked MuiButtonBase-root MuiSwitch-colorDefault MuiSwitch-switchBase PrivateSwitchBase-root\">"
+		]
+	},
+	{
+		"rule": "label",
+		"screen": "edit mode tools panel > Settings",
+		"theme": "dark",
+		"nodes": [
+			".MuiSwitch-colorDefault > .MuiSwitch-input[role=\"switch\"][type=\"checkbox\"] <input role=\"switch\" class=\"MuiSwitch-input PrivateSwitchBase-input\">"
+		]
+	},
+	{
+		"rule": "list",
+		"screen": "edit mode tools panel > Settings",
+		"theme": "dark",
+		"nodes": ["ul <ul class=\"MuiList-padding MuiList-root\">"]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Settings",
+		"theme": "dark",
+		"nodes": [
+			".mui-*.MuiListItem-root.MuiListItem-gutters:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*.MuiListItem-root.MuiListItem-gutters:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "aria-prohibited-attr",
+		"screen": "edit mode tools panel > Settings",
+		"theme": "light",
+		"nodes": [
+			".MuiSwitch-colorDefault <span class=\"Mui-checked MuiButtonBase-root MuiSwitch-colorDefault MuiSwitch-switchBase PrivateSwitchBase-root\">"
+		]
+	},
+	{
+		"rule": "label",
+		"screen": "edit mode tools panel > Settings",
+		"theme": "light",
+		"nodes": [
+			".MuiSwitch-colorDefault > .MuiSwitch-input[role=\"switch\"][type=\"checkbox\"] <input role=\"switch\" class=\"MuiSwitch-input PrivateSwitchBase-input\">"
+		]
+	},
+	{
+		"rule": "list",
+		"screen": "edit mode tools panel > Settings",
+		"theme": "light",
+		"nodes": ["ul <ul class=\"MuiList-padding MuiList-root\">"]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel > Settings",
+		"theme": "light",
+		"nodes": [
+			".mui-*.MuiListItem-root.MuiListItem-gutters:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*.MuiListItem-root.MuiListItem-gutters:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel",
+		"theme": "dark",
+		"nodes": [
+			".MuiListItem-padding <li class=\"MuiListItem-gutters MuiListItem-padding MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(10) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(2) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(3) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(4) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(5) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(6) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(7) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(9) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "edit mode tools panel",
+		"theme": "light",
+		"nodes": [
+			".MuiListItem-padding <li class=\"MuiListItem-gutters MuiListItem-padding MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(10) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(2) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(3) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(4) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(5) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(6) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(7) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(9) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "preview",
+		"theme": "dark",
+		"nodes": [
+			".MuiListItem-padding <li class=\"MuiListItem-gutters MuiListItem-padding MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(10) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(2) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(3) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(4) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(5) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(6) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(7) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(9) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "preview",
+		"theme": "light",
+		"nodes": [
+			".MuiListItem-padding <li class=\"MuiListItem-gutters MuiListItem-padding MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(10) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(2) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(3) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(4) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(5) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(6) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(7) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(9) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "link-in-text-block",
+		"screen": "projects",
+		"theme": "light",
+		"nodes": [
+			"a[href$=\"blog\"] <a href=\"https://craftercms.org/blog\">",
+			"a[href$=\"craftercms.org\"] <a href=\"https://craftercms.org\">",
+			"a[target=\"_blank\"]:nth-child(2) <a href=\"https://github.com/craftercms/craftercms/issues\">"
+		]
+	},
+	{
+		"rule": "aria-input-field-name",
+		"screen": "search",
+		"theme": "dark",
+		"nodes": [
+			"#* <div role=\"combobox\" class=\"MuiInputBase-input MuiSelect-select MuiSelect-standard MuiTablePagination-select\">"
+		]
+	},
+	{
+		"rule": "aria-prohibited-attr",
+		"screen": "search",
+		"theme": "dark",
+		"nodes": [
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(17) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(18) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(19) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(21) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(4) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(9) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			"span[aria-label=\"Select 1-gear.png\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select 10 Tips to Get in Shape\"] <span class=\"M... MuiButtonBase-root\">",
+			"span[aria-label=\"Select 404.ftl\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select 500.ftl\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Brand Icons\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Categories\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Closed captioning\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Contact Widget\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Entertainment\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Feature Icons\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Header\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Health\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Home\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Latest Articles Widget\"] <span class=\"M... MuiButtonBase-root\">",
+			"span[aria-label=\"Select Men Styles For Winter\"] <span class=\"M... MuiButtonBase-root\">"
+		]
+	},
+	{
+		"rule": "label",
+		"screen": "search",
+		"theme": "dark",
+		"nodes": [
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(17) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(18) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(19) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(21) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(4) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(9) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select 1-gear.png\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select 10 Tips to Get in Shape\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select 404.ftl\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select 500.ftl\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Brand Icons\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Categories\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Closed captioning\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Contact Widget\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Entertainment\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Feature Icons\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Header\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Health\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Home\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Latest Articles Widget\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Men Styles For Winter\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">"
+		]
+	},
+	{
+		"rule": "aria-input-field-name",
+		"screen": "search",
+		"theme": "light",
+		"nodes": [
+			"#* <div role=\"combobox\" class=\"MuiInputBase-input MuiSelect-select MuiSelect-standard MuiTablePagination-select\">"
+		]
+	},
+	{
+		"rule": "aria-prohibited-attr",
+		"screen": "search",
+		"theme": "light",
+		"nodes": [
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(17) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(18) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(19) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(21) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(4) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(9) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary <span class=\"M... MuiButtonBase-root\">",
+			"span[aria-label=\"Select 1-gear.png\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select 10 Tips to Get in Shape\"] <span class=\"M... MuiButtonBase-root\">",
+			"span[aria-label=\"Select 404.ftl\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select 500.ftl\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Brand Icons\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Categories\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Closed captioning\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Contact Widget\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Entertainment\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Feature Icons\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Header\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Health\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Home\"] <span class=\"MuiButtonBase-root MuiCheckbox-colorPrimary MuiCheckbox-root MuiCheckbox-sizeSmall PrivateSwitchBase-root\">",
+			"span[aria-label=\"Select Latest Articles Widget\"] <span class=\"M... MuiButtonBase-root\">",
+			"span[aria-label=\"Select Men Styles For Winter\"] <span class=\"M... MuiButtonBase-root\">"
+		]
+	},
+	{
+		"rule": "label",
+		"screen": "search",
+		"theme": "light",
+		"nodes": [
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(17) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(18) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(19) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(21) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(4) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			".MuiGrid-grid-xs-12.MuiGrid-grid-sm-6.MuiGrid-grid-md-4:nth-child(9) > .MuiPaper-elevation1.MuiCard-root.mui-* > .MuiCardHeader-root.mui-* > .MuiCardHeader-avatar.mui-* > .MuiFormGroup-root.mui-* > .MuiCheckbox-sizeSmall.MuiCheckbox-root.MuiCheckbox-colorPrimary > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select 1-gear.png\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select 10 Tips to Get in Shape\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select 404.ftl\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select 500.ftl\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Brand Icons\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Categories\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Closed captioning\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Contact Widget\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Entertainment\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Feature Icons\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Header\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Health\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Home\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Latest Articles Widget\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
+			"span[aria-label=\"Select Men Styles For Winter\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">"
+		]
+	},
+	{
+		"rule": "link-in-text-block",
+		"screen": "site tools",
+		"theme": "light",
+		"nodes": [
+			"a:nth-child(2) <a href=\"https://github.com/craftercms/craftercms/issues\">",
+			"a[href$=\"blog\"] <a href=\"https://craftercms.org/blog\">",
+			"a[href$=\"craftercms.org\"] <a href=\"https://craftercms.org\">"
+		]
+	},
+	{
+		"rule": "aria-input-field-name",
+		"screen": "tools panel > Dashboard",
+		"theme": "dark",
+		"nodes": [
+			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
+			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
+		]
+	},
+	{
+		"rule": "label",
+		"screen": "tools panel > Dashboard",
+		"theme": "dark",
+		"nodes": [
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(1) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(10) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(11) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(12) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(13) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(14) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(15) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(16) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(17) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(18) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(19) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(2) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(20) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(21) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(22) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(23) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(24) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(25) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(26) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(27) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(28) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(29) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(3) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(30) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(31) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(32) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(33) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(34) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(35) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(36) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(37) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(38) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(39) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(4) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(40) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(41) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(42) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(43) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(44) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(45) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(46) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(47) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(48) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(49) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(5) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(50) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(6) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(7) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(8) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(9) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">"
+		]
+	},
+	{
+		"rule": "list",
+		"screen": "tools panel > Dashboard",
+		"theme": "dark",
+		"nodes": [".mui-* <ul class=\"MuiList-padding MuiList-root\">"]
+	},
+	{
+		"rule": "nested-interactive",
+		"screen": "tools panel > Dashboard",
+		"theme": "dark",
+		"nodes": [
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(3) > .mui-*.MuiCard-root.MuiPaper-elevation1 > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(4) > .mui-*.MuiCard-root.MuiPaper-elevation1 > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(5) > .mui-*.MuiCard-root.MuiPaper-elevation1 > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(6) > .mui-*.MuiCard-root.MuiPaper-elevation1 > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(7) > .mui-*.MuiCard-root.MuiPaper-elevation1 > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".mui-* > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(1) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(10) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(11) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(12) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(13) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(14) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(15) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(16) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(17) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(18) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(19) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(2) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(20) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(21) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(22) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(23) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(24) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(25) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(26) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(27) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(28) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(29) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(3) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(30) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(31) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(32) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(33) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(34) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(35) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(36) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(37) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(38) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(39) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(4) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(40) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(41) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(42) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(43) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(44) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(45) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(46) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(47) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(48) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(49) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(5) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(50) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(6) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(7) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(8) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(9) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">"
+		]
+	},
+	{
+		"rule": "aria-input-field-name",
+		"screen": "tools panel > Dashboard",
+		"theme": "light",
+		"nodes": [
+			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
+			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
+		]
+	},
+	{
+		"rule": "label",
+		"screen": "tools panel > Dashboard",
+		"theme": "light",
+		"nodes": [
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(1) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(10) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(11) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(12) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(13) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(14) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(15) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(16) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(17) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(18) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(19) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(2) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(20) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(21) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(22) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(23) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(24) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(25) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(26) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(27) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(28) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(29) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(3) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(30) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(31) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(32) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(33) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(34) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(35) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(36) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(37) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(38) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(39) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(4) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(40) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(41) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(42) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(43) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(44) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(45) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(46) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(47) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(48) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(49) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(5) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(50) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(6) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(7) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(8) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(9) > .mui-*.MuiListItemIcon-root > .PrivateSwitchBase-edgeStart.mui-*.MuiCheckbox-root > .PrivateSwitchBase-input.mui-*[data-indeterminate=\"false\"] <input class=\"PrivateSwitchBase-input\">"
+		]
+	},
+	{
+		"rule": "list",
+		"screen": "tools panel > Dashboard",
+		"theme": "light",
+		"nodes": [".mui-* <ul class=\"MuiList-padding MuiList-root\">"]
+	},
+	{
+		"rule": "nested-interactive",
+		"screen": "tools panel > Dashboard",
+		"theme": "light",
+		"nodes": [
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(3) > .mui-*.MuiCard-root.MuiPaper-elevation1 > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(4) > .mui-*.MuiCard-root.MuiPaper-elevation1 > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(5) > .mui-*.MuiCard-root.MuiPaper-elevation1 > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(6) > .mui-*.MuiCard-root.MuiPaper-elevation1 > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".MuiGrid-grid-md-6.mui-*.MuiGrid-grid-xs-12:nth-child(7) > .mui-*.MuiCard-root.MuiPaper-elevation1 > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".mui-* > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(1) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(10) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(11) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(12) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(13) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(14) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(15) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(16) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(17) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(18) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(19) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(2) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(20) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(21) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(22) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(23) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(24) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(25) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(26) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(27) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(28) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(29) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(3) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(30) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(31) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(32) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(33) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(34) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(35) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(36) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(37) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(38) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(39) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(4) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(40) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(41) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(42) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(43) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(44) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(45) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(46) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(47) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(48) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(49) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(5) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(50) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(6) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(7) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(8) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
+			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(9) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "tools panel",
+		"theme": "dark",
+		"nodes": [
+			".MuiListItem-padding <li class=\"MuiListItem-gutters MuiListItem-padding MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(10) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(2) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(3) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(4) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(5) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(6) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(7) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(9) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "listitem",
+		"screen": "tools panel",
+		"theme": "light",
+		"nodes": [
+			".MuiListItem-padding <li class=\"MuiListItem-gutters MuiListItem-padding MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-* > .mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(10) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(2) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(3) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(4) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(5) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(6) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(7) <li class=\"MuiListItem-gutters MuiListItem-root\">",
+			".mui-*:nth-child(9) <li class=\"MuiListItem-gutters MuiListItem-root\">"
+		]
+	},
+	{
+		"rule": "color-contrast",
+		"screen": "users",
+		"theme": "dark",
+		"nodes": [
+			"tr:nth-child(1) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">",
+			"tr:nth-child(2) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">"
+		]
+	},
+	{
+		"rule": "color-contrast",
+		"screen": "users",
+		"theme": "light",
+		"nodes": [
+			"tr:nth-child(1) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">",
+			"tr:nth-child(2) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">"
+		]
+	},
+	{
+		"rule": "link-in-text-block",
+		"screen": "users",
+		"theme": "light",
+		"nodes": [
+			"a[href$=\"blog\"] <a href=\"https://craftercms.org/blog\">",
+			"a[href$=\"craftercms.org\"] <a href=\"https://craftercms.org\">",
+			"a[target=\"_blank\"]:nth-child(2) <a href=\"https://github.com/craftercms/craftercms/issues\">"
+		]
+	}
+]

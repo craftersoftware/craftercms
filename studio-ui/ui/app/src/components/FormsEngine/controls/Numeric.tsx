@@ -24,12 +24,11 @@ import Button from '@mui/material/Button';
 import MinusRounded from '@mui/icons-material/RemoveRounded';
 import { NumberField } from '@base-ui-components/react/number-field';
 import { getValidationValue, isFieldReadOnly } from '../lib/formUtils';
+import { fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
 
 type NumberFieldRootProps = ComponentProps<typeof NumberField.Root>;
 
-export interface NumberProps extends ControlProps {
-	value: number | null;
-}
+export type NumberProps = ControlProps<number | null>;
 
 const decrementButtonSx: BoxProps['sx'] = {
 	borderTopRightRadius: 0,
@@ -59,8 +58,10 @@ const OutlinedInputWithRef = forwardRef<HTMLInputElement, OutlinedInputProps>((p
 });
 
 export function Numeric(props: NumberProps) {
-	const { field, value, setValue, readonly: formReadonly, autoFocus } = props;
-	const htmlId = useId();
+	const { field, value, setValue, readonly: formReadonly, autoFocus, inputId, labelId } = props;
+	const generatedId = useId();
+	const htmlId = inputId || generatedId;
+	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, htmlId));
 
 	// region field properties/validations
 	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
@@ -71,7 +72,7 @@ export function Numeric(props: NumberProps) {
 
 	const handleChange: NumberFieldRootProps['onValueChange'] = (newValue) => setValue(newValue);
 	return (
-		<FormsEngineField htmlFor={htmlId} field={field} max={maxLength}>
+		<FormsEngineField htmlFor={htmlId} labelId={labelId} field={field} max={maxLength}>
 			<NumberField.Root
 				id={htmlId}
 				value={value}
@@ -93,7 +94,7 @@ export function Numeric(props: NumberProps) {
 					<NumberField.Decrement render={<Button variant="outlined" sx={decrementButtonSx} />}>
 						<MinusRounded />
 					</NumberField.Decrement>
-					<NumberField.Input render={<OutlinedInputWithRef />} />
+					<NumberField.Input render={<OutlinedInputWithRef />} aria-describedby={a11y['aria-describedby']} />
 					<NumberField.Increment render={<Button variant="outlined" sx={incrementButtonSx} />}>
 						<AddRounded />
 					</NumberField.Increment>

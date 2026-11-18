@@ -45,6 +45,8 @@ import {
 	decideSaveReveal,
 	gateSaveBeforeWrite,
 	planSettledFieldScroll,
+	draftFlagAfterBeforeSave,
+	resolveSaveDraft,
 	saveAsDraftFlag,
 	fieldVisibility,
 	clearRepeatItemScope,
@@ -643,6 +645,74 @@ describe('save gate before the controller hook', () => {
 	it('marks a completed save as a draft when the hook leaves the form invalid', () => {
 		assert.equal(saveAsDraftFlag(false, true), true);
 		assert.equal(saveAsDraftFlag(false, false), false);
+	});
+
+	// The main button is auto. A remembered Save of a valid form writes a normal save.
+	it('writes a non-draft when the form is valid and the user last chose Save', async () => {
+		const result = await applySaveGate({
+			draft: 'auto',
+			saveAsDraft: false,
+			visibility,
+			sectionOrder: ['title_s', 'body_html'],
+			readValidity: async () => ({ isFormInvalid: false, invalidFieldIds: [] }),
+			onReveal() {},
+			preloadAndWrite: async (saveAsDraft) => saveAsDraft
+		});
+		assert.equal(result, false);
+	});
+
+	// A remembered Save Draft of a valid form still writes a draft.
+	it('writes a draft when the form is valid and the user last chose Save Draft', async () => {
+		const result = await applySaveGate({
+			draft: 'auto',
+			saveAsDraft: true,
+			visibility,
+			sectionOrder: ['title_s', 'body_html'],
+			readValidity: async () => ({ isFormInvalid: false, invalidFieldIds: [] }),
+			onReveal() {},
+			preloadAndWrite: async (saveAsDraft) => saveAsDraft
+		});
+		assert.equal(result, true);
+	});
+
+	// Invalid wins over a remembered Save. The main action stores a draft.
+	it('writes a draft when the form is invalid regardless of the remembered choice', async () => {
+		const result = await applySaveGate({
+			draft: 'auto',
+			saveAsDraft: false,
+			visibility,
+			sectionOrder: ['title_s', 'body_html'],
+			readValidity: async () => ({ isFormInvalid: true, invalidFieldIds: ['title_s'] }),
+			onReveal() {},
+			preloadAndWrite: async (saveAsDraft) => saveAsDraft
+		});
+		assert.equal(result, true);
+	});
+
+	// A hidden error on the main button does not open the field. The write is a draft.
+	it('writes a draft for a hidden error in auto mode without revealing it', async () => {
+		let revealed = false;
+		const result = await applySaveGate({
+			draft: 'auto',
+			saveAsDraft: false,
+			visibility,
+			sectionOrder: ['title_s', 'body_html'],
+			readValidity: async () => ({ isFormInvalid: true, invalidFieldIds: ['body_html'] }),
+			onReveal() {
+				revealed = true;
+			},
+			preloadAndWrite: async (saveAsDraft) => saveAsDraft
+		});
+		assert.equal(revealed, false);
+		assert.equal(result, true);
+	});
+
+	// onBeforeSave can change validity. The second read uses the remembered choice and the fresh invalid bit.
+	it('re-reads the draft flag after onBeforeSave', () => {
+		assert.equal(draftFlagAfterBeforeSave('auto', true, false), true);
+		assert.equal(draftFlagAfterBeforeSave('auto', false, true), true);
+		assert.equal(draftFlagAfterBeforeSave('auto', false, false), false);
+		assert.equal(resolveSaveDraft('auto', true, false), true);
 	});
 });
 
@@ -1300,26 +1370,84 @@ describe('stacked form guards', () => {
 		assert.equal(stackedFormsClosedByReload(3, 1), 0);
 	});
 
+	// Each entry holds its changed set in a box that stands for the atom. Sets are replaced, never mutated.
+	const box = (ids: string[] = []) => {
+		const state = { ids: new Set(ids) as ReadonlySet<string>, writes: 0 };
+		return {
+			state,
+			get changedFieldIds() {
+				return state.ids;
+			},
+			setChangedFieldIds(next: ReadonlySet<string>) {
+				state.ids = next;
+				state.writes++;
+			}
+		};
+	};
+
 	// A parent save already stored selected-fields edits that still match. A full-mode or pencil item was not written through.
 	it('clears pending flags only for selected-fields entries', () => {
-		const selectedChanged = new Set(['icon_s']);
-		const fullChanged = new Set(['url_s']);
+		const selected = box(['icon_s']);
+		const full = box(['url_s']);
 		let selectedPending = true;
 		let fullPending = true;
 		clearStackPendingFlags([
-			{ selected: true, changedFieldIds: selectedChanged, setPending: (value) => (selectedPending = value) },
-			{ selected: false, changedFieldIds: fullChanged, setPending: (value) => (fullPending = value) }
+			{ selected: true, ...selected, setPending: (value) => (selectedPending = value) },
+			{ selected: false, ...full, setPending: (value) => (fullPending = value) }
 		]);
 		assert.equal(selectedPending, false);
-		assert.equal(selectedChanged.size, 0);
+		assert.equal(selected.state.ids.size, 0);
 		assert.equal(fullPending, true);
-		assert.equal(fullChanged.size, 1);
+		assert.deepEqual([...full.state.ids], ['url_s']);
+		assert.equal(full.state.writes, 0);
+	});
+
+	// A set whose membership did not change is not written, so nothing downstream recomputes.
+	it('does not write a set whose membership is unchanged', () => {
+		const item = box(['icon_s']);
+		const parent = box();
+		clearStackPendingFlags(
+			[
+				{
+					selected: true,
+					fieldId: 'accounts_o',
+					...item,
+					savedItem: { icon_s: 'saved' },
+					currentItem: { icon_s: 'newer' },
+					setPending() {}
+				}
+			],
+			{ changedFieldIds: parent.state.ids, setChangedFieldIds: parent.setChangedFieldIds }
+		);
+		assert.equal(item.state.writes, 0);
+		assert.deepEqual([...parent.state.ids], ['accounts_o']);
+	});
+
+	// An in-flight edit marks the repeat on the parent. The parent is written once, after the entries.
+	it('writes the parent set once, after the entries', () => {
+		const first = box(['a']);
+		const second = box(['b']);
+		const parent = box();
+		const inFlight = (entry: ReturnType<typeof box>) => ({
+			selected: true,
+			...entry,
+			fieldId: 'rows_o',
+			savedItem: { a: 'saved', b: 'saved' },
+			currentItem: { a: 'edited', b: 'edited' },
+			setPending() {}
+		});
+		clearStackPendingFlags([inFlight(first), inFlight(second)], {
+			changedFieldIds: parent.state.ids,
+			setChangedFieldIds: parent.setChangedFieldIds
+		});
+		assert.equal(parent.state.writes, 1);
+		assert.deepEqual([...parent.state.ids], ['rows_o']);
 	});
 
 	// An edit during the save stays dirty. A field that matches the saved checkpoint is dropped, and the parent repeat is marked.
 	it('keeps a selected item dirty when it changed during the parent save', () => {
-		const changed = new Set(['icon_s', 'url_s']);
-		const parentChanged = new Set<string>();
+		const item = box(['icon_s', 'url_s']);
+		const parent = box();
 		let pending = true;
 		let checkpoint: Record<string, unknown> | null = null;
 		clearStackPendingFlags(
@@ -1327,7 +1455,7 @@ describe('stacked form guards', () => {
 				{
 					selected: true,
 					fieldId: 'accounts_o',
-					changedFieldIds: changed,
+					...item,
 					savedItem: { icon_s: 'saved', url_s: 'kept' },
 					currentItem: { icon_s: 'newer', url_s: 'kept' },
 					setCheckpoint: (values) => {
@@ -1338,26 +1466,26 @@ describe('stacked form guards', () => {
 					}
 				}
 			],
-			parentChanged
+			{ changedFieldIds: parent.state.ids, setChangedFieldIds: parent.setChangedFieldIds }
 		);
 		assert.equal(pending, true);
-		assert.equal(changed.has('icon_s'), true);
-		assert.equal(changed.has('url_s'), false);
-		assert.equal(parentChanged.has('accounts_o'), true);
+		assert.equal(item.state.ids.has('icon_s'), true);
+		assert.equal(item.state.ids.has('url_s'), false);
+		assert.equal(parent.state.ids.has('accounts_o'), true);
 		assert.deepEqual(checkpoint, { icon_s: 'saved', url_s: 'kept' });
 	});
 
 	// The author typed the saved Icon back while the save was running, so the old changed-id list is empty.
 	it('marks the parent when an undo during the save differs from the snapshot', () => {
-		const changed = new Set<string>();
-		const parentChanged = new Set<string>();
+		const item = box();
+		const parent = box();
 		let pending = false;
 		clearStackPendingFlags(
 			[
 				{
 					selected: true,
 					fieldId: 'accounts_o',
-					changedFieldIds: changed,
+					...item,
 					savedItem: { icon_s: 'new' },
 					currentItem: { icon_s: 'old' },
 					setPending: (value) => {
@@ -1365,24 +1493,24 @@ describe('stacked form guards', () => {
 					}
 				}
 			],
-			parentChanged
+			{ changedFieldIds: parent.state.ids, setChangedFieldIds: parent.setChangedFieldIds }
 		);
-		assert.equal(changed.has('icon_s'), true);
+		assert.equal(item.state.ids.has('icon_s'), true);
 		assert.equal(pending, true);
-		assert.equal(parentChanged.has('accounts_o'), true);
+		assert.equal(parent.state.ids.has('accounts_o'), true);
 	});
 
 	// Every remaining id matches the save, so the item is clean and the parent repeat is not marked.
 	it('clears the item and leaves the parent alone when nothing differs from the save', () => {
-		const changed = new Set(['icon_s']);
-		const parentChanged = new Set<string>();
+		const item = box(['icon_s']);
+		const parent = box();
 		let pending = true;
 		clearStackPendingFlags(
 			[
 				{
 					selected: true,
 					fieldId: 'accounts_o',
-					changedFieldIds: changed,
+					...item,
 					savedItem: { icon_s: 'saved' },
 					currentItem: { icon_s: 'saved' },
 					setPending: (value) => {
@@ -1390,11 +1518,12 @@ describe('stacked form guards', () => {
 					}
 				}
 			],
-			parentChanged
+			{ changedFieldIds: parent.state.ids, setChangedFieldIds: parent.setChangedFieldIds }
 		);
-		assert.equal(changed.size, 0);
+		assert.equal(item.state.ids.size, 0);
 		assert.equal(pending, false);
-		assert.equal(parentChanged.size, 0);
+		assert.equal(parent.state.ids.size, 0);
+		assert.equal(parent.state.writes, 0);
 	});
 
 	// Close and minimize are the checkbox values read when Save is clicked.

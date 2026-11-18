@@ -41,7 +41,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.endsWith;
 import static org.craftercms.commons.config.ConfigUtils.getBooleanProperty;
 
 /**
@@ -85,7 +84,7 @@ public class S3SyncProcessor extends AbstractS3Processor {
 
 	@Override
 	protected boolean shouldIncludeFile(String file) {
-		return super.shouldIncludeFile(file) && !(ignoreBlobs && endsWith(file, blobExtension));
+		return S3PublishedFileSelection.include(file, includeFiles, excludeFiles, ignoreBlobs, blobExtension);
 	}
 
 	/**
@@ -134,19 +133,14 @@ public class S3SyncProcessor extends AbstractS3Processor {
 			List<CompletableFuture<Void>> futures = paths.stream().map(item -> {
 				Path path = Paths.get(localRepoUrl, item);
 				if (path.toFile().exists()) {
-					UploadFileRequest uploadFileRequest = UploadFileRequest.builder()
-						.putObjectRequest(p -> p.bucket(getBucket()).key(getS3Key(item)))
-						.source(path)
-						.build();
-					return CompletableFuture
-						.runAsync(() -> transferManager.uploadFile(uploadFileRequest).completionFuture().join(), threadPoolTaskExecutor)
-						.thenRun(() -> logger.debug("Uploaded file: {}", item))
-						.exceptionally(e -> {
-							logger.error("Error uploading file: {}", item, e);
-							return null;
-						});
+					return scheduleUpload(transferManager, path, item);
 				}
-				if (Paths.get(localRepoUrl, item + blobExtension).toFile().exists()) {
+				String pointerItem = item + blobExtension;
+				Path pointerPath = Paths.get(localRepoUrl, pointerItem);
+				if (pointerPath.toFile().exists()) {
+					if (!ignoreBlobs) {
+						return scheduleUpload(transferManager, pointerPath, pointerItem);
+					}
 					logger.debug("Blob-backed file found, no file to upload: {}", item);
 					return CompletableFuture.<Void>completedFuture(null);
 				}
@@ -160,6 +154,24 @@ public class S3SyncProcessor extends AbstractS3Processor {
 		} catch (Exception e) {
 			throw new DeployerException(format("Error uploading files '%s'", paths), e);
 		}
+	}
+
+	/**
+	 * Uploads one local file to its S3 key. Failures are logged and complete the returned future exceptionally.
+	 */
+	private CompletableFuture<Void> scheduleUpload(S3TransferManager transferManager, Path path, String item) {
+		UploadFileRequest uploadFileRequest = UploadFileRequest.builder()
+			.putObjectRequest(p -> p.bucket(getBucket()).key(getS3Key(item)))
+			.source(path)
+			.build();
+		return CompletableFuture
+			.runAsync(() -> transferManager.uploadFile(uploadFileRequest).completionFuture().join(), threadPoolTaskExecutor)
+			.thenRun(() -> logger.debug("Uploaded file: {}", item))
+			.whenComplete((ignored, error) -> {
+				if (error != null) {
+					logger.error("Error uploading file: {}", item, error);
+				}
+			});
 	}
 
 	/**

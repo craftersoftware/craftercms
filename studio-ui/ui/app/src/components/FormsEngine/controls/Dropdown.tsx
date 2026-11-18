@@ -14,8 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 import { FormsEngineField } from '../components/FormsEngineField';
+import { fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
 import { ControlProps } from '../types';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -23,18 +24,19 @@ import ListSubheader from '@mui/material/ListSubheader';
 import Skeleton from '@mui/material/Skeleton';
 import { useDataSourceListOptions, type DataSourceListOptionGroup } from '../dataSourceHooks/useDataSourceListOptions';
 
-export interface DropdownProps extends ControlProps {
-	value: string;
-}
+export type DropdownProps = ControlProps<string>;
 
 export function Dropdown(props: DropdownProps) {
-	const { field, value, setValue, readonly, autoFocus, dataSources } = props;
+	const { field, value, setValue, readonly, autoFocus, dataSources, inputId, labelId } = props;
 	const maxLength = field.validations.maxLength?.value;
 	const handleChange = (event: SelectChangeEvent) => setValue(event.target.value);
 	const optionGroups = useDataSourceListOptions(dataSources);
+	const generatedId = useId();
+	const controlId = inputId || generatedId;
+	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, controlId));
 	if (!optionGroups) {
 		return (
-			<FormsEngineField field={field} max={maxLength} length={value.length}>
+			<FormsEngineField field={field} labelId={labelId} max={maxLength} length={value.length}>
 				<Skeleton variant="rounded" height={56} />
 			</FormsEngineField>
 		);
@@ -46,8 +48,15 @@ export function Dropdown(props: DropdownProps) {
 			</MenuItem>
 		));
 	return (
-		<FormsEngineField field={field} max={maxLength} length={value.length}>
-			<Select value={value} label="" onChange={handleChange} disabled={readonly} autoFocus={autoFocus}>
+		<FormsEngineField field={field} controlId={controlId} labelId={labelId} max={maxLength} length={value.length}>
+			<Select
+				value={value}
+				label=""
+				onChange={handleChange}
+				disabled={readonly}
+				autoFocus={autoFocus}
+				aria-describedby={a11y['aria-describedby']}
+			>
 				{optionGroups.length === 0
 					? null
 					: optionGroups.length > 1

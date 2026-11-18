@@ -33,11 +33,11 @@ interface Dependency {
 	'remove-empty-folder': boolean;
 }
 
-export interface DeleteDependenciesProps extends ControlProps {
-	value: {
-		'delete-dependency': Dependency[];
-	};
+interface DeleteDependenciesValue {
+	'delete-dependency': Dependency[];
 }
+
+export type DeleteDependenciesProps = ControlProps<DeleteDependenciesValue>;
 
 export function DeleteDependencies(props: DeleteDependenciesProps) {
 	const { field, value, setValue } = props;
@@ -97,7 +97,7 @@ export function DeleteDependencies(props: DeleteDependenciesProps) {
 							alignItems: 'center'
 						}}
 					>
-						<Tooltip title={<FormattedMessage defaultMessage="Remove Reference" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Remove Reference' })}>
 							<IconButton
 								aria-label={formatMessage({ defaultMessage: 'Remove Reference' })}
 								onClick={() => removeDependency(index)}
@@ -114,7 +114,7 @@ export function DeleteDependencies(props: DeleteDependenciesProps) {
 					justifyContent: 'center'
 				}}
 			>
-				<Tooltip title={<FormattedMessage defaultMessage="Add Reference" />}>
+				<Tooltip title={formatMessage({ defaultMessage: 'Add Reference' })}>
 					<IconButton aria-label={formatMessage({ defaultMessage: 'Add Reference' })} onClick={() => addDependency()}>
 						<AddCircleOutlineRoundedIcon />
 					</IconButton>

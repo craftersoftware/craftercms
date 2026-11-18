@@ -27,6 +27,8 @@ services:
       # Please specify the following env variables in the current dir .env file
       - ES_URL
       - crafter.engine.site.default.rootFolder.path
+      - crafter.engine.studio.url
+      - crafter.engine.studio.siteManagementToken
       - crafter.engine.s3.region
       - crafter.engine.s3.accessKey
       - crafter.engine.s3.secretKey

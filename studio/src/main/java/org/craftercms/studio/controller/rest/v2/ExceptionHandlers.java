@@ -27,6 +27,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.craftercms.commons.config.profiles.ConfigurationProfileNotFoundException;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
 import org.craftercms.commons.http.HttpUtils;
+import org.craftercms.commons.rest.RequestLogSanitizer;
 import org.craftercms.commons.security.exception.ActionDeniedException;
 import org.craftercms.commons.validation.ValidationException;
 import org.craftercms.commons.validation.ValidationResultAware;
@@ -44,6 +45,7 @@ import org.craftercms.studio.api.v2.exception.content.ContentExistException;
 import org.craftercms.studio.api.v2.exception.content.ContentInPublishQueueException;
 import org.craftercms.studio.api.v2.exception.content.ContentLockedByAnotherUserException;
 import org.craftercms.studio.api.v2.exception.content.ContentMoveInvalidLocation;
+import org.craftercms.studio.api.v2.exception.content.NavOrderException;
 import org.craftercms.studio.api.v2.exception.contentType.ContentTypeUsageException;
 import org.craftercms.studio.api.v2.exception.git.MergeInProgressException;
 import org.craftercms.studio.api.v2.exception.git.NoMergeStateException;
@@ -274,6 +276,14 @@ public class ExceptionHandlers {
 	@ResponseStatus(BAD_REQUEST)
 	public Result handleContentTypeInvalidLocationException(HttpServletRequest request, ContentTypeInvalidLocationException e) {
 		ApiResponse response = new ApiResponse(CONTENT_TYPE_INVALID_LOCATION);
+		response.setMessage(response.getMessage() + " : " + e.getMessage());
+		return handleExceptionInternal(request, e, response);
+	}
+
+	@ExceptionHandler(NavOrderException.class)
+	@ResponseStatus(BAD_REQUEST)
+	public Result handleNavOrderException(HttpServletRequest request, NavOrderException e) {
+		ApiResponse response = new ApiResponse(e.getResponse());
 		response.setMessage(response.getMessage() + " : " + e.getMessage());
 		return handleExceptionInternal(request, e, response);
 	}
@@ -786,19 +796,19 @@ public class ExceptionHandlers {
 		switch (logLevel) {
 			case DEBUG:
 				logger.debug("API endpoint '{}' failed with response '{}'",
-					HttpUtils.getFullRequestUri(request, true), response, e);
+					RequestLogSanitizer.sanitizeUri(HttpUtils.getFullRequestUri(request, true)), response, e);
 				break;
 			case WARN:
 				logger.warn("API endpoint '{}' failed with response '{}'",
-					HttpUtils.getFullRequestUri(request, true), response, e);
+					RequestLogSanitizer.sanitizeUri(HttpUtils.getFullRequestUri(request, true)), response, e);
 				break;
 			case INFO:
 				logger.info("API endpoint '{}' failed with response '{}'",
-					HttpUtils.getFullRequestUri(request, true), response, e);
+					RequestLogSanitizer.sanitizeUri(HttpUtils.getFullRequestUri(request, true)), response, e);
 				break;
 			case ERROR:
 				logger.error("API endpoint '{}' failed with response '{}'",
-					HttpUtils.getFullRequestUri(request, true), response, e);
+					RequestLogSanitizer.sanitizeUri(HttpUtils.getFullRequestUri(request, true)), response, e);
 				break;
 			default:
 				break;

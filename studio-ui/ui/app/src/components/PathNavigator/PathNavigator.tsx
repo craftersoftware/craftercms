@@ -48,7 +48,7 @@ import { useItemsByPath } from '../../hooks/useItemsByPath';
 import { useSubject } from '../../hooks/useSubject';
 import { useSiteLocales } from '../../hooks/useSiteLocales';
 import { useMount } from '../../hooks/useMount';
-import { createComponentId, getSystemLink, pickShowContentFormAction } from '../../utils/system';
+import { createComponentId, getSystemLink, showContentFormAction } from '../../utils/system';
 import { getStoredPathNavigator } from '../../utils/state';
 import { useActiveSite } from '../../hooks/useActiveSite';
 import { useActiveUser } from '../../hooks/useActiveUser';
@@ -58,6 +58,7 @@ import { nanoid } from 'nanoid';
 import { showItemMegaMenu } from '../../state/actions/dialogs';
 import TranslationOrText from '../../models/TranslationOrText';
 import usePossibleTranslation from '../../hooks/usePossibleTranslation';
+import { NavigatorTitleComponent } from './navigatorHeading';
 import { useIntl } from 'react-intl';
 
 interface Menu {
@@ -76,6 +77,8 @@ export type PathNavigatorClassKey = 'root' | 'body' | 'searchRoot';
 export interface PathNavigatorProps {
 	id: string;
 	label: TranslationOrText;
+	/** Heading element for the title. Defaults to h2, or to the parent navigator-heading context. */
+	titleComponent?: NavigatorTitleComponent;
 	rootPath: string;
 	sortStrategy?: GetChildrenOptions['sortStrategy'];
 	order?: GetChildrenOptions['order'];
@@ -146,6 +149,7 @@ export function PathNavigator(props: PathNavigatorProps) {
 		onItemClicked: onItemClickedProp,
 		createItemClickedHandler = (defaultHandler) => defaultHandler,
 		computeActiveItems,
+		titleComponent,
 		sortStrategy,
 		order,
 		sxs
@@ -249,7 +253,7 @@ export function PathNavigator(props: PathNavigatorProps) {
 
 	const onPreview = (item: ContentItem) => {
 		if (isEditableViaFormEditor(item)) {
-			dispatch(pickShowContentFormAction({ path: item.path, authoringBase, site: siteId, readonly: true }));
+			dispatch(showContentFormAction({ path: item.path, authoringBase, site: siteId, readonly: true }));
 		} else if (isImage(item) || isVideo(item) || isPdfDocument(item.mimeType)) {
 			dispatch(
 				pushDialog({
@@ -417,6 +421,7 @@ export function PathNavigator(props: PathNavigatorProps) {
 				icon={expandedIcon && collapsedIcon ? (state.collapsed ? collapsedIcon : expandedIcon) : icon}
 				container={container}
 				title={translatedLabel}
+				titleComponent={titleComponent}
 				onChangeCollapsed={onChangeCollapsed}
 				onHeaderButtonClick={state.collapsed ? void 0 : onHeaderButtonClick}
 				onCurrentParentMenu={onCurrentParentMenu}

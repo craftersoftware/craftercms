@@ -26,7 +26,7 @@ import { createPresenceTable } from '../../utils/array';
 import { ContentItem, LightItem } from '../../models/Item';
 import { isBlank } from '../../utils/string';
 import { ApiResponse } from '../../models';
-import { pickShowContentFormAction, pushErrorDialog } from '../../utils/system';
+import { showContentFormAction, pushErrorDialog } from '../../utils/system';
 import { useEnhancedDialogContext } from '../EnhancedDialog';
 import { fetchDeleteDependencies as fetchDeleteDependenciesService } from '../../services/dependencies';
 import { useIntl } from 'react-intl';
@@ -183,7 +183,7 @@ export function DeleteDialogContainer(props: DeleteDialogContainerProps) {
 		// Until we find a better way around that, will uncheck when the edit button is pressed.
 		selectedItems[path] && onItemClicked(null, path);
 		dispatch(
-			pickShowContentFormAction({
+			showContentFormAction({
 				path,
 				authoringBase,
 				site,

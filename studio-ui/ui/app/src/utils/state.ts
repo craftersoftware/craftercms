@@ -465,6 +465,35 @@ export function getFormsEngineMinimizeAfterSave(username: string): string {
 	return `craftercms.${username}.formsEngine.minimizeAfterSave`;
 }
 
+export function getFormsEngineReleaseLockOnClose(username: string): string {
+	return `craftercms.${username}.formsEngine.releaseLockOnClose`;
+}
+
+/** Stored choice, or null when absent or unreadable. Absent means release the lock. */
+export function getStoredFormsEngineReleaseLockOnClose(username: string): boolean | null {
+	try {
+		const value = window.localStorage.getItem(getFormsEngineReleaseLockOnClose(username));
+		if (value == null) return null;
+		const parsed = JSON.parse(value) as unknown;
+		return typeof parsed === 'boolean' ? parsed : null;
+	} catch {
+		return null;
+	}
+}
+
+export function removeStoredFormsEngineReleaseLockOnClose(username: string): void {
+	window.localStorage.removeItem(getFormsEngineReleaseLockOnClose(username));
+}
+
+/** False or absent means Save. True means the user last chose Save Draft. */
+export function getFormsEngineSaveAsDraft(username: string): string {
+	return `craftercms.${username}.formsEngine.saveAsDraft`;
+}
+
+export function removeStoredFormsEngineSaveAsDraft(username: string): void {
+	window.localStorage.removeItem(getFormsEngineSaveAsDraft(username));
+}
+
 export function getCompareVersionDialogViewModes(username: string): { entireDiff: boolean; accordionView: boolean } {
 	return JSON.parse(localStorage.getItem(`craftercms.${username}.compareVersionDialog.viewModes`));
 }

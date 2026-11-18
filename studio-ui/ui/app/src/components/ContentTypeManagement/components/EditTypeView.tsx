@@ -59,13 +59,14 @@ import {
 	TypePropsToEdit,
 	typePropsToEdit
 } from '../utils';
-import { extractAtomValues, useShowAlert } from '../../FormsEngine/lib/formUtils';
+import { EMPTY_CHANGED_FIELD_IDS, extractAtomValues, useShowAlert } from '../../FormsEngine/lib/formUtils';
 import TypeBuilderFormsEngine, { FieldFormViewProps } from './TypeBuilderFormsEngine';
 import controlDescriptors from '../descriptors/controls';
 import dataSourceDescriptors from '../descriptors/dataSources';
 import type { BuiltInControlType } from '../../FormsEngine/lib/controlMap';
 import TypeDetailsView, { TypeDetailsViewProps } from './TypeDetailsView';
 import {
+	FieldUpdate,
 	FormsEngineAtoms,
 	FormsEngineFormApiContextProps,
 	StableFormContextProps
@@ -97,21 +98,36 @@ import { fetchItemVersions } from '../../../state/actions/versions';
 import { getRootPath } from '../../../utils/path';
 import { showHistoryDialog } from '../../../state/actions/dialogs';
 import { XmlViewerDialog } from './XmlViewerDialog';
+import {
+	createTypeWorkingCopy,
+	deleteDataSourceFromType,
+	insertDataSourceIntoType,
+	reorderTypeSections
+} from './editTypeWorkingCopy';
 import useEnhancedDialogState from '../../../hooks/useEnhancedDialogState';
 import { XmlDiffDialog } from './XmlDiffDialog';
 import type { ReorderFieldsDialogProps } from './ReorderFieldsDialog';
 import PickControlDialog from './PickControlDialog';
 import PickDataSourceDialog from './PickDataSourceDialog';
 import { TypeControllerFlagContext, TypeControllerFlagContextProps } from '../typeControllerFlagContext';
+import { FieldNamePostfixContext, FieldNamePostfixContextProps } from '../fieldNamePostfixContext';
+import { collectTopLevelFieldNamePostfixViolations, formatPostfixList } from '../fieldNamePostfix';
 import { fetchContentTypes } from '../../../state/actions/preview';
+import useSelection from '../../../hooks/useSelection';
 import { getXmlBuilder, valueSerializersLookup } from '../../FormsEngine/lib/valueSerializers';
 import { pushErrorDialog } from '../../../utils/system';
-import { showSystemNotification } from '../../../state/actions/system';
+import {
+	contentTypeCreated,
+	contentTypeDeleted,
+	emitSystemEvent,
+	showSystemNotification
+} from '../../../state/actions/system';
 import { extractErrorPayload } from '../../../utils/ajax';
 import Typography from '@mui/material/Typography';
 import { AjaxError } from 'rxjs/ajax';
 import { sectionDescriptor, typeBasicDetailsDescriptor } from '../descriptors/controls/commonDescriptors';
 import { ContentItem } from '../../../models/Item';
+import { onSubmittingAndOrPendingChangeProps } from '../../../hooks/useEnhancedDialogState';
 
 export interface EditTypeAppProps {
 	/**
@@ -121,7 +137,15 @@ export interface EditTypeAppProps {
 	type: PossibleContentTypeDraft;
 	sx?: BoxProps['sx'];
 	style?: BoxProps['style'];
+	/** Navigate back to the type listing (toolbar Done/back). */
+	onExit?: () => void;
+	/** Whether the tool is mounted in a dialog or as a standalone page. */
+	mountMode?: 'dialog' | 'page';
+	/** Close the host dialog (Save & Close). Only used when mountMode is 'dialog'. */
 	onClose?: () => void;
+	/** Minimize the host dialog (Save & Minimize). Only used when mountMode is 'dialog'. */
+	onMinimize?: () => void;
+	onSubmittingAndOrPendingChange?: (value: onSubmittingAndOrPendingChangeProps) => void;
 }
 
 // How this works:
@@ -139,7 +163,12 @@ export interface EditTypeAppProps {
 // - When a field is added/removed...
 
 interface EditAppContextProps {
-	fieldUpdates$: Subject<string>;
+	/**
+	 * The open form's internal stream of value writes (a stream of `FieldUpdate`s, see `StableFormContextProps.fieldUpdates$`): one emission per
+	 * write, after the changed-ids atom is updated, never on a clear. Used to track dirty state synchronously and to
+	 * debounce background validation. It carries no state: read dirty from the form's `changedFieldIds` atom.
+	 */
+	fieldUpdates$: Subject<FieldUpdate>;
 	formContextApi: FormsEngineFormApiContextProps;
 	activeFormContext: StableFormContextProps;
 	selectedField: ContentTypeField;
@@ -167,7 +196,7 @@ export interface ContentTypeManagementConfig {
 }
 
 export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props, ref) => {
-	const { onClose } = props;
+	const { onExit, onClose, onMinimize, mountMode, onSubmittingAndOrPendingChange } = props;
 
 	const site = useActiveSiteId();
 	const contentTypesLookup = useContentTypes();
@@ -181,7 +210,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const stateRef = useRef<EditAppContextProps>(null);
 	if (!stateRef.current) stateRef.current = createContextObject();
 
-	const [type, setType] = useState(() => ({ ...props.type })); // Working copy of the ContentType being edited.
+	// Deep-clone so nested fields/sections/dataSources are not shared with `props.type`
+	// (rollback baseline / diff source). A shallow spread would leak in-place mutations.
+	const [type, setType] = useState(() => createTypeWorkingCopy(props.type));
 	const typeRef = useRef(type);
 	typeRef.current = type;
 	// `<controller>` written straight to the saved form-definition this session. Rollback and diff
@@ -210,6 +241,14 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			}
 		}),
 		[jotai]
+	);
+	const formEngine = useSelection((state) => state.uiConfig.formEngine);
+	const fieldNamePostfixContext = useMemo<FieldNamePostfixContextProps>(
+		() => ({
+			fieldNamePostfix: formEngine.fieldNamePostfix,
+			ignorePostfixFields: formEngine.ignorePostfixFields
+		}),
+		[formEngine.fieldNamePostfix, formEngine.ignorePostfixFields]
 	);
 	const [open, setOpen] = useState(false);
 	const xmlViewerDialogState = useEnhancedDialogState();
@@ -269,7 +308,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	/** True when the open form has unsaved edits (derived from that form's synchronous changedFieldIds). */
 	const activeFormHasChanges = () => {
 		const formContext = stateRef.current.activeFormContext;
-		return (formContext?.changedFieldIds?.size ?? 0) > 0;
+		return formContext?.changedFieldIds ? jotai.get(formContext.changedFieldIds).size > 0 : false;
 	};
 	/** Saves and commits the state changes. Returns undefined if no changes occurred. */
 	const commitOpenFormChanges = () => {
@@ -304,8 +343,11 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			// There's no selected field, section or data source, so assume the type itself is being edited.
 			updatedType = updateTypeProps(currentType, values as TypePropsToEdit);
 		}
-		formContext.changedFieldIds.clear();
+		jotai.set(formContext.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
 		stateRef.current.formFieldsChanged = false;
+		// Keep typeRef in sync immediately so in-flight save completion can detect
+		// structural divergence from typeToSave before the next render.
+		typeRef.current = updatedType;
 		setType(updatedType);
 		return updatedType;
 	};
@@ -452,7 +494,16 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						fieldForForm.type,
 						configDescriptors.controlDescriptors ?? undefined
 					),
-					additionalFields: controlDescriptor.metadata?.additionalFields ?? undefined
+					additionalFields: controlDescriptor.metadata?.additionalFields ?? undefined,
+					// Nested fields (inside a repeat) are not postfix-checked; only the repeat itself is.
+					...(!isComposedPath(resolvedFieldIdPath) &&
+						formEngine.fieldNamePostfix && {
+							fieldNamePostfix: {
+								enabled: true,
+								ignoreFields: formEngine.ignorePostfixFields,
+								suffixes: controlDescriptor.metadata?.suffixes ?? []
+							}
+						})
 				}
 			),
 			{
@@ -528,7 +579,14 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 	const onUpdateHasPendingChanges = (hasPendingChanges: boolean) => {
 		setHasPendingChanges(hasPendingChanges);
-		dialogContext?.updateSubmittingOrHasPendingChanges({ hasPendingChanges });
+		const pendingState = { hasPendingChanges };
+		dialogContext?.updateSubmittingOrHasPendingChanges(pendingState);
+		onSubmittingAndOrPendingChange?.(pendingState);
+	};
+
+	const reportSubmittingOrPending = (value: onSubmittingAndOrPendingChangeProps) => {
+		dialogContext?.updateSubmittingOrHasPendingChanges(value);
+		onSubmittingAndOrPendingChange?.(value);
 	};
 
 	const effectRefs = useUpdateRefs({
@@ -561,13 +619,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				break;
 			}
 			case 'deleted':
-				onClose?.();
-				window.top.postMessage(
-					{
-						type: 'CONTENT_TYPES_ON_DELETED'
-					},
-					'*'
-				);
+				onUpdateHasPendingChanges(false);
+				dispatch(batchActions([emitSystemEvent(contentTypeDeleted()), fetchContentTypes()]));
+				onExit?.();
 				break;
 		}
 	};
@@ -584,7 +638,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							props: {
 								title: <FormattedMessage defaultMessage="Discard changes?" />,
 								onOk: () => {
-									onClose?.();
+									onExit?.();
 									onUpdateHasPendingChanges(false);
 									dispatch(popDialog({ id }));
 								},
@@ -593,37 +647,100 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						})
 					);
 				} else {
-					onClose?.();
+					onExit?.();
 				}
 				break;
-			case 'save': {
+			case 'save':
+			case 'saveAndClose':
+			case 'saveAndMinimize': {
 				if (!(await performCurrentFormErrorCheckAndWarning())) break;
 				const latestUpdate = commitOpenFormChanges();
-				dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: true });
-				const typeToSave = latestUpdate ?? type;
+				const typeToSave = latestUpdate ?? typeRef.current;
+				if (formEngine.fieldNamePostfix) {
+					const postfixViolations = collectTopLevelFieldNamePostfixViolations(
+						typeToSave,
+						formEngine.ignorePostfixFields,
+						(field) =>
+							(controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor)
+								?.metadata?.suffixes
+					);
+					if (postfixViolations.length) {
+						showAlert({
+							children: (
+								<Box>
+									<Typography sx={{ marginBottom: 1 }}>
+										<FormattedMessage defaultMessage="Model fields require their respective data type postfix at the end of the variable name:" />
+									</Typography>
+									<Box component="ul" sx={{ m: 0, pl: 2 }}>
+										{postfixViolations.map((violation) => (
+											<Typography key={violation.id} component="li" variant="body2">
+												<strong>{violation.title}:</strong>{' '}
+												{violation.suffixes.length > 1 ? (
+													<FormattedMessage
+														defaultMessage="options are {postfixes}"
+														values={{ postfixes: formatPostfixList(violation.suffixes) }}
+													/>
+												) : (
+													<FormattedMessage
+														defaultMessage="option is {postfixes}"
+														values={{ postfixes: formatPostfixList(violation.suffixes) }}
+													/>
+												)}
+											</Typography>
+										))}
+									</Box>
+								</Box>
+							)
+						});
+						break;
+					}
+				}
+				reportSubmittingOrPending({ isSubmitting: true });
+				const isNew = Boolean((typeToSave as PossibleContentTypeDraft).NEW);
 				save(site, typeToSave.id, () => withPersistedJsController(typeToSave), configDescriptors).subscribe({
 					next() {
-						onUpdateHasPendingChanges(false);
-						dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: false, hasPendingChanges: false });
+						// Edits that landed after submit must keep pending state and must not close the dialog:
+						// - open-form edits (fieldUpdates$ → changedFieldIds)
+						// - structural working-type edits (delete/insert/move/etc. via setType) while save was in flight
+						const postSubmitEdits = activeFormHasChanges() || typeRef.current !== typeToSave;
+						onUpdateHasPendingChanges(postSubmitEdits);
+						reportSubmittingOrPending({ isSubmitting: false, hasPendingChanges: postSubmitEdits });
 						// If the type being saved is new, update the type state to remove the NEW property.
 						// Clearing NEW triggers the contentItem effect to fetch once. For existing types, bump
 						// the reload token so the same effect re-fetches (and cancels any in-flight request).
-						if ((typeToSave as PossibleContentTypeDraft).NEW) {
-							setType(reversePluckProps(typeToSave as PossibleContentTypeDraft, 'NEW'));
+						// Use the current working copy so edits made while save was in flight are kept.
+						if (isNew) {
+							setType((current) => reversePluckProps(current as PossibleContentTypeDraft, 'NEW'));
 						} else {
 							setContentItemReloadToken((token) => token + 1);
 						}
 						dispatch(
 							batchActions([
+								...(isNew ? [emitSystemEvent(contentTypeCreated())] : []),
 								fetchContentTypes(),
 								showSystemNotification({
 									message: formatMessage({ defaultMessage: 'Save successful.' })
 								})
 							])
 						);
+						if (action === 'saveAndClose') {
+							if (postSubmitEdits) {
+								dispatch(
+									showSystemNotification({
+										message: formatMessage({
+											defaultMessage: 'Saved. The dialog stayed open because there are newer unsaved changes.'
+										})
+									})
+								);
+							} else {
+								onClose?.();
+							}
+						} else if (action === 'saveAndMinimize') {
+							onMinimize?.();
+						}
 					},
 					error(error: AjaxError) {
-						dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: false });
+						reportSubmittingOrPending({ isSubmitting: false });
 						showAlert({
 							children: (
 								<Box>
@@ -681,7 +798,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							),
 							onOk: () => {
 								resetSelection();
-								setType(withPersistedJsController(props.type));
+								setType(withPersistedJsController(createTypeWorkingCopy(props.type)));
 								dispatch(popDialog({ id }));
 							},
 							onCancel: () => dispatch(popDialog({ id }))
@@ -699,7 +816,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		stateRef.current.formFieldsChanged = false;
 		setVirtualContentType(null);
 		setFieldFormViewProps(null);
-		setHasPendingChanges(false);
+		onUpdateHasPendingChanges(false);
 		setDrawerOpenTransitionEnded(false);
 		setOpen(false);
 	};
@@ -716,7 +833,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 
 	const handleInsertSection: TypeDetailsViewProps['onInsertSection'] = (section, position) => {
-		setType(insertSection(type, section, position));
+		setType((currentType) => insertSection(currentType, section, position));
 		onUpdateHasPendingChanges(true);
 		handleSectionSelected(section);
 	};
@@ -780,9 +897,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const newDataSource = getNewDataSourceFromDescriptor(dataSourceType, descriptor, configEntry);
 
 		setOpenDataSourceInserter(false);
-		const nextDataSources = type.dataSources?.concat() ?? [];
-		nextDataSources.splice(position, 0, newDataSource);
-		setType({ ...type, dataSources: nextDataSources });
+		setType((currentType) => insertDataSourceIntoType(currentType, newDataSource, position));
 		onUpdateHasPendingChanges(true);
 		handleDataSourceSelected(newDataSource);
 	};
@@ -802,8 +917,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const handleDeleteDataSource: FieldFormViewProps['onDeleteDataSource'] = (dataSourceId) => {
 		resetSelection();
 		onUpdateHasPendingChanges(true);
-		const nextDataSources = type.dataSources.filter((dataSource) => dataSource.id !== dataSourceId);
-		setType((currentType) => ({ ...currentType, dataSources: nextDataSources }));
+		setType((currentType) => deleteDataSourceFromType(currentType, dataSourceId));
 	};
 	// endregion
 
@@ -832,14 +946,18 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 	// region const fieldEditorView = ...
 	const fieldEditorView = virtualContentType ? (
-		<TypeControllerFlagContext.Provider value={typeControllerFlagContext}>
-			{createElement(TypeBuilderFormsEngine, {
-				...fieldFormViewProps,
-				isPanelReady: drawerOpenTransitionEnded,
-				onOpenInsertFieldDialog,
-				performCurrentFormErrorCheckAndWarning
-			})}
-		</TypeControllerFlagContext.Provider>
+		<FieldNamePostfixContext.Provider value={fieldNamePostfixContext}>
+			<TypeControllerFlagContext.Provider value={typeControllerFlagContext}>
+				{createElement(TypeBuilderFormsEngine, {
+					...fieldFormViewProps,
+					// Keep `type` current so delete-confirmation can list fields that still reference a data source.
+					type,
+					isPanelReady: drawerOpenTransitionEnded,
+					onOpenInsertFieldDialog,
+					performCurrentFormErrorCheckAndWarning
+				})}
+			</TypeControllerFlagContext.Provider>
+		</FieldNamePostfixContext.Provider>
 	) : null;
 	// endregion
 
@@ -855,7 +973,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Commit open form edits first so the move runs on up-to-date type state.
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
-		const baseType = commitOpenFormChanges() ?? type;
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		// Field id may have changed during commit (rename); replace only the leaf of composed paths.
 		const committedFieldId = stateRef.current.selectedField?.id ?? getIdFromIdPath(fieldIdPath);
 		const resolvedFieldIdPath = replaceIdPathLeaf(fieldIdPath, committedFieldId);
@@ -922,7 +1040,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Commit open form edits first so the reorder runs on up-to-date type state.
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
-		const baseType = commitOpenFormChanges() ?? type;
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		// Field id may have changed during commit (rename); replace only the leaf of composed paths.
 		const committedFieldId = stateRef.current.selectedField?.id ?? getIdFromIdPath(fieldIdPath);
 		const resolvedFieldIdPath = replaceIdPathLeaf(fieldIdPath, committedFieldId);
@@ -939,7 +1057,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Commit open form edits first so the reorder runs on up-to-date type state.
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
-		const baseType = commitOpenFormChanges() ?? type;
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		// Dialog keys are pre-commit; replace any id missing from type.fields with the
 		// committed selected field id (rename), preserving the requested order.
 		const renamedId = stateRef.current.selectedField?.id;
@@ -960,15 +1078,13 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		}
 	};
 
-	const handleReorderTypeSections = (sections: ReorderFieldsDialogProps['fields']) => {
-		setType((currentType) => {
-			const newSections = sections.map((section) => {
-				return currentType.sections.find((s) => s.id === section.key);
-			});
-			const nextType = { ...currentType, sections: newSections };
-			handleEditTypeProperties(nextType);
-			return nextType;
-		});
+	const handleReorderTypeSections = async (sections: ReorderFieldsDialogProps['fields']) => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return;
+		onUpdateHasPendingChanges(true);
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
+		const nextType = reorderTypeSections(baseType, sections);
+		setType(nextType);
+		handleEditTypeProperties(nextType);
 	};
 	// endregion
 
@@ -981,7 +1097,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				tap(() => {
 					if (!effectRefs.current.open) return;
 					const formContext = stateRef.current.activeFormContext;
-					const isDirty = (formContext?.changedFieldIds?.size ?? 0) > 0;
+					const isDirty = formContext?.changedFieldIds ? jotai.get(formContext.changedFieldIds).size > 0 : false;
 					stateRef.current.formFieldsChanged = isDirty;
 					if (isDirty) {
 						effectRefs.current.onUpdateHasPendingChanges(true);
@@ -1084,6 +1200,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				open={open}
 				onClose={handleCloseDrawer}
 				disableSave={disableSave}
+				mountMode={mountMode}
 				onActionClick={handleToolbarActionClick}
 				drawerContent={fieldEditorView}
 				drawerProps={{
@@ -1152,9 +1269,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	);
 });
 
+/** Fresh Type Builder edit state. `fieldUpdates$` is the internal stream the open form emits {@link FieldUpdate}s on. */
 function createContextObject(): EditAppContextProps {
 	return {
-		fieldUpdates$: new Subject<string>(),
+		fieldUpdates$: new Subject<FieldUpdate>(),
 		formContextApi: createFieldFormContextApi(),
 		activeFormContext: null,
 		selectedField: null,
@@ -1470,7 +1588,7 @@ function updateTypeFromDataSourceUpdate(
 		const field = descriptorFields[key];
 		const fieldType = field?.type;
 		const serializer = fieldType ? valueSerializersLookup[fieldType] : undefined;
-		serializedValues[key] = serializer ? serializer(field, value) : value;
+		serializedValues[key] = serializer ? serializer(value, { field, contentTypesById: {} }) : value;
 	});
 	const nextDataSource = { ...selectedDataSource };
 	// When updating a new data source, we need to exclude NEW prop from the new datasource content

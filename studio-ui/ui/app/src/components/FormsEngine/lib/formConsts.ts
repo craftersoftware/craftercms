@@ -15,6 +15,7 @@
  */
 
 import { atom } from 'jotai';
+import { XML_ATTRIBUTE_PREFIX } from './controlValueTypes';
 
 export const ItemNotFoundError = Symbol('ItemNotFoundError');
 export const ContentTypeNotFoundError = Symbol('ContentTypeNotFoundError');
@@ -71,7 +72,7 @@ export const systemFieldsNotInType = [
 export const preservedElements: string[] = [XmlKeys.groupId, XmlKeys.orderDefault, XmlKeys.placeInNav];
 
 /** Prefix of item attributes in the values object, as read by `deserializeContentDoc` and written by `buildContentXml`. */
-export const xmlAttributePrefix = '@:';
+export const xmlAttributePrefix = XML_ATTRIBUTE_PREFIX;
 
 /** The node-selector item `datasource` attribute key in the values object. */
 export const xmlDataSourceAttribute = `${xmlAttributePrefix}datasource` as const;

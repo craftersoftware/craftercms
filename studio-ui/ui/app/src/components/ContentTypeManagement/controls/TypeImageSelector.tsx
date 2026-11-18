@@ -18,7 +18,7 @@ import OutlinedInput, { OutlinedInputProps } from '@mui/material/OutlinedInput';
 import React, { useId } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
@@ -29,7 +29,7 @@ import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { useStableFormContext } from '../../FormsEngine/lib/formsEngineContext';
 import { TypeBuilderControl } from '../utils';
 import type { ImageRestrictions } from '../../ImageEditorDialog/types';
-import { showImageCropDialog } from '../../FormsEngine/lib/controlHelpers';
+import { showImageCropDialog } from '../../FormsEngine/lib/mediaDialogs';
 import { validateImageRestrictions } from '../../../utils/content';
 import { showSystemNotification } from '../../../state/actions/system';
 import { ensureSingleSlash } from '../../../utils/string';
@@ -37,9 +37,7 @@ import { getFileNameFromPath } from '../../../utils/path';
 import { uploadFile } from '../../../services/content';
 import { pushErrorDialog } from '../../../utils/system';
 
-export interface TypeImageSelectorProps extends TypeBuilderControl {
-	value: string;
-}
+export type TypeImageSelectorProps = TypeBuilderControl<string>;
 
 /** Content-type thumbnail size caps (WIDTHCONSTRAINS / HEIGHTCONSTRAINS). */
 const TYPE_IMAGE_RESTRICTIONS: ImageRestrictions = {
@@ -152,13 +150,13 @@ export function TypeImageSelector(props: TypeImageSelectorProps) {
 				endAdornment={
 					<>
 						{value && (
-							<Tooltip title={<FormattedMessage defaultMessage="Remove image" />}>
+							<Tooltip title={formatMessage({ defaultMessage: 'Remove image' })}>
 								<IconButton onClick={() => onDeleteImage()}>
 									<DeleteOutlineRoundedIcon />
 								</IconButton>
 							</Tooltip>
 						)}
-						<Tooltip title={<FormattedMessage defaultMessage="Upload Image" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Upload Image' })}>
 							<IconButton onClick={() => onUploadImage()}>
 								<UploadRoundedIcon />
 							</IconButton>

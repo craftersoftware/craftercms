@@ -19,7 +19,8 @@ import ContentType, { ContentTypeField } from '../../../models/ContentType';
 import type { BuiltInControlType } from './controlMap';
 import type { RepeatItem } from '../controls/Repeat';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
-import { getPluginControlValueRetriever } from '../controls/registry';
+import { getPluginControlValueRetriever, getRegisteredControlContribution } from '../controls/registry';
+import { freezeForPlugin } from './pluginHooks';
 import { preservedElements, systemFieldsNotInType, xmlAttributePrefix, XmlKeys } from './formConsts';
 import { deserialize, getParsedField, unescapeXml } from '../../../utils/xml';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
@@ -27,7 +28,7 @@ import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import { nnou } from '../../../utils/object';
 import { v4 as uuid } from 'uuid';
 import { getAdditionalFieldsIdsFromDescriptor, resolveControlDescriptors } from './formUtils';
-import type { ValueRetriever } from './controlValueTypes';
+import type { ValueRetriever, ValueRetrieverContext } from './controlValueTypes';
 
 export type { ValueRetriever } from './controlValueTypes';
 
@@ -206,7 +207,8 @@ export function createParsedValueForField<T = unknown>(
 export function retrieveFieldValue<T = unknown>(field: ContentTypeField, value: unknown): T {
 	// Prefer the built-in map when the type is known there (including explicit `null` = no conversion).
 	// Only consult plugin contributions for types absent from the built-in map.
-	const retriever: ValueRetriever<T> | null | undefined = Object.hasOwn(valueRetrieverLookup, field.type)
+	const isBuiltIn = Object.hasOwn(valueRetrieverLookup, field.type);
+	const retriever: ValueRetriever<T> | null | undefined = isBuiltIn
 		? (valueRetrieverLookup[field.type] as ValueRetriever<T> | null)
 		: (getPluginControlValueRetriever(field.type) as ValueRetriever<T> | undefined);
 	const defaultValue = field.defaultValue as string;
@@ -216,7 +218,20 @@ export function retrieveFieldValue<T = unknown>(field: ContentTypeField, value: 
 	if (!retriever) {
 		return fieldValue as T;
 	}
-	return retriever(fieldValue, field);
+	if (isBuiltIn) {
+		return retriever(fieldValue, { field });
+	}
+	// A plugin's retriever fails on its own field only. The rest of the form still loads.
+	try {
+		return retriever(fieldValue, { field: freezeForPlugin(field) });
+	} catch (error) {
+		console.error(
+			`The valueRetriever of plugin "${getRegisteredControlContribution(field.type)?.pluginId}" for field ` +
+				`"${field.id}" (control type "${field.type}") threw. The raw value is used for that field.`,
+			error
+		);
+		return fieldValue as T;
+	}
 }
 
 /** Takes in the CrafterCMS content XML and returns a JS object with the values */
@@ -258,8 +273,8 @@ export function arrayFieldExtractor(value: unknown): unknown[] {
 	return Array.isArray(value) ? value : ((value as Record<'item', unknown[]>)?.item ?? []);
 }
 
-export function textFieldExtractor(value: unknown, field?: ContentTypeField): string {
-	const escapeContent = (field?.properties?.escapeContent?.value as boolean) ?? false;
+export function textFieldExtractor(value: unknown, ctx?: ValueRetrieverContext): string {
+	const escapeContent = (ctx?.field?.properties?.escapeContent?.value as boolean) ?? false;
 	const rawValue: string = nnou(value) ? (value as string) : '';
 	return escapeContent ? unescapeXml(rawValue) : rawValue;
 }
