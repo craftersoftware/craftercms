@@ -16,7 +16,7 @@ Before substantive changes, read and follow:
 
 - Next FE: `ui/app/src/components/FormsEngine/`
 - Next TB: `ui/app/src/components/ContentTypeManagement/`; centric editor: `components/EditTypeView.tsx`
-- Goal: fold `config.xml` into `form-definition.xml` (backend still blocks full drop)
+- Type definition: `form-definition.xml` only; `config.xml` merged and deleted by the 5.0.0.2 upgrader (see docs §3).
 
 ## Runtime environment (authoring instance + sites)
 

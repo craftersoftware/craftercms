@@ -51,7 +51,7 @@ import { generatePackageOptions, packageActionDispatcher } from '../../utils/pac
 import { LIVE_COLOUR, STAGING_COLOUR } from '../ItemPublishingTargetIcon/styles';
 import { asLocalizedDateTime } from '../../utils/datetime';
 import useLocale from '../../hooks/useLocale';
-import { useTheme } from '@mui/material/styles';
+import { Theme, useTheme } from '@mui/material/styles';
 
 export const actionsToBeShown: AllItemActions[] = [
 	'edit',
@@ -208,6 +208,30 @@ export function Pager(props: {
 		</>
 	);
 }
+
+/**
+ * Styles for a dashlet row that selects itself when clicked. The row is not a button: the checkbox inside it is the
+ * keyboard (and assistive technology) way to select, so the click is a pointer convenience. Making the row a button
+ * would nest the checkbox and the row's other controls inside it (axe `nested-interactive`).
+ */
+export const dashletSelectableRowSx: SxProps<Theme> = {
+	pt: 0,
+	pb: 0,
+	cursor: 'pointer',
+	'&:hover': { bgcolor: 'action.hover' }
+};
+
+/**
+ * Hides a dashlet options button until its row is hovered, while keeping it available to keyboard focus and to touch
+ * (or any coarse or hover-less pointer). `pointer-events: none` stops a hidden button from taking the row's click; the
+ * button stays in the tab order.
+ */
+export const getDashletRevealOnHoverSx = (visible: boolean): SxProps<Theme> => ({
+	opacity: visible ? 1 : 0,
+	pointerEvents: visible ? 'auto' : 'none',
+	'&:focus-visible': { opacity: 1, pointerEvents: 'auto' },
+	'@media (hover: none), (any-pointer: coarse)': { opacity: 1, pointerEvents: 'auto' }
+});
 
 export function DashletItemOptions(props: { path: string; iconButtonProps?: IconButtonProps }) {
 	const { path, iconButtonProps } = props;
