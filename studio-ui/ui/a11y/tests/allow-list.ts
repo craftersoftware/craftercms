@@ -117,20 +117,23 @@ export const ruleTickets: Record<string, RuleTicket> = {
 };
 
 /** True when the rule's ticket lists the screen in that theme. */
-export function inTicketScope(rule: string, screen: string, theme: Theme) {
-	return Boolean(ruleTickets[rule]?.scope[screen]?.includes(theme));
+export function inTicketScope(rule: string, screen: string, theme: Theme, tickets = ruleTickets) {
+	return Boolean(tickets[rule]?.scope[screen]?.includes(theme));
 }
 
-/** Throws on any entry that is not a reviewed, ticketed, in-scope node list. There is no placeholder ticket. */
-export function validateAllowList(entries: AllowListEntry[]) {
+/**
+ * Throws on any entry that is not a reviewed, ticketed, in-scope node list. There is no placeholder ticket.
+ * `tickets` defaults to `ruleTickets`. The unit tests pass a fixed table so they don't depend on which tickets are open.
+ */
+export function validateAllowList(entries: AllowListEntry[], tickets = ruleTickets) {
 	const keys = new Set<string>();
 	entries.forEach(({ rule, screen, theme, nodes }) => {
 		const key = `${rule} on ${theme} ${screen}`;
-		if (!ruleTickets[rule]) {
+		if (!tickets[rule]) {
 			throw new Error(`Allow-list entry for ${key}: the rule has no umbrella ticket in ruleTickets`);
 		}
-		if (!inTicketScope(rule, screen, theme)) {
-			throw new Error(`Allow-list entry for ${key}: ${ruleTickets[rule].ticket} does not list that screen and theme`);
+		if (!inTicketScope(rule, screen, theme, tickets)) {
+			throw new Error(`Allow-list entry for ${key}: ${tickets[rule].ticket} does not list that screen and theme`);
 		}
 		if (!Array.isArray(nodes) || !nodes.length || nodes.some((node) => typeof node !== 'string' || !node)) {
 			throw new Error(`Allow-list entry for ${key} must list the fingerprint of every node it allows`);
