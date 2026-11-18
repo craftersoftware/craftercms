@@ -60,6 +60,20 @@ export function HistoryDialogPagination(props: PaginationProps) {
 			rowsPerPage={rowsPerPage}
 			page={page}
 			slotProps={{
+				select: {
+					SelectDisplayProps: {
+						'aria-label': formatMessage(translations.itemsPerPage),
+						'aria-labelledby': undefined
+					},
+					MenuProps: {
+						slotProps: {
+							list: {
+								'aria-label': formatMessage(translations.itemsPerPage),
+								'aria-labelledby': undefined
+							}
+						}
+					}
+				},
 				actions: {
 					previousButton: {
 						'aria-label': formatMessage(translations.previousPage),
