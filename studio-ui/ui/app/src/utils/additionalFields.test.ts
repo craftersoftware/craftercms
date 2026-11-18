@@ -656,3 +656,32 @@ describe('parseContentXML additionalFields skip logic', () => {
 		);
 	});
 });
+
+describe('parseElementByContentType plugin fallthrough', () => {
+	it('does not log a missing type for a plugin control, but still does for an unknown built-in', async () => {
+		const { parseElementByContentType } = await import('./content.ts');
+		const element = contentDoc('<x_s>v</x_s>').documentElement.querySelector('x_s');
+		const logs: string[] = [];
+		const original = console.log;
+		console.log = (...args: unknown[]) => void logs.push(args.map(String).join(' '));
+		try {
+			parseElementByContentType(
+				element,
+				{ id: 'x_s', type: 'backup-control', properties: { plugin: { pluginId: 'p' } } } as never,
+				{},
+				{}
+			);
+			assert.equal(
+				logs.some((m) => m.includes('Missing type')),
+				false
+			);
+			parseElementByContentType(element, { id: 'x_s', type: 'not-a-control', properties: {} } as never, {}, {});
+			assert.equal(
+				logs.some((m) => m.includes('Missing type "not-a-control"')),
+				true
+			);
+		} finally {
+			console.log = original;
+		}
+	});
+});
