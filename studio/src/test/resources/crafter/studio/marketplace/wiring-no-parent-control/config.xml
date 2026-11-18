@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<siteUi>
+	<widget id="craftercms.components.ContentTypeManagement">
+		<configuration>
+			<controls>
+				<control id="input">
+					<icon id="@mui/icons-material/DriveFileRenameOutlineOutlined"/>
+				</control>
+				<!-- the new element should be added here -->
+			</controls>
+		</configuration>
+	</widget>
+</siteUi>

@@ -1007,14 +1007,11 @@ public class MarketplaceServiceInternalImpl implements MarketplaceService, Initi
 					Document document = DocumentHelper.parseText(config);
 
 					// check if the wiring has already been performed
-					if (document.selectSingleNode(installation.getElementXpath()) != null) {
+					if (isNotEmpty(installation.getElementXpath()) &&
+						document.selectSingleNode(installation.getElementXpath()) != null) {
 						logger.debug("Wiring of type '{}' was already performed for plugin '{}' in site '{}'," +
 							" skip...", installation.getType(), plugin.getId(), siteId);
 						continue;
-					}
-
-					if (wiring != null) {
-						wiring.add(ConfigRecord.from(installation));
 					}
 
 					// merge the new XML with the existing configuration (to avoid invalid XML)
@@ -1053,7 +1050,22 @@ public class MarketplaceServiceInternalImpl implements MarketplaceService, Initi
 					executeTemplate(toInputStream(template, UTF_8), params, null,
 						toInputStream(config, UTF_8), output);
 
-					Files.write(configFile, output.toByteArray());
+					// A transform that does not match its catalog parent leaves the document unchanged.
+					// Fail before writing or recording that wiring.
+					byte[] wired = output.toByteArray();
+					Document wiredDocument = DocumentHelper.parseText(new String(wired, UTF_8));
+					if (isEmpty(installation.getElementXpath()) ||
+						wiredDocument.selectSingleNode(installation.getElementXpath()) == null) {
+						throw new PluginInstallationException(format(
+							"Wiring of type '%s' for plugin '%s' in site '%s' did not add the element '%s'",
+							installation.getType(), plugin.getId(), siteId, installation.getElementXpath()));
+					}
+
+					if (wiring != null) {
+						wiring.add(ConfigRecord.from(installation));
+					}
+
+					Files.write(configFile, wired);
 					changedFiles.add(configPath);
 				} catch (ConfigurationRuntimeException e) {
 					logger.warn("Unsupported installation type '{}' for plugin '{}' in site '{}'",
