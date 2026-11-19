@@ -210,7 +210,10 @@ describe('PickFieldDialogBody', () => {
 		const { host, inserts } = await renderBody({ typesCurrentList: [] });
 
 		await act(async () => {
-			fieldButton(host).dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
+			const button = fieldButton(host);
+			button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+			button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+			button.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
 		});
 
 		assert.deepEqual(inserts, [['input', 0]]);
