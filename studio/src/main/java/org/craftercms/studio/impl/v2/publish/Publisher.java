@@ -117,11 +117,6 @@ public class Publisher implements ApplicationEventPublisherAware {
 	 * the site avoids that round trip on later staging publishes.
 	 */
 	private final Set<String> ensuredStagingDeployerTargets = ConcurrentHashMap.newKeySet();
-	/**
-	 * Live deletes held while {@code staging_blobs_copied} is false, so they cannot remove a blob the baseline
-	 * copy still needs. Released after a later copy succeeds.
-	 */
-	private final Map<String, List<PublishItem>> heldLiveDeletes = new ConcurrentHashMap<>();
 
 	@ConstructorProperties({"siteDao", "publishDao", "auditService",
 		"contentRepository", "generalLockService", "servicesConfig", "itemTargetDAO", "transactionManager",
@@ -333,46 +328,31 @@ public class Publisher implements ApplicationEventPublisherAware {
 				   final boolean stagingEnabled) throws ServiceLayerException {
 		String siteId = publishPackage.getSite().getSiteId();
 		long packageId = publishPackage.getId();
-		boolean publishStagingTarget = stagingEnabled;
-		boolean baselineCopyFailed = false;
 		if (stagingEnabled) {
 			try {
 				copyStagingBlobsFromLive(siteId);
 			} catch (Exception blobCopyFailure) {
 				try {
-					failStagingBlobCopy(publishPackage, siteId, blobCopyFailure);
+					failBothTargetsForBlobCopy(publishPackage, siteId, blobCopyFailure);
 				} catch (Exception failureHandlingError) {
 					blobCopyFailure.addSuppressed(failureHandlingError);
 					throw new StagingBlobCopyException(format("Failed to copy live blobs to staging for site '%s'", siteId), blobCopyFailure);
 				}
-				baselineCopyFailed = true;
+				return;
 			}
-		}
-		boolean liveTarget = isLiveTarget(publishPackage, siteId);
-		if (baselineCopyFailed && !liveTarget) {
-			return;
-		}
-		if (baselineCopyFailed) {
-			publishStagingTarget = false;
-		}
-		Collection<PublishItem> itemsForPublish = publishItems;
-		if (stagingBlobsCopied(siteId)) {
-			publishHeldLiveDeletes(publishPackage, siteId);
-		} else if (liveTarget) {
-			itemsForPublish = holdLiveDeletes(siteId, publishItems);
 		}
 		switch (publishPackage.getPackageType()) {
 			case INITIAL_PUBLISH -> {
 				logger.debug("Processing initial publish package '{}' for site '{}'", packageId, siteId);
-				doInitialPublish(publishPackage, publishStagingTarget);
+				doInitialPublish(publishPackage, stagingEnabled);
 			}
 			case PUBLISH_ALL -> {
 				logger.debug("Processing publish-all package '{}' for site '{}'", packageId, siteId);
-				doPublishItemList(publishPackage, itemsForPublish, this::doPublishAllTarget, publishStagingTarget);
+				doPublishItemList(publishPackage, publishItems, this::doPublishAllTarget, stagingEnabled);
 			}
 			case ITEM_LIST -> {
 				logger.debug("Processing publish package '{}' for site '{}'", packageId, siteId);
-				doPublishItemList(publishPackage, itemsForPublish, this::doPublishItemListTarget, publishStagingTarget);
+				doPublishItemList(publishPackage, publishItems, this::doPublishItemListTarget, stagingEnabled);
 			}
 			default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
 				publishPackage.getPackageType(), packageId, siteId));
@@ -386,61 +366,10 @@ public class Publisher implements ApplicationEventPublisherAware {
 		publishDao.resetProcessingPackages(READY.value, PROCESSING.value);
 	}
 
-	private boolean isLiveTarget(final PublishPackage publishPackage, final String siteId) throws SiteNotFoundException {
-		return CS.equals(servicesConfig.getLiveEnvironment(siteId), publishPackage.getTarget());
-	}
-
-	private boolean stagingBlobsCopied(final String siteId) {
-		Site site = siteDao.getSite(siteId);
-		return site != null && site.isStagingBlobsCopied();
-	}
-
 	/**
-	 * Keep live deletes pending while the baseline blob copy has not finished. A partial copy counts as not copied.
-	 */
-	private Collection<PublishItem> holdLiveDeletes(final String siteId, final Collection<PublishItem> publishItems) {
-		List<PublishItem> held = new ArrayList<>();
-		List<PublishItem> publishable = new ArrayList<>();
-		for (PublishItem item : publishItems) {
-			if (item.getAction() == DELETE) {
-				held.add(item);
-			} else {
-				publishable.add(item);
-			}
-		}
-		if (held.isEmpty()) {
-			return publishItems;
-		}
-		heldLiveDeletes.compute(siteId, (id, existing) -> {
-			List<PublishItem> stored = existing == null ? new ArrayList<>() : existing;
-			for (PublishItem delete : held) {
-				delete.setPublishState(PublishItem.PublishState.PENDING.value);
-				boolean alreadyHeld = stored.stream().anyMatch(item ->
-					item.getPackageId() == delete.getPackageId() && CS.equals(item.getPath(), delete.getPath()));
-				if (!alreadyHeld) {
-					stored.add(delete);
-				}
-			}
-			return stored;
-		});
-		publishDao.updatePublishItemListState(held);
-		logger.info("Holding {} live delete item(s) for site '{}' until the staging blob copy succeeds", held.size(), siteId);
-		return publishable;
-	}
-
-	private void publishHeldLiveDeletes(final PublishPackage publishPackage, final String siteId) throws SiteNotFoundException {
-		List<PublishItem> held = heldLiveDeletes.remove(siteId);
-		if (held == null || held.isEmpty()) {
-			return;
-		}
-		logger.info("Publishing {} held live delete item(s) for site '{}' after the staging blob copy", held.size(), siteId);
-		runTargetPublisher(publishPackage, held, this::doPublishItemListTarget, true, servicesConfig.getLiveEnvironment(siteId));
-	}
-
-	/**
-	 * Copy the live blob-store assets onto the staging branch created during upgrade, before this package publishes
-	 * its staging delta. The copy is skipped once {@code staging_blobs_copied} is set. A failure, including a partial
-	 * copy, leaves the flag false. Live deletes stay pending until a later copy succeeds.
+	 * Copy the live blob-store assets onto the staging branch before this package publishes. The copy is skipped
+	 * once {@code staging_blobs_copied} is set. Every package retries it while the flag is false, and nothing is
+	 * published until it succeeds. A failure, including a partial copy, leaves the flag false and fails both targets.
 	 */
 	private void copyStagingBlobsFromLive(String siteId) throws ServiceLayerException {
 		Site site = siteDao.getSite(siteId);
@@ -511,14 +440,20 @@ public class Publisher implements ApplicationEventPublisherAware {
 	}
 
 	/**
-	 * Record a staging blob-copy failure the same way {@link #runTargetPublisher} records a staging target failure.
-	 * {@link #doPublish} then completes the package, which clears processing and keeps the staging failure bits.
+	 * A baseline blob-copy failure publishes nothing. Record it on both targets and leave the items unpublished.
 	 */
-	private void failStagingBlobCopy(final PublishPackage publishPackage, final String siteId, final Exception e)
+	private void failBothTargetsForBlobCopy(final PublishPackage publishPackage, final String siteId, final Exception e)
 			throws SiteNotFoundException {
-		PublishPackageTO packageTO = getPublishPackageTO(publishPackage, false);
-		recordTargetPublishFailure(publishPackage, packageTO, servicesConfig.getStagingEnvironment(siteId), e);
-		finishTargetPublish(publishPackage, packageTO);
+		logger.error("Failed to copy live blobs to staging for site '{}'. The package will not be published to live or staging",
+			siteId, e);
+		String stagingTarget = servicesConfig.getStagingEnvironment(siteId);
+		String liveTarget = servicesConfig.getLiveEnvironment(siteId);
+		PublishPackageTO stagingPackage = getPublishPackageTO(publishPackage, false);
+		recordTargetPublishFailure(publishPackage, stagingPackage, stagingTarget, e);
+		finishTargetPublish(publishPackage, stagingPackage);
+		PublishPackageTO livePackage = getPublishPackageTO(publishPackage, true);
+		recordTargetPublishFailure(publishPackage, livePackage, liveTarget, e);
+		finishTargetPublish(publishPackage, livePackage);
 	}
 
 	private void recordTargetPublishFailure(final PublishPackage publishPackage, final PublishPackageTO packageTO,

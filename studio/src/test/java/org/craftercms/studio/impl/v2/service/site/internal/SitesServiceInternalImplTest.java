@@ -529,6 +529,35 @@ public class SitesServiceInternalImplTest {
 	}
 
 	@Test
+	public void enableStagingFreshBranchDeletesLeftoverItemTargets() throws Exception {
+		site.setStagingBlobsCopied(false);
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(true);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+		AtomicBoolean targetsExist = new AtomicBoolean(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenAnswer(invocation -> targetsExist.get());
+		doAnswer(invocation -> {
+			targetsExist.set(false);
+			return null;
+		}).when(itemTargetDao).deleteForTarget(0L, "staging");
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		assertFalse(targetsExist.get());
+		InOrder inOrder = inOrder(itemTargetDao, contentRepository);
+		inOrder.verify(itemTargetDao).deleteForTarget(0L, "staging");
+		inOrder.verify(contentRepository).createStagingBranchFromLive(SITE_ID, "live", "staging");
+		inOrder.verify(itemTargetDao).initStaging(0L, "staging", "live");
+		inOrder.verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
 	public void enableStagingRetryDeletesLeftoverTargetsAndRebuildsAfterLivePublish() throws Exception {
 		site.setStagingBlobsCopied(false);
 		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");

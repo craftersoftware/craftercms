@@ -31,7 +31,6 @@ import org.craftercms.studio.api.v2.event.publish.PublishErrorEvent;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
 import org.craftercms.studio.api.v2.event.site.SiteDeletingEvent;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
-import org.craftercms.studio.api.v2.repository.publish.GitPublishChangeSet;
 import org.craftercms.studio.api.v2.service.audit.ActivityStreamService;
 import org.craftercms.studio.api.v2.task.TaskManager;
 import org.craftercms.studio.api.v2.task.TaskProgress;
@@ -46,15 +45,9 @@ import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.craftercms.studio.model.rest.ApiResponse;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
 import org.springframework.web.client.RestClientException;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Collections.emptyList;
 import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_PUBLISH_START;
@@ -119,9 +112,6 @@ public class PublisherTest {
 
 	@Mock
 	ApplicationEventPublisher eventPublisher;
-
-	@Mock
-	PlatformTransactionManager transactionManager;
 
 	@Spy
 	@InjectMocks
@@ -407,210 +397,77 @@ public class PublisherTest {
 	}
 
 	@Test
-	public void blobCopyFailureRecordsStagingFailureAndPublishesLive() throws Exception {
-		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
-		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
-		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
-		when(site2.isStagingBlobsCopied()).thenReturn(false);
-		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
-		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+	public void blobCopyFailurePublishesNothingAndFailsBothTargets() throws Exception {
+		prepareFailedBaselineCopy(LIVE);
 		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
+			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+		long[] packageState = trackPackageState();
+		long[] itemState = trackItemState();
+
+		publisher.doPublish(publishPackage);
+
+		assertFailedUnpublishedPackage(packageState, itemState);
+		verify(siteDAO, never()).setStagingBlobsCopied(SITE_ID, true);
+	}
+
+	@Test
+	public void blobCopySucceedsOnTheNextPackageAndPublishesBothTargets() throws Exception {
+		prepareFailedBaselineCopy(LIVE);
+		doThrow(new ServiceLayerException("blob copy failed")).doNothing().when(contentRepository)
 			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
 		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
-		long[] packageState = {0};
-		doAnswer(invocation -> {
-			long onBits = invocation.getArgument(0);
-			long offBits = invocation.getArgument(1);
-			packageState[0] = (packageState[0] | onBits) & ~offBits;
-			return null;
-		}).when(publishPackage).updatePackageState(anyLong(), anyLong());
-		long[] itemState = {0};
-		doAnswer(invocation -> {
-			long onBits = invocation.getArgument(1);
-			long offBits = invocation.getArgument(2);
-			itemState[0] = (itemState[0] | onBits) & ~offBits;
-			return null;
-		}).when(publishDAO).updatePublishItemsState(eq(PACKAGE_ID), anyLong(), anyLong());
+
+		publisher.doPublish(publishPackage);
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
 
 		publisher.doPublish(publishPackage);
 
-		assertEquals(COMPLETED.value | STAGING_FAILED.value, packageState[0]);
-		assertTrue(COMPLETED.matches(packageState[0]));
-		assertTrue(STAGING_FAILED.matches(packageState[0]));
-		assertFalse(PROCESSING.matches(packageState[0]));
-		// runTargetPublisher stores the package staging-failure bit on the items, then completion clears processing.
-		assertEquals(STAGING_FAILED.value, itemState[0]);
-		assertEquals(0, itemState[0] & PublishItem.PublishState.PROCESSING.value);
-		verify(publishPackage).setStagingError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
-		verify(publishPackage).setPublishedOn(any());
-		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(false), eq(STAGING));
-		verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+		verify(contentRepository, times(2)).copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+		InOrder inOrder = inOrder(siteDAO, publisher);
+		inOrder.verify(siteDAO).setStagingBlobsCopied(SITE_ID, true);
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(false), eq(STAGING));
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+	}
+
+	@Test
+	public void partialBlobCopyFailurePublishesNothingAndLeavesTheFlagFalse() throws Exception {
+		prepareFailedBaselineCopy(LIVE);
+		doThrow(new ServiceLayerException("partial copy failed")).when(contentRepository)
+			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+		long[] packageState = trackPackageState();
+		long[] itemState = trackItemState();
+
+		publisher.doPublish(publishPackage);
+
+		assertFailedUnpublishedPackage(packageState, itemState);
 		verify(siteDAO, never()).setStagingBlobsCopied(anyString(), anyBoolean());
-		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
-		verify(publishDAO).updateItemStatesForCompletePackage(eq(PACKAGE_ID), anyLong(), anyLong(), anyLong(),
-			eq(PublishItem.PublishState.STAGING_SUCCESS.value), eq(LIVE));
-		verify(eventPublisher).publishEvent(any(PublishErrorEvent.class));
 	}
 
 	@Test
-	public void blobCopyFailureThenLiveFailureCompletesWithBothFailureBits() throws Exception {
-		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
-		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
-		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
-		when(site2.isStagingBlobsCopied()).thenReturn(false);
-		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
-		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+	public void liveDeletePublishesNothingWhileTheBlobCopyIsFailing() throws Exception {
+		prepareFailedBaselineCopy(LIVE);
+		when(publishDAO.getPublishItems(SITE_ID, PACKAGE_ID)).thenReturn(List.of(publishItem(PublishItem.Action.DELETE, "/static-assets/blob.png")));
 		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
 			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
-		doCallRealMethod().when(publisher).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
-		stubLivePublishTransaction();
-		when(contentRepository.publish(any(), eq(LIVE), any())).thenThrow(new ServiceLayerException("live publish failed"));
-		long[] packageState = {0};
-		doAnswer(invocation -> {
-			long onBits = invocation.getArgument(0);
-			long offBits = invocation.getArgument(1);
-			packageState[0] = (packageState[0] | onBits) & ~offBits;
-			return null;
-		}).when(publishPackage).updatePackageState(anyLong(), anyLong());
-		long[] itemState = {0};
-		doAnswer(invocation -> {
-			long onBits = invocation.getArgument(1);
-			long offBits = invocation.getArgument(2);
-			itemState[0] = (itemState[0] | onBits) & ~offBits;
-			return null;
-		}).when(publishDAO).updatePublishItemsState(eq(PACKAGE_ID), anyLong(), anyLong());
 
 		publisher.doPublish(publishPackage);
 
-		assertEquals(COMPLETED.value | STAGING_FAILED.value | LIVE_FAILED.value, packageState[0]);
-		assertFalse(PROCESSING.matches(packageState[0]));
-		assertEquals(STAGING_FAILED.value | LIVE_FAILED.value, itemState[0]);
-		assertEquals(0, itemState[0] & PublishItem.PublishState.PROCESSING.value);
-		verify(publishPackage).setStagingError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
-		verify(publishPackage).setLiveError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
-		verify(publishPackage).setPublishedOn(any());
-		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(false), eq(STAGING));
-		verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
-		verify(contentRepository).publish(eq(publishPackage), eq(LIVE), any());
-	}
-
-	@Test
-	public void blobCopyFailureThenLivePublishSucceeds() throws Exception {
-		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
-		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
-		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
-		when(site2.isStagingBlobsCopied()).thenReturn(false);
-		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
-		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
-		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
-			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
-		doCallRealMethod().when(publisher).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
-		stubLivePublishTransaction();
-		when(contentRepository.publish(any(), eq(LIVE), any()))
-			.thenReturn(new GitPublishChangeSet<>("commit-live", List.of(), List.of()));
-		long[] packageState = {0};
-		doAnswer(invocation -> {
-			long onBits = invocation.getArgument(0);
-			long offBits = invocation.getArgument(1);
-			packageState[0] = (packageState[0] | onBits) & ~offBits;
-			return null;
-		}).when(publishPackage).updatePackageState(anyLong(), anyLong());
-		long[] itemState = {0};
-		doAnswer(invocation -> {
-			long onBits = invocation.getArgument(1);
-			long offBits = invocation.getArgument(2);
-			itemState[0] = (itemState[0] | onBits) & ~offBits;
-			return null;
-		}).when(publishDAO).updatePublishItemsState(eq(PACKAGE_ID), anyLong(), anyLong());
-
-		publisher.doPublish(publishPackage);
-
-		assertEquals(COMPLETED.value | STAGING_FAILED.value | LIVE_SUCCESS.value, packageState[0]);
-		assertTrue(COMPLETED.matches(packageState[0]));
-		assertTrue(STAGING_FAILED.matches(packageState[0]));
-		assertTrue(LIVE_SUCCESS.matches(packageState[0]));
-		assertFalse(PROCESSING.matches(packageState[0]));
-		assertEquals(STAGING_FAILED.value | PublishItem.PublishState.LIVE_SUCCESS.value, itemState[0]);
-		assertEquals(0, itemState[0] & PublishItem.PublishState.PROCESSING.value);
-		verify(publishPackage).setPublishedOn(any());
-		verify(publishPackage).setPublishedLiveCommitId("commit-live");
-		verify(contentRepository).publish(eq(publishPackage), eq(LIVE), any());
-		verify(contentRepository).updateRef(SITE_ID, PACKAGE_ID, "commit-live", LIVE);
-		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(false), eq(STAGING));
-		verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+		verify(contentRepository, never()).publish(any(), any(), any());
+		verify(siteDAO, never()).setStagingBlobsCopied(SITE_ID, true);
 	}
 
 	@Test
 	public void blobCopyFailureDoesNotPublishAStagingTargetPackage() throws Exception {
-		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, STAGING);
-		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
-		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
-		when(site2.isStagingBlobsCopied()).thenReturn(false);
-		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
-		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+		prepareFailedBaselineCopy(STAGING);
 		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
 			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
 		long[] packageState = trackPackageState();
+		long[] itemState = trackItemState();
 
 		publisher.doPublish(publishPackage);
 
-		assertEquals(COMPLETED.value | STAGING_FAILED.value, packageState[0]);
-		assertFalse(PROCESSING.matches(packageState[0]));
-		verify(publishPackage).setPublishedOn(any());
-		verify(publisher, never()).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
-		verify(contentRepository, never()).publish(any(), any(), any());
-	}
-
-	@Test
-	public void failedBlobCopyHoldsLiveDeletesUntilTheCopySucceeds() throws Exception {
-		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
-		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
-		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
-		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
-		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
-		PublishItem updateItem = publishItem(PublishItem.Action.UPDATE, "/site/website/index.xml");
-		PublishItem deleteItem = publishItem(PublishItem.Action.DELETE, "/static-assets/blob.png");
-		when(publishDAO.getPublishItems(SITE_ID, PACKAGE_ID))
-			.thenReturn(List.of(updateItem))
-			.thenReturn(List.of(deleteItem))
-			.thenReturn(List.of(updateItem));
-		AtomicBoolean copied = new AtomicBoolean(false);
-		when(site2.isStagingBlobsCopied()).thenAnswer(invocation -> copied.get());
-		List<String> events = new ArrayList<>();
-		doAnswer(invocation -> {
-			boolean flag = invocation.getArgument(1);
-			copied.set(flag);
-			if (flag) {
-				events.add("copy-succeeded");
-			}
-			return null;
-		}).when(siteDAO).setStagingBlobsCopied(eq(SITE_ID), anyBoolean());
-		AtomicInteger copyAttempts = new AtomicInteger();
-		doAnswer(invocation -> {
-			if (copyAttempts.incrementAndGet() < 3) {
-				throw new ServiceLayerException("partial copy failed");
-			}
-			return null;
-		}).when(contentRepository).copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
-		doAnswer(invocation -> {
-			boolean live = invocation.getArgument(3);
-			Collection<PublishItem> items = invocation.getArgument(1);
-			if (live && items.stream().anyMatch(item -> "/static-assets/blob.png".equals(item.getPath()))) {
-				events.add("delete-published");
-			}
-			return null;
-		}).when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
-
-		publisher.doPublish(publishPackage);
-		publisher.doPublish(publishPackage);
-
-		assertEquals(PublishItem.PublishState.PENDING.value, deleteItem.getPublishState());
-		assertTrue(events.isEmpty());
-		verify(publishDAO).updatePublishItemListState(argThat(items -> items.contains(deleteItem)));
-
-		publisher.doPublish(publishPackage);
-
-		assertEquals(List.of("copy-succeeded", "delete-published"), events);
+		assertFailedUnpublishedPackage(packageState, itemState);
 	}
 
 	@Test
@@ -618,6 +475,39 @@ public class PublisherTest {
 		publisher.resetProcessingPackages();
 
 		verify(publishDAO).resetProcessingPackages(PublishPackage.PackageState.READY.value, PROCESSING.value);
+	}
+
+	private void prepareFailedBaselineCopy(String target) throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, target);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(site2.isStagingBlobsCopied()).thenReturn(false);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+	}
+
+	private void assertFailedUnpublishedPackage(long[] packageState, long[] itemState) throws Exception {
+		assertEquals(COMPLETED.value | STAGING_FAILED.value | LIVE_FAILED.value, packageState[0]);
+		assertFalse(PROCESSING.matches(packageState[0]));
+		assertFalse(LIVE_SUCCESS.matches(packageState[0]));
+		assertEquals(STAGING_FAILED.value | LIVE_FAILED.value, itemState[0]);
+		assertEquals(0, itemState[0] & PublishItem.PublishState.PROCESSING.value);
+		assertEquals(0, itemState[0] & PublishItem.PublishState.LIVE_SUCCESS.value);
+		verify(publishPackage).setStagingError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
+		verify(publishPackage).setLiveError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+		verify(contentRepository, never()).publish(any(), any(), any());
+	}
+
+	private long[] trackItemState() {
+		long[] itemState = {0};
+		doAnswer(invocation -> {
+			long onBits = invocation.getArgument(1);
+			long offBits = invocation.getArgument(2);
+			itemState[0] = (itemState[0] | onBits) & ~offBits;
+			return null;
+		}).when(publishDAO).updatePublishItemsState(eq(PACKAGE_ID), anyLong(), anyLong());
+		return itemState;
 	}
 
 	private long[] trackPackageState() {
@@ -704,15 +594,6 @@ public class PublisherTest {
 		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
 		verify(generalLockService, never()).lock(getEnableStagingLockKey(SITE_ID));
 		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
-	}
-
-	private void stubLivePublishTransaction() {
-		when(transactionManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
-		TaskProgress<?, ?> progress = mock(TaskProgress.class);
-		TaskProgress.Stage stage = mock(TaskProgress.Stage.class);
-		lenient().when(progress.startStage(anyString())).thenReturn(stage);
-		when(progress.startStage(anyString(), anyInt())).thenReturn(stage);
-		doReturn(progress).when(taskManager).getTask(any());
 	}
 
 	private void prepareStagingDeployerTarget() throws Exception {
