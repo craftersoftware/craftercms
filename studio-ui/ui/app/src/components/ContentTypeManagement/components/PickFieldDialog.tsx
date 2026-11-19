@@ -17,7 +17,7 @@
 import { EnhancedDialog, EnhancedDialogProps } from '../../EnhancedDialog';
 import { ContentType, ContentTypeField, DataSource } from '../../../models';
 import { FormattedMessage, useIntl } from 'react-intl';
-import React, { ReactNode, useMemo, useRef, useState } from 'react';
+import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { applyTranslations, DescriptorContentType, DescriptorField, PartialContentType } from '../utils';
 import { DialogBody } from '../../DialogBody';
 import { SearchBar, SearchBarProps } from '../../SearchBar';
@@ -44,7 +44,7 @@ import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
-import InsertPositionPicker, { InsertPositionPickerItem } from './InsertPositionPicker';
+import InsertPositionPicker from './InsertPositionPicker';
 
 export interface PickFieldDialogProps extends EnhancedDialogProps {
 	type: ContentType;
@@ -71,6 +71,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 		currentFields,
 		onInsert,
 		onClose,
+		open,
 		systemFieldsTitle,
 		systemFieldsIds,
 		type,
@@ -81,6 +82,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 	const [selectedField, setSelectedField] = useState<PartialContentType>(undefined);
 	const [selectedView, setSelectedView] = useState<number>(0);
 	const [position, setPosition] = useState<number>(typesCurrentList?.length ?? 0);
+	const insertedRef = useRef(false);
 	const { formatMessage } = useIntl();
 	const hasItems = (typesCurrentList?.length ?? 0) > 0;
 	const positionItems = useMemo(
@@ -92,6 +94,21 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 		[typesCurrentList]
 	);
 	const showFieldPositionStep = !isMdUp && selectedView === 1;
+
+	// Dialog exit transition keeps the body mounted; ignore further inserts after the first in this open session.
+	useEffect(() => {
+		if (open) {
+			insertedRef.current = false;
+		}
+	}, [open]);
+
+	const insertOnce = (fieldType: string, insertPosition: number) => {
+		if (insertedRef.current) {
+			return;
+		}
+		insertedRef.current = true;
+		onInsert(fieldType, insertPosition);
+	};
 
 	const onSecondaryAction = (e: React.MouseEvent) => {
 		if (isMdUp || selectedView === 0) {
@@ -106,11 +123,11 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 			return;
 		}
 		if (!hasItems) {
-			onInsert(selectedField.id, 0);
+			insertOnce(selectedField.id, 0);
 			return;
 		}
 		if (isMdUp || selectedView === 1) {
-			onInsert(selectedField.id, position);
+			insertOnce(selectedField.id, position);
 		} else {
 			setSelectedView(1);
 		}
@@ -119,7 +136,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 	const onSelectField = (field: PartialContentType) => {
 		setSelectedField(field);
 		if (!hasItems) {
-			onInsert(field.id, 0);
+			insertOnce(field.id, 0);
 		} else if (!isMdUp) {
 			setSelectedView(1);
 		}
@@ -128,9 +145,9 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 	const onConfirmField = (field: PartialContentType) => {
 		setSelectedField(field);
 		if (!hasItems) {
-			onInsert(field.id, 0);
+			insertOnce(field.id, 0);
 		} else if (isMdUp) {
-			onInsert(field.id, position);
+			insertOnce(field.id, position);
 		} else {
 			setSelectedView(1);
 		}
