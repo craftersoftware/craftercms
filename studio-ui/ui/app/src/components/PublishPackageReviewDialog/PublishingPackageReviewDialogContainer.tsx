@@ -15,7 +15,7 @@
  */
 
 import { PublishingPackageReviewDialogContainerProps } from './types';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import { fetchPackage } from '../../services/publishing';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import { DialogBody } from '../DialogBody';
@@ -81,6 +81,7 @@ export function PublishingPackageReviewDialogContainer(props: PublishingPackageR
 	});
 	const [error, setError] = useState<ApiResponse>();
 	const siteId = useActiveSiteId();
+	const cannedCommentsLabelId = useId();
 	const submitLabel =
 		state.action === 'reject' ? (
 			<FormattedMessage defaultMessage="Reject" />
@@ -343,10 +344,11 @@ export function PublishingPackageReviewDialogContainer(props: PublishingPackageR
 								) : (
 									state.action === 'reject' && (
 										<FormControl fullWidth>
-											<InputLabel>
+											<InputLabel id={cannedCommentsLabelId}>
 												<FormattedMessage defaultMessage="Canned Comments" />
 											</InputLabel>
 											<Select
+												labelId={cannedCommentsLabelId}
 												fullWidth
 												label={<FormattedMessage defaultMessage="Canned Comments" />}
 												autoFocus

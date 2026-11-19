@@ -85,4 +85,19 @@ describe('dashlet page picker name', () => {
 		assert.equal(pagePicker?.getAttribute('aria-label'), 'Page');
 		assert.equal(pagePicker?.textContent?.replace(/\s+/g, ' ').trim(), 'Page 3');
 	});
+
+	it('names the open listbox Page, with no dangling aria-labelledby', async () => {
+		const host = await render(0);
+		const pagePicker = Array.from(host.querySelectorAll<HTMLElement>('[role="combobox"]')).find(
+			(node) => !node.classList.contains('MuiTablePagination-select')
+		);
+		assert.ok(pagePicker, 'the page picker combobox is missing');
+		await act(async () => {
+			pagePicker.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+		});
+		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
+		assert.ok(listbox, 'the page picker listbox did not open');
+		assert.equal(listbox.getAttribute('aria-label'), 'Page');
+		assert.equal(listbox.hasAttribute('aria-labelledby'), false, 'the listbox points at a label that is not shown');
+	});
 });

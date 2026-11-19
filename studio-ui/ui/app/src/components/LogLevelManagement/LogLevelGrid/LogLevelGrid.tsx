@@ -23,7 +23,7 @@ import TableBody from '@mui/material/TableBody';
 import GlobalAppGridRow from '../../GlobalAppGridRow';
 import GlobalAppGridCell from '../../GlobalAppGridCell';
 import Typography from '@mui/material/Typography';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -58,6 +58,11 @@ export function LogLevelGrid(props: LoggingLevelsGridUIProps) {
 		loggerFilter = '',
 		levelFilter = ''
 	} = props;
+	const { formatMessage } = useIntl();
+	const levelFilterLabel = formatMessage({
+		id: 'loggingLevels.levelFilterLabel',
+		defaultMessage: 'Level filter'
+	});
 	const [displayAll, setDisplayAll] = useState(false);
 	const onShowAllClick = () => setDisplayAll(true);
 	useEffect(() => {
@@ -107,6 +112,18 @@ export function LogLevelGrid(props: LoggingLevelsGridUIProps) {
 											displayEmpty
 											onChange={(e) => {
 												onLevelFilterChange(e.target.value);
+											}}
+											SelectDisplayProps={{
+												'aria-label': levelFilterLabel,
+												'aria-labelledby': undefined
+											}}
+											MenuProps={{
+												slotProps: {
+													list: {
+														'aria-label': levelFilterLabel,
+														'aria-labelledby': undefined
+													}
+												}
 											}}
 										>
 											<MenuItem key="empty" value="">
