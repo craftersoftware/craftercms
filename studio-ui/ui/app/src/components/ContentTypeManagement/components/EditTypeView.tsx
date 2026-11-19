@@ -904,6 +904,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		handleFieldSelected(newFieldPath, newField, sectionId, nextType);
 	};
 	const handleInsertDataSource = (dataSourceType: string, position: number) => {
+		setOpenDataSourceInserter(false);
 		const configEntry = config.dataSources?.[dataSourceType];
 		const descriptor = dataSourceDescriptors[dataSourceType] ?? configEntry?.descriptor;
 		if (!descriptor) {
@@ -913,7 +914,6 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 		const newDataSource = getNewDataSourceFromDescriptor(dataSourceType, descriptor, configEntry);
 
-		setOpenDataSourceInserter(false);
 		setType((currentType) => insertDataSourceIntoType(currentType, newDataSource, position));
 		onUpdateHasPendingChanges(true);
 		handleDataSourceSelected(newDataSource);
