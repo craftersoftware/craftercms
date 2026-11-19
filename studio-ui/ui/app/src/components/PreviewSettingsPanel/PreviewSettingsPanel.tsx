@@ -127,7 +127,7 @@ export function PreviewSettingsPanel() {
 				<FormHelperText sx={formHelperTextSx}>{formatMessage(translations.highlightModeHelperText)}</FormHelperText>
 			</FormControl>
 			<Divider />
-			<PaddingModeSwitchListItem showIcon={false} showHelperText />
+			<PaddingModeSwitchListItem component="li" showIcon={false} showHelperText />
 		</List>
 	);
 }

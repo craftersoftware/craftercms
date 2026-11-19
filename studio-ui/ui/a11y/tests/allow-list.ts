@@ -41,44 +41,16 @@ export interface AllowListEntry {
 }
 
 const both: Theme[] = ['light', 'dark'];
-const light: Theme[] = ['light'];
-
-const editModePages = [
-	'Search',
-	'Create Content',
-	'Existing Content',
-	'Drop Targets',
-	'Assets',
-	'Audience Targeting',
-	'Page Explorer',
-	'Device Simulator',
-	'Settings'
-];
 
 /**
  * The umbrella tickets, one per axe rule, and the screens and themes each one lists. They inventory what still fails once
  * the other a11y PRs have merged. A rule that is not here has no ticket, so it can't be allow-listed: it fails the run.
  */
 export const ruleTickets: Record<string, RuleTicket> = {
-	'color-contrast': {
-		ticket: 'craftersoftware/craftercms-e#1452',
-		criterion: '1.4.3 Contrast (Minimum)',
-		scope: { users: both, 'edit form': light }
-	},
 	list: {
 		ticket: 'craftersoftware/craftercms-e#1455',
 		criterion: '1.3.1 Info and Relationships',
 		scope: { 'edit mode tools panel > Settings': both }
-	},
-	listitem: {
-		ticket: 'craftersoftware/craftercms-e#1456',
-		criterion: '1.3.1 Info and Relationships',
-		scope: {
-			preview: both,
-			'tools panel': both,
-			'edit mode tools panel': both,
-			...Object.fromEntries(editModePages.map((page) => [`edit mode tools panel > ${page}`, both]))
-		}
 	}
 };
 

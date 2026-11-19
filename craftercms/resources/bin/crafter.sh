@@ -794,7 +794,7 @@ function createOpenSearchDocker() {
     cecho "Docker image $SEARCH_DOCKER_NAME found, unable to start. Please remove this image before starting.\n To remove the image, run: docker rm $SEARCH_DOCKER_NAME\n" "error"
     exit 21
   else
-    docker create -p $SEARCH_PORT:9200 -e "discovery.type=single-node" -e "DISABLE_SECURITY_PLUGIN=true" -v "$SEARCH_INDEXES_DIR":/usr/share/opensearch/data/ --name "$SEARCH_DOCKER_NAME" opensearchproject/opensearch:$searchVersion > /dev/null 2>&1
+    docker create -p $SEARCH_PORT:9200 -e "discovery.type=single-node" -e "DISABLE_SECURITY_PLUGIN=true" -e "OPENSEARCH_JAVA_OPTS=$OPENSEARCH_JAVA_OPTS" -v "$SEARCH_INDEXES_DIR":/usr/share/opensearch/data/ --name "$SEARCH_DOCKER_NAME" opensearchproject/opensearch:$searchVersion > /dev/null 2>&1
   fi
 }
 
