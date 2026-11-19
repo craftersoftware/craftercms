@@ -31,6 +31,7 @@ import org.craftercms.studio.api.v2.event.publish.PublishErrorEvent;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
 import org.craftercms.studio.api.v2.event.site.SiteDeletingEvent;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
+import org.craftercms.studio.api.v2.repository.publish.GitPublishChangeSet;
 import org.craftercms.studio.api.v2.service.audit.ActivityStreamService;
 import org.craftercms.studio.api.v2.task.TaskManager;
 import org.craftercms.studio.api.v2.task.TaskProgress;
@@ -45,13 +46,18 @@ import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.craftercms.studio.model.rest.ApiResponse;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.web.client.RestClientException;
+
+import java.util.List;
 
 import static java.util.Collections.emptyList;
 import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_PUBLISH_START;
 import static org.craftercms.studio.api.v2.dal.Site.State.READY;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.COMPLETED;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.LIVE_FAILED;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.LIVE_SUCCESS;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.STAGING_FAILED;
 import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
@@ -109,6 +115,9 @@ public class PublisherTest {
 
 	@Mock
 	ApplicationEventPublisher eventPublisher;
+
+	@Mock
+	PlatformTransactionManager transactionManager;
 
 	@Spy
 	@InjectMocks
@@ -450,6 +459,8 @@ public class PublisherTest {
 		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
 			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
 		doCallRealMethod().when(publisher).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
+		stubLivePublishTransaction();
+		when(contentRepository.publish(any(), eq(LIVE), any())).thenThrow(new ServiceLayerException("live publish failed"));
 		long[] packageState = {0};
 		doAnswer(invocation -> {
 			long onBits = invocation.getArgument(0);
@@ -474,6 +485,53 @@ public class PublisherTest {
 		verify(publishPackage).setStagingError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
 		verify(publishPackage).setLiveError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
 		verify(publishPackage).setPublishedOn(any());
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(false), eq(STAGING));
+		verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+		verify(contentRepository).publish(eq(publishPackage), eq(LIVE), any());
+	}
+
+	@Test
+	public void blobCopyFailureThenLivePublishSucceeds() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(site2.isStagingBlobsCopied()).thenReturn(false);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
+			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+		doCallRealMethod().when(publisher).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
+		stubLivePublishTransaction();
+		when(contentRepository.publish(any(), eq(LIVE), any()))
+			.thenReturn(new GitPublishChangeSet<>("commit-live", List.of(), List.of()));
+		long[] packageState = {0};
+		doAnswer(invocation -> {
+			long onBits = invocation.getArgument(0);
+			long offBits = invocation.getArgument(1);
+			packageState[0] = (packageState[0] | onBits) & ~offBits;
+			return null;
+		}).when(publishPackage).updatePackageState(anyLong(), anyLong());
+		long[] itemState = {0};
+		doAnswer(invocation -> {
+			long onBits = invocation.getArgument(1);
+			long offBits = invocation.getArgument(2);
+			itemState[0] = (itemState[0] | onBits) & ~offBits;
+			return null;
+		}).when(publishDAO).updatePublishItemsState(eq(PACKAGE_ID), anyLong(), anyLong());
+
+		publisher.doPublish(publishPackage);
+
+		assertEquals(COMPLETED.value | STAGING_FAILED.value | LIVE_SUCCESS.value, packageState[0]);
+		assertTrue(COMPLETED.matches(packageState[0]));
+		assertTrue(STAGING_FAILED.matches(packageState[0]));
+		assertTrue(LIVE_SUCCESS.matches(packageState[0]));
+		assertFalse(PROCESSING.matches(packageState[0]));
+		assertEquals(STAGING_FAILED.value | PublishItem.PublishState.LIVE_SUCCESS.value, itemState[0]);
+		assertEquals(0, itemState[0] & PublishItem.PublishState.PROCESSING.value);
+		verify(publishPackage).setPublishedOn(any());
+		verify(publishPackage).setPublishedLiveCommitId("commit-live");
+		verify(contentRepository).publish(eq(publishPackage), eq(LIVE), any());
+		verify(contentRepository).updateRef(SITE_ID, PACKAGE_ID, "commit-live", LIVE);
 		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(false), eq(STAGING));
 		verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
 	}
@@ -543,6 +601,15 @@ public class PublisherTest {
 		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
 		verify(generalLockService, never()).lock(getEnableStagingLockKey(SITE_ID));
 		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+	}
+
+	private void stubLivePublishTransaction() {
+		when(transactionManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
+		TaskProgress<?, ?> progress = mock(TaskProgress.class);
+		TaskProgress.Stage stage = mock(TaskProgress.Stage.class);
+		lenient().when(progress.startStage(anyString())).thenReturn(stage);
+		when(progress.startStage(anyString(), anyInt())).thenReturn(stage);
+		doReturn(progress).when(taskManager).getTask(any());
 	}
 
 	private void prepareStagingDeployerTarget() throws Exception {
