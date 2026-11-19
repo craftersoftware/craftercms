@@ -25,7 +25,7 @@ import Select, { SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemText from '@mui/material/ListItemText';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
+import { visuallyHidden } from '@mui/utils';
 
 export interface InsertPositionPickerItem {
 	id: string;
@@ -132,16 +132,19 @@ export function InsertPositionPicker(props: InsertPositionPickerProps) {
 							/>
 							{afterOptions.length > 0 && (
 								<Box sx={{ pl: 3.5, width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-									<Typography id={afterSelectLabelId} component="span" sx={{ display: 'none' }}>
+									{/* Keep in the a11y tree (visuallyHidden, not display:none) so aria-labelledby resolves. */}
+									<Box component="span" id={afterSelectLabelId} sx={visuallyHidden}>
 										{afterSelectLabel}
-									</Typography>
+									</Box>
 									<Select
 										fullWidth
 										size="small"
 										disabled={disabled}
 										value={selectedAfterId}
 										onChange={selectAfter}
-										inputProps={{ 'aria-labelledby': `${afterRadioId} ${afterSelectLabelId}` }}
+										inputProps={{
+											'aria-labelledby': `${afterRadioId} ${afterSelectLabelId}`
+										}}
 										sx={{ maxWidth: '100%', '& .MuiSelect-select': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
 										renderValue={(id) => afterOptions.find((item) => item.id === id)?.label ?? ''}
 									>
