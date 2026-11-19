@@ -22,25 +22,28 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { merge, Subject } from 'rxjs';
-import { ofType } from 'redux-observable';
-import { switchMap } from 'rxjs/operators';
 import '../../../../test/registerTsLoader.mjs';
 
 const { contentTypeSaveSystemEvent, editTypeSaveSuccessActions } = await import('./editTypeSaveSystemEvent.ts');
 const { contentTypeCreated, contentTypeUpdated, emitSystemEvent } = await import('../../../state/actions/system.ts');
 const { emitSystemEventEpic } = await import('../../../state/epics/system.ts');
+const { batchActionsEpic } = await import('../../../state/epics/batchActions.ts');
 const { getHostToHostBus } = await import('../../../utils/subjects.ts');
 const { batchActions } = await import('../../../state/actions/misc.ts');
 
-/** Same flatten as the root batchActions epic, then the system emitSystemEvent epic. */
+/**
+ * Drives a Type Builder save-success batch through the same epic path production uses,
+ * and returns whatever lands on the host-to-host bus.
+ *
+ * Steps:
+ * 1. Run batchActionsEpic (flatten the batch) and emitSystemEventEpic (forward to the bus).
+ * 2. Feed epic outputs back into action$ so flattened emitSystemEvent actions are handled.
+ * 3. Dispatch batchActions(editTypeSaveSuccessActions(...)) as EditTypeView does after save.
+ * 4. Collect host-bus publishes, then tear down subscriptions.
+ */
 function runSaveSuccessThroughHostBus(isNew: boolean, contentTypeId: string) {
 	const action$ = new Subject();
-	const batchEpic = (actions$) =>
-		actions$.pipe(
-			ofType(batchActions.type),
-			switchMap(({ payload }) => payload)
-		);
-	const epicOut$ = merge(batchEpic(action$), emitSystemEventEpic(action$));
+	const epicOut$ = merge(batchActionsEpic(action$), emitSystemEventEpic(action$));
 	const feedback = epicOut$.subscribe((action) => action$.next(action));
 	const received = [];
 	const busSub = getHostToHostBus().subscribe((action) => received.push(action));
