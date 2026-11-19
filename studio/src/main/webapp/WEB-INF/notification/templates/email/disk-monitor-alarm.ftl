@@ -1,5 +1,5 @@
 <#ftl output_format="HTML" auto_esc=true>
-<html>
+<html lang="en">
 	<head>
 	</head>
 	<body>
