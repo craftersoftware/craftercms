@@ -216,7 +216,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 			activityOperation = auditOperation(publishPackage.getPackageType(), packageId, siteId);
 			publishPackage(publishPackage, publishItems);
 		} catch (StagingBlobCopyException e) {
-			// Failure bits could not be recorded. Completing the package here would look like a successful publish.
+			// The failure could not be recorded. This path intentionally leaves the package in PROCESSING.
 			completePackage = false;
 			throw e;
 		} finally {
@@ -327,6 +327,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 				   final boolean stagingEnabled) throws ServiceLayerException {
 		String siteId = publishPackage.getSite().getSiteId();
 		long packageId = publishPackage.getId();
+		boolean publishStagingTarget = stagingEnabled;
 		if (stagingEnabled) {
 			try {
 				copyStagingBlobsFromLive(siteId);
@@ -337,23 +338,23 @@ public class Publisher implements ApplicationEventPublisherAware {
 					blobCopyFailure.addSuppressed(failureHandlingError);
 					throw new StagingBlobCopyException(format("Failed to copy live blobs to staging for site '%s'", siteId), blobCopyFailure);
 				}
-				// The failure is recorded. Skip both targets. doPublish still completes the package, which clears
-				// processing and keeps the staging failure bits, the same way a staging target failure does.
-				return;
+				// Staging failure is already recorded. Skip that target and still publish live, as runTargetPublisher
+				// does when the staging publish fails.
+				publishStagingTarget = false;
 			}
 		}
 		switch (publishPackage.getPackageType()) {
 			case INITIAL_PUBLISH -> {
 				logger.debug("Processing initial publish package '{}' for site '{}'", packageId, siteId);
-				doInitialPublish(publishPackage, stagingEnabled);
+				doInitialPublish(publishPackage, publishStagingTarget);
 			}
 			case PUBLISH_ALL -> {
 				logger.debug("Processing publish-all package '{}' for site '{}'", packageId, siteId);
-				doPublishItemList(publishPackage, publishItems, this::doPublishAllTarget, stagingEnabled);
+				doPublishItemList(publishPackage, publishItems, this::doPublishAllTarget, publishStagingTarget);
 			}
 			case ITEM_LIST -> {
 				logger.debug("Processing publish package '{}' for site '{}'", packageId, siteId);
-				doPublishItemList(publishPackage, publishItems, this::doPublishItemListTarget, stagingEnabled);
+				doPublishItemList(publishPackage, publishItems, this::doPublishItemListTarget, publishStagingTarget);
 			}
 			default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
 				publishPackage.getPackageType(), packageId, siteId));
@@ -363,8 +364,9 @@ public class Publisher implements ApplicationEventPublisherAware {
 	/**
 	 * Copy the live blob-store assets onto the staging branch created during upgrade, before this package publishes
 	 * its staging delta. The copy is skipped once {@code staging_blobs_copied} is set. A failure leaves the flag
-	 * false and fails the package and its items the same way a staging target publish fails. Neither target is
-	 * published. The package is then completed with those failure bits, so a later publish request copies again.
+	 * false and fails the package and its items the same way a staging target publish fails. The staging target is
+	 * not published. Live still is. The package is then completed with those failure bits, so a later publish
+	 * request copies again.
 	 */
 	private void copyStagingBlobsFromLive(String siteId) throws ServiceLayerException {
 		Site site = siteDao.getSite(siteId);
