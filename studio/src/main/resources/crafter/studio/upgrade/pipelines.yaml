@@ -468,6 +468,8 @@ pipelines:
                 nextVersion: 5.0-t
             -   currentVersion: 4.5.1.2
                 nextVersion: 5.0-t
+            -   currentVersion: 4.5.1.3
+                nextVersion: 5.0-t
             # Entry point for 5.0 upgrade
             -   currentVersion: 5.0-t
                 nextVersion: 5.0-t2
