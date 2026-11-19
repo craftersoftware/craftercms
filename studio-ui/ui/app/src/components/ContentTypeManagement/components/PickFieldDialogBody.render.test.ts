@@ -41,11 +41,13 @@ const type = {
 
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
 
+/** Controls `useMediaQuery(theme.breakpoints.up('md'))` for the next render. */
+let matchMediaMatches = true;
+
 before(() => {
-	// useMediaQuery(theme.breakpoints.up('md')) — treat the viewport as wide enough for side-by-side layout.
 	window.matchMedia = ((query: string) =>
 		({
-			matches: true,
+			matches: matchMediaMatches,
 			media: query,
 			onchange: null,
 			addListener() {},
@@ -59,6 +61,7 @@ before(() => {
 });
 
 afterEach(async () => {
+	matchMediaMatches = true;
 	for (const { unmount, host } of mounted.splice(0)) {
 		await act(async () => unmount());
 		host.remove();
@@ -67,7 +70,10 @@ afterEach(async () => {
 
 async function renderBody(props: {
 	typesCurrentList: Array<{ id: string; title?: string; name?: string }>;
+	/** When false, exercises the stepped (!isMdUp) flow. Defaults to true. */
+	mdUp?: boolean;
 }): Promise<{ host: HTMLElement; inserts: Array<[string, number]> }> {
+	matchMediaMatches = props.mdUp ?? true;
 	const inserts: Array<[string, number]> = [];
 	const host = document.createElement('div');
 	document.body.appendChild(host);
@@ -108,6 +114,12 @@ function fieldButton(host: HTMLElement): HTMLElement {
 	return button;
 }
 
+function footerButton(host: HTMLElement, label: string): HTMLButtonElement {
+	const button = [...host.querySelectorAll('button')].find((el) => (el.textContent ?? '').includes(label));
+	assert.ok(button instanceof HTMLButtonElement, `expected footer button "${label}"`);
+	return button;
+}
+
 async function pressEnter(el: HTMLElement) {
 	await act(async () => {
 		el.focus();
@@ -116,6 +128,11 @@ async function pressEnter(el: HTMLElement) {
 		);
 	});
 }
+
+const nonEmptyList = [
+	{ id: 'a', title: 'Alpha' },
+	{ id: 'b', title: 'Beta' }
+];
 
 describe('PickFieldDialogBody', () => {
 	it('calls onInsert exactly once on Enter when the current list is empty', async () => {
@@ -128,10 +145,7 @@ describe('PickFieldDialogBody', () => {
 
 	it('inserts at the selected position on Enter when the current list is non-empty', async () => {
 		const { host, inserts } = await renderBody({
-			typesCurrentList: [
-				{ id: 'a', title: 'Alpha' },
-				{ id: 'b', title: 'Beta' }
-			]
+			typesCurrentList: nonEmptyList
 		});
 
 		const button = fieldButton(host);
@@ -146,6 +160,58 @@ describe('PickFieldDialogBody', () => {
 		});
 
 		await pressEnter(button);
+
+		assert.deepEqual(inserts, [['input', 0]]);
+	});
+
+	it('narrow + non-empty: click or Enter moves to the position step; Accept inserts at the chosen position', async () => {
+		const { host, inserts } = await renderBody({ typesCurrentList: nonEmptyList, mdUp: false });
+
+		const button = fieldButton(host);
+		await act(async () => {
+			button.click();
+		});
+
+		assert.deepEqual(inserts, [], 'click must not insert before Accept on the narrow flow');
+		assert.ok(footerButton(host, 'Accept'), 'position step shows Accept');
+		assert.ok(footerButton(host, 'Back'), 'position step shows Back');
+
+		await act(async () => {
+			footerButton(host, 'Back').click();
+		});
+
+		await pressEnter(fieldButton(host));
+
+		assert.deepEqual(inserts, [], 'Enter must not insert before Accept on the narrow flow');
+		assert.ok(footerButton(host, 'Accept'), 'Enter advances to the position step');
+
+		const first = host.querySelector<HTMLInputElement>('input[type="radio"][value="first"]');
+		assert.ok(first);
+		await act(async () => {
+			first.click();
+		});
+
+		await act(async () => {
+			footerButton(host, 'Accept').click();
+		});
+
+		assert.deepEqual(inserts, [['input', 0]]);
+	});
+
+	it('narrow + empty: Enter inserts once', async () => {
+		const { host, inserts } = await renderBody({ typesCurrentList: [], mdUp: false });
+
+		await pressEnter(fieldButton(host));
+
+		assert.deepEqual(inserts, [['input', 0]]);
+	});
+
+	it('double-click on an empty target inserts once', async () => {
+		const { host, inserts } = await renderBody({ typesCurrentList: [] });
+
+		await act(async () => {
+			fieldButton(host).dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
+		});
 
 		assert.deepEqual(inserts, [['input', 0]]);
 	});
