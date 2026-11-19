@@ -64,6 +64,7 @@ import org.springframework.web.client.RestClientException;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -74,6 +75,7 @@ import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLoc
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_ENABLED;
 import static org.craftercms.studio.model.rest.sites.CreateSiteRequest.RemoteAuthentication.NONE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -424,16 +426,20 @@ public class SitesServiceInternalImplTest {
 		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
 		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
 		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
-		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false);
-		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false, true);
+		when(contentRepository.deletePublishedBranch(SITE_ID, "staging")).thenReturn(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
 		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
 
 		sitesServiceInternal.enableStaging(SITE_ID);
 
+		verify(itemTargetDao).deleteForTarget(0L, "staging");
+		verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
+		verify(contentRepository, times(2)).createStagingBranchFromLive(SITE_ID, "live", "staging");
+		verify(itemTargetDao).initStaging(0L, "staging", "live");
 		verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
-		verify(siteDAO, never()).setStagingBlobsCopied(SITE_ID, false);
+		verify(siteDAO).setStagingBlobsCopied(SITE_ID, false);
 		verify(siteDAO).setStagingBlobsCopied(SITE_ID, true);
-		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
 		verify(siteDAO).setStagingEnabled(SITE_ID);
 		verifyEnableStagingLockReleased();
 	}
@@ -523,22 +529,56 @@ public class SitesServiceInternalImplTest {
 	}
 
 	@Test
-	public void enableStagingExistingBranchAndTargetsDoesNotRebuild() throws Exception {
+	public void enableStagingRetryDeletesLeftoverTargetsAndRebuildsAfterLivePublish() throws Exception {
 		site.setStagingBlobsCopied(false);
 		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
 		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
 		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
 		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
-		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false);
-		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(true);
 		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+		AtomicReference<String> liveCommit = new AtomicReference<>("commit-b");
+		AtomicReference<String> stagingCommit = new AtomicReference<>("commit-a");
+		AtomicBoolean targetsExist = new AtomicBoolean(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenAnswer(invocation -> {
+			if (stagingCommit.get() != null) {
+				return false;
+			}
+			stagingCommit.set(liveCommit.get());
+			return true;
+		});
+		when(contentRepository.deletePublishedBranch(SITE_ID, "staging")).thenAnswer(invocation -> {
+			stagingCommit.set(null);
+			return true;
+		});
+		when(itemTargetDao.targetExists(0L, "staging")).thenAnswer(invocation -> targetsExist.get());
+		doAnswer(invocation -> {
+			targetsExist.set(false);
+			return null;
+		}).when(itemTargetDao).deleteForTarget(0L, "staging");
+		doAnswer(invocation -> {
+			if (!liveCommit.get().equals(stagingCommit.get())) {
+				throw new AssertionError("Item targets were rebuilt from live " + liveCommit.get()
+					+ " while the staging branch is " + stagingCommit.get());
+			}
+			return null;
+		}).when(itemTargetDao).initStaging(0L, "staging", "live");
+		doAnswer(invocation -> {
+			if (!liveCommit.get().equals(stagingCommit.get())) {
+				throw new AssertionError("Blob copy used live " + liveCommit.get() + " and staging " + stagingCommit.get());
+			}
+			return null;
+		}).when(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
 
 		sitesServiceInternal.enableStaging(SITE_ID);
 
-		verify(contentRepository, times(1)).createStagingBranchFromLive(SITE_ID, "live", "staging");
-		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
-		verify(itemTargetDao, never()).initStaging(anyLong(), anyString(), anyString());
-		verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+		assertEquals("commit-b", stagingCommit.get());
+		assertFalse(targetsExist.get());
+		InOrder inOrder = inOrder(itemTargetDao, contentRepository);
+		inOrder.verify(itemTargetDao).deleteForTarget(0L, "staging");
+		inOrder.verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
+		inOrder.verify(contentRepository).createStagingBranchFromLive(SITE_ID, "live", "staging");
+		inOrder.verify(itemTargetDao).initStaging(0L, "staging", "live");
+		inOrder.verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
 		verify(siteDAO).setStagingEnabled(SITE_ID);
 		verifyEnableStagingLockReleased();
 	}
@@ -573,7 +613,6 @@ public class SitesServiceInternalImplTest {
 		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
 		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false);
 		when(contentRepository.deletePublishedBranch(SITE_ID, "staging")).thenReturn(false);
-		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
 
 		ServiceLayerException error = assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
 
@@ -594,7 +633,6 @@ public class SitesServiceInternalImplTest {
 		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
 		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false);
 		when(contentRepository.deletePublishedBranch(SITE_ID, "staging")).thenReturn(true);
-		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
 
 		ServiceLayerException error = assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
 

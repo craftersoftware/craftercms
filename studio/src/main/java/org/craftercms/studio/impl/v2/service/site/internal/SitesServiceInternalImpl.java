@@ -1136,8 +1136,9 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	 * Blobs are copied from live when this call creates the staging branch, and when a previous attempt left
 	 * {@code staging_blobs_copied} false. The flag is stored false before item targets and the blob copy, so a
 	 * retry that finds the branch still there copies instead of treating it as already published. An existing
-	 * branch whose flag is already true is left as published. When that retry still has to insert item targets,
-	 * the leftover branch is deleted and created again from live before the item targets and the blob copy.
+	 * branch whose flag is already true is left as published. When blobs are still pending and the staging branch
+	 * is already there, leftover item targets are deleted and the branch is created again from live before the
+	 * item targets and the blob copy.
 	 * Each of those steps reads live on its own. They stay consistent because this call holds the enable lock,
 	 * so live cannot move between them. {@code createStagingTarget} returns false when the target already exists,
 	 * and only a target this call created is removed on failure. There is no blob-prefix delete; deleting the new
@@ -1164,7 +1165,8 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 				if (createdBranch) {
 					retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingBlobsCopied(siteId, false));
 					blobsPending = true;
-				} else if (blobsPending && !itemTargetDao.targetExists(site.getId(), stagingBranch)) {
+				} else if (blobsPending) {
+					retryingDatabaseOperationFacade.retry(() -> itemTargetDao.deleteForTarget(site.getId(), stagingBranch));
 					createdBranch = rebuildStagingBranchFromLive(siteId, liveBranch, stagingBranch);
 					if (createdBranch) {
 						retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingBlobsCopied(siteId, false));

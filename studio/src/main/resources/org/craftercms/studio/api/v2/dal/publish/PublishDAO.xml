@@ -214,6 +214,12 @@
 				AND s.site_id = #{siteId})
 	</select>
 
+	<update id="resetProcessingPackages">
+		UPDATE publish_package
+		SET package_state = #{readyState}
+		WHERE (package_state &amp; #{processingState}) &gt; 0
+	</update>
+
 	<update id="updatePackage" parameterType="org.craftercms.studio.api.v2.dal.publish.PublishPackage">
 		UPDATE publish_package
 		SET target                      = #{publishPackage.target},

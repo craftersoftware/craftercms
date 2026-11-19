@@ -32,6 +32,7 @@ import java.util.List;
  */
 public class PublishingQueueProbeTask extends ThrottledJob implements ApplicationEventPublisherAware {
 	private final PublishDAO publishDAO;
+	private Publisher publisher;
 	private ApplicationEventPublisher eventPublisher;
 	private final int period;
 
@@ -39,6 +40,17 @@ public class PublishingQueueProbeTask extends ThrottledJob implements Applicatio
 	public PublishingQueueProbeTask(final PublishDAO publishDAO, final int period) {
 		this.publishDAO = publishDAO;
 		this.period = period;
+	}
+
+	public void setPublisher(Publisher publisher) {
+		this.publisher = publisher;
+	}
+
+	/**
+	 * Return packages interrupted in PROCESSING to READY before the queue is probed.
+	 */
+	public void onSchedulerStart() {
+		publisher.resetProcessingPackages();
 	}
 
 	@Override

@@ -267,6 +267,14 @@ public interface PublishDAO {
 	void updatePackage(@Param(PUBLISH_PACKAGE) final PublishPackage publishPackage);
 
 	/**
+	 * Set packages left PROCESSING back to READY so the publisher can pick them up after a restart.
+	 *
+	 * @param readyState      the ready package state
+	 * @param processingState the processing package state to match
+	 */
+	void resetProcessingPackages(@Param("readyState") long readyState, @Param("processingState") long processingState);
+
+	/**
 	 * Cancel all active (ready non-rejected) packages for a site and a target
 	 *
 	 * @param siteId the site id
