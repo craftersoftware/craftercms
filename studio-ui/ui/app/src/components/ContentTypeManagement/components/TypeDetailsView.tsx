@@ -157,12 +157,18 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 						<div>
 							<Divider orientation="vertical" flexItem />
 							<Tooltip title={formatMessage({ defaultMessage: 'Expand All' })}>
-								<IconButton onClick={handleExpandAllSections}>
+								<IconButton
+									onClick={handleExpandAllSections}
+									aria-label={formatMessage({ defaultMessage: 'Expand All' })}
+								>
 									<UnfoldMore />
 								</IconButton>
 							</Tooltip>
 							<Tooltip title={formatMessage({ defaultMessage: 'Collapse All' })}>
-								<IconButton onClick={handleCollapseAllSections}>
+								<IconButton
+									onClick={handleCollapseAllSections}
+									aria-label={formatMessage({ defaultMessage: 'Collapse All' })}
+								>
 									<UnfoldLess />
 								</IconButton>
 							</Tooltip>
@@ -199,7 +205,10 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 							<Box sx={{ position: 'absolute', top: 15, right: 10 }}>
 								{section.fields?.length > 0 && (
 									<Tooltip title={formatMessage({ defaultMessage: 'Reorder fields' })}>
-										<IconButton onClick={() => setReorderSectionId(section.id)}>
+										<IconButton
+											onClick={() => setReorderSectionId(section.id)}
+											aria-label={formatMessage({ defaultMessage: 'Reorder fields' })}
+										>
 											<MoveDownIcon />
 										</IconButton>
 									</Tooltip>

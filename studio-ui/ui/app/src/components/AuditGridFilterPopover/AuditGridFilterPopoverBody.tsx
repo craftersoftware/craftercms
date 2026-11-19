@@ -284,7 +284,12 @@ export function AuditGridFilterPopoverBody(props: AuditGridFilterPopoverProps) {
 						input: {
 							endAdornment: keyword && (
 								<Tooltip title={formatMessage({ id: 'words.clear', defaultMessage: 'Clear' })}>
-									<IconButton size="small" sx={{ ml: '20px' }} onClick={() => onClearTextField()}>
+									<IconButton
+										size="small"
+										sx={{ ml: '20px' }}
+										onClick={() => onClearTextField()}
+										aria-label={formatMessage({ id: 'words.clear', defaultMessage: 'Clear' })}
+									>
 										<ClearRoundedIcon />
 									</IconButton>
 								</Tooltip>

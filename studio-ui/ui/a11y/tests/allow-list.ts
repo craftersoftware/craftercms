@@ -40,24 +40,11 @@ export interface AllowListEntry {
 	nodes: string[];
 }
 
-const both: Theme[] = ['light', 'dark'];
-
 /**
  * The umbrella tickets, one per axe rule, and the screens and themes each one lists. They inventory what still fails once
  * the other a11y PRs have merged. A rule that is not here has no ticket, so it can't be allow-listed: it fails the run.
  */
-export const ruleTickets: Record<string, RuleTicket> = {
-	'aria-prohibited-attr': {
-		ticket: 'craftersoftware/craftercms-e#1450',
-		criterion: '4.1.2 Name, Role, Value',
-		scope: { 'edit mode tools panel > Settings': both }
-	},
-	label: {
-		ticket: 'craftersoftware/craftercms-e#1453',
-		criterion: '1.3.1 Info and Relationships; 4.1.2 Name, Role, Value',
-		scope: { 'edit mode tools panel > Settings': both }
-	}
-};
+export const ruleTickets: Record<string, RuleTicket> = {};
 
 /** True when the rule's ticket lists the screen in that theme. */
 export function inTicketScope(rule: string, screen: string, theme: Theme, tickets = ruleTickets) {

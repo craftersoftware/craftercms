@@ -82,12 +82,18 @@ export function TemplateSelector(props: TemplateSelectorProps) {
 				endAdornment={
 					<>
 						<Tooltip title={formatMessage({ defaultMessage: 'Select template' })}>
-							<IconButton onClick={() => onOpenBrowseTemplate()}>
+							<IconButton
+								onClick={() => onOpenBrowseTemplate()}
+								aria-label={formatMessage({ defaultMessage: 'Select template' })}
+							>
 								<SearchRoundedIcon />
 							</IconButton>
 						</Tooltip>
 						<Tooltip title={formatMessage({ defaultMessage: 'Edit template' })}>
-							<IconButton onClick={() => onEditTemplate()}>
+							<IconButton
+								onClick={() => onEditTemplate()}
+								aria-label={formatMessage({ defaultMessage: 'Edit template' })}
+							>
 								<EditRoundedIcon />
 							</IconButton>
 						</Tooltip>

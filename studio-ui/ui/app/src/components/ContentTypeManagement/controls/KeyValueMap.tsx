@@ -95,12 +95,15 @@ export function KeyValueMap(props: KeyValueMapProps) {
 						}}
 					>
 						<Tooltip title={formatMessage({ defaultMessage: 'Add Option' })}>
-							<IconButton onClick={() => addOption(index)}>
+							<IconButton onClick={() => addOption(index)} aria-label={formatMessage({ defaultMessage: 'Add Option' })}>
 								<AddCircleOutlineRoundedIcon />
 							</IconButton>
 						</Tooltip>
 						<Tooltip title={formatMessage({ defaultMessage: 'Remove Option' })}>
-							<IconButton onClick={() => removeOption(index)}>
+							<IconButton
+								onClick={() => removeOption(index)}
+								aria-label={formatMessage({ defaultMessage: 'Remove Option' })}
+							>
 								<RemoveCircleOutlineRoundedIcon />
 							</IconButton>
 						</Tooltip>
@@ -115,7 +118,7 @@ export function KeyValueMap(props: KeyValueMapProps) {
 					}}
 				>
 					<Tooltip title={formatMessage({ defaultMessage: 'Add Option' })}>
-						<IconButton onClick={() => addOption(0)}>
+						<IconButton onClick={() => addOption(0)} aria-label={formatMessage({ defaultMessage: 'Add Option' })}>
 							<AddCircleOutlineRoundedIcon />
 						</IconButton>
 					</Tooltip>

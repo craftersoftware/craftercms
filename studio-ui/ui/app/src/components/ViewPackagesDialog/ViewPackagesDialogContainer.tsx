@@ -144,7 +144,7 @@ export function ViewPackagesDialogContainer(props: ViewPackagesDialogContainerPr
 										slotProps={{ secondary: { title: pkg.title, component: 'div' } }}
 									/>
 									<Tooltip title={formatMessage({ defaultMessage: 'View Package Details' })}>
-										<IconButton>
+										<IconButton aria-label={formatMessage({ defaultMessage: 'View Package Details' })}>
 											<ChevronRightRoundedIcon />
 										</IconButton>
 									</Tooltip>

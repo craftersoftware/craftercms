@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -103,7 +103,8 @@ export const getItemSkeleton = ({
 			<ListItem key={index} sx={{ pl: 2, pr: 2 }}>
 				{showCheckbox && (
 					<ListItemIcon>
-						<Checkbox edge="start" disabled />
+						{/* Loading placeholder. Hidden from the accessibility tree until the real row checkbox replaces it. */}
+						<Checkbox edge="start" disabled slotProps={{ input: { 'aria-hidden': true } }} />
 					</ListItemIcon>
 				)}
 				{showAvatar && (
@@ -173,6 +174,8 @@ export function Pager(props: {
 	const { totalPages, totalItems, currentPage, rowsPerPage, onPagePickerChange, onPageChange, onRowsPerPageChange } =
 		props;
 	const { formatMessage } = useIntl();
+	// "Page N" is the closed select's value, not its label, so the name stays the word Page.
+	const pageLabel = formatMessage({ id: 'words.page', defaultMessage: 'Page' });
 
 	return (
 		<>
@@ -182,8 +185,16 @@ export function Pager(props: {
 				value={`${currentPage}`}
 				onChange={(e) => onPagePickerChange(parseInt(e.target.value))}
 				inputProps={{
-					// "Page N" is the closed select's value, not its label, so the name stays the word Page.
-					'aria-label': formatMessage({ id: 'words.page', defaultMessage: 'Page' })
+					'aria-label': pageLabel
+				}}
+				MenuProps={{
+					slotProps: {
+						// The open listbox is named only through labelId. This select has none, so the same name goes on the list.
+						list: {
+							'aria-label': pageLabel,
+							'aria-labelledby': undefined
+						}
+					}
 				}}
 				sx={{ fontSize: (theme) => theme.typography.fontSize }}
 			>

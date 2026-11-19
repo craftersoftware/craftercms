@@ -26,10 +26,14 @@ import useActiveUser from '../../hooks/useActiveUser';
 import { ChangeEvent } from 'react';
 
 export function KeyboardShortcutsSwitch(props: SwitchProps) {
+	const { slotProps, ...rest } = props;
 	const dispatch = useDispatch();
 	const shortcutsEnabled = useSelection((state) => state.preview.keyboardShortcutsEnabled);
 	const { username } = useActiveUser();
 	const { formatMessage } = useIntl();
+	// The settings panel prefers its visible label via aria-labelledby. This names the input when nothing else does.
+	const label = formatMessage({ defaultMessage: 'Toggle keyboard shortcuts' });
+	const callerInput = slotProps?.input;
 
 	const onChange = (e: ChangeEvent<HTMLInputElement>) => {
 		setStoredEnabledKeyboardShortcutsState(e.target.checked, username);
@@ -38,6 +42,7 @@ export function KeyboardShortcutsSwitch(props: SwitchProps) {
 
 	return (
 		<Tooltip
+			describeChild
 			title={
 				shortcutsEnabled ? (
 					<FormattedMessage defaultMessage="Disable shortcuts" />
@@ -47,13 +52,15 @@ export function KeyboardShortcutsSwitch(props: SwitchProps) {
 			}
 		>
 			<Switch
-				{...props}
+				{...rest}
 				checked={shortcutsEnabled}
 				onChange={onChange}
 				slotProps={{
-					input: {
-						'aria-label': formatMessage({ defaultMessage: 'Toggle keyboard shortcuts' })
-					}
+					...slotProps,
+					input: (ownerState) => ({
+						'aria-label': label,
+						...(typeof callerInput === 'function' ? callerInput(ownerState) : callerInput)
+					})
 				}}
 			/>
 		</Tooltip>
