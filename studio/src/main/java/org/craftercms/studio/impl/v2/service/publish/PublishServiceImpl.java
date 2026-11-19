@@ -213,6 +213,7 @@ public class PublishServiceImpl implements PublishService {
 
 	@Override
 	@RequireSiteExists
+	@RequirePackageExists
 	@PackageSubmitter
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public void updatePublishPackage(@SiteId String site, @PackageId long packageId, Instant schedule,

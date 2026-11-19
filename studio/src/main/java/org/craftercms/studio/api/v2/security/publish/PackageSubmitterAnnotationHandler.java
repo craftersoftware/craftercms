@@ -6,7 +6,6 @@ import java.beans.ConstructorProperties;
 import java.lang.reflect.Method;
 import java.security.InvalidParameterException;
 
-import org.apache.logging.log4j.core.config.Order;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -17,14 +16,16 @@ import org.craftercms.studio.api.v2.annotation.resourceids.SiteId;
 import org.craftercms.studio.api.v2.dal.User;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
+import org.craftercms.studio.api.v2.exception.publish.PublishPackageNotFoundException;
 import org.craftercms.studio.api.v2.exception.security.ActionsDeniedException;
 import org.craftercms.studio.api.v2.exception.security.PackageSubmitterCheckException;
+import org.springframework.core.annotation.Order;
 
 /**
  * Aspect that handles {@link PackageSubmitter} annotations.
  */
 @Aspect
-@Order(-20)
+@Order(20)
 public class PackageSubmitterAnnotationHandler {
 
 	private final PublishDAO publishDao;
@@ -46,6 +47,9 @@ public class PackageSubmitterAnnotationHandler {
 			throw new InvalidParameterException("Package ID is required");
 		}
 		PublishPackage publishPackage = publishDao.getByStringSiteId(siteId, packageId);
+		if (publishPackage == null) {
+			throw new PublishPackageNotFoundException(siteId, packageId);
+		}
 
 		User user = (User) getAuthentication().getPrincipal();
 		if (publishPackage.getSubmitterId() != user.getId()) {
