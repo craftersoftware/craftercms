@@ -95,6 +95,19 @@ describe('transfer list move button names', () => {
 		assert.equal(add.getAttribute('aria-labelledby'), null);
 		assert.equal(span.getAttribute('aria-label'), null);
 		assert.equal(span.getAttribute('aria-labelledby'), null);
-		assert.ok(host.querySelector('button[aria-label="Remove from target"]'));
+		const remove = host.querySelector<HTMLButtonElement>('button[aria-label="Remove from target"]');
+		assert.ok(remove, 'the remove button has no name');
+		const removeSpan = remove.parentElement;
+		assert.equal(removeSpan?.tagName, 'SPAN');
+		await act(async () => {
+			removeSpan.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+		assert.equal(remove.getAttribute('aria-label'), 'Remove from target');
+		assert.equal(remove.getAttribute('aria-labelledby'), null);
+		assert.equal(removeSpan.getAttribute('aria-label'), null);
+		assert.equal(removeSpan.getAttribute('aria-labelledby'), null);
 	});
 });

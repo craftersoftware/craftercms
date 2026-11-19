@@ -48,8 +48,9 @@ export function ActionsBar(props: ActionsBarProps) {
 	const { tools, currentMode, setMode: setEditorMode, onRotate, onFlip } = props;
 	const { formatMessage } = useIntl();
 
-	// The tooltip title is the button's name. It stays a string, and that same string is the
-	// button's aria-label, so the name is there with the tooltip closed.
+	// MUI's Tooltip copies a string title onto the button as its aria-label, so these stay
+	// formatMessage strings instead of <FormattedMessage />. The explicit aria-label is a guard
+	// for a non-string or translated title.
 	const cropLabel = formatMessage({ defaultMessage: 'Crop' });
 	const rotateLeftLabel = formatMessage({ defaultMessage: 'Rotate left' });
 	const rotateRightLabel = formatMessage({ defaultMessage: 'Rotate right' });

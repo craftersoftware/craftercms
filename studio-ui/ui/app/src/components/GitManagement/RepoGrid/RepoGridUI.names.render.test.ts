@@ -114,4 +114,34 @@ describe('RepoGridUI row button names', () => {
 		assert.equal(span.getAttribute('aria-label'), null);
 		assert.equal(span.getAttribute('aria-labelledby'), null);
 	});
+
+	it('keeps the repository in the Push name and leaves the wrapper unnamed while the tooltip is open', async () => {
+		const host = await mountTree(
+			createItemsStore(baseItems()),
+			React.createElement(RepoGridUI, {
+				repositories,
+				disableActions: false,
+				onDeleteRemote() {},
+				onPullClick() {},
+				onPushClick() {}
+			} as never)
+		);
+		const push = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label]')).find(
+			(button) => button.getAttribute('aria-label') === 'Push origin'
+		);
+		assert.ok(push, 'no Push button named for the repository');
+		const span = push.parentElement;
+		assert.equal(span?.tagName, 'SPAN');
+		await act(async () => {
+			span.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
+		assert.equal(push.getAttribute('aria-label'), 'Push origin');
+		assert.equal(push.getAttribute('aria-labelledby'), null);
+		assert.equal(span.getAttribute('aria-label'), null);
+		assert.equal(span.getAttribute('aria-labelledby'), null);
+	});
 });
