@@ -142,7 +142,8 @@ export function InsertPositionPicker(props: InsertPositionPickerProps) {
 										disabled={disabled}
 										value={selectedAfterId}
 										onChange={selectAfter}
-										inputProps={{
+										labelId={afterSelectLabelId}
+										SelectDisplayProps={{
 											'aria-labelledby': `${afterRadioId} ${afterSelectLabelId}`
 										}}
 										sx={{ maxWidth: '100%', '& .MuiSelect-select': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
