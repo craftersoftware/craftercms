@@ -21,14 +21,12 @@
 
 -->
 <site-config>
-	<version>4.2.0.0</version>
-	<wem-project>{siteName}</wem-project>
+	<version>5.0.0.1</version>
 	<display-name>{siteName}</display-name>
 
 	<!-- Site URLs. Default to http://localhost:8080 if blank -->
 	<site-urls>
 		<authoring-url></authoring-url>
-		<staging-url></staging-url>
 		<live-url></live-url>
 	</site-urls>
 
@@ -123,25 +121,10 @@
 		<pattern>^/([^ !$`&amp;*()/+]|(\\[ !$`&amp;*()+]))+$</pattern>
 	</protected-folders-patterns>
 
-	<repository rootPrefix="/site">
+	<repository>
 
 		<!-- default inheritance file name -->
 		<level-descriptor>crafter-level-descriptor.level.xml</level-descriptor>
-
-		<!-- The section below classifies items into folders for two dashboard widgets:
-		- Items Waiting For Approval
-		- Approved Scheduled Items
-
-		Items that match the paths specified will be grouped together in the dashboard widget
-		-->
-		<folders>
-			<folder name="Pages" path="/website" read-direct-children="false" attach-root-prefix="true"/>
-			<folder name="Components" path="/components" read-direct-children="false" attach-root-prefix="true"/>
-			<folder name="Taxonomy" path="/taxonomy" read-direct-children="false" attach-root-prefix="true"/>
-			<folder name="Assets" path="/static-assets" read-direct-children="false" attach-root-prefix="false"/>
-			<folder name="Templates" path="/templates" read-direct-children="false" attach-root-prefix="false"/>
-			<folder name="Scripts" path="/scripts" read-direct-children="false" attach-root-prefix="false"/>
-		</folders>
 
 		<!-- Item Patterns -->
 		<patterns>
@@ -180,23 +163,8 @@
 				<pattern>/config/(?!studio/content-types/)([^&lt;"']+)\.xml</pattern>
 			</pattern-group>
 
-			<!-- The section below enumerates the mime-types we can preview -->
-			<pattern-group name="previewable-mimetypes">
-				<pattern>image/(.*)</pattern>
-				<pattern>application/pdf</pattern>
-				<pattern>video/(.*)</pattern>
-				<pattern>application/msword</pattern>
-				<pattern>application/vnd.openxmlformats-officedocument.wordprocessingml.document</pattern>
-				<pattern>application/vnd.ms-excel</pattern>
-				<pattern>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</pattern>
-				<pattern>application/vnd.ms-powerpoint</pattern>
-			</pattern-group>
 		</patterns>
 
-		<!-- The patterns below identify what is allowed to show up in the Dashboard widgets -->
-		<display-in-widget-patterns>
-			<display-in-widget-pattern>.*</display-in-widget-pattern>
-		</display-in-widget-patterns>
 	</repository>
 	<contentMonitoring>
 		<monitor>

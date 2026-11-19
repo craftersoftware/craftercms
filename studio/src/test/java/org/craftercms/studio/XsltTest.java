@@ -65,6 +65,7 @@ public class XsltTest {
 	private enum Scenario {
 		XSLT,
 		SHIPPED_SITE_CONFIG_TOOLS,
+		SITE_CONFIG_V10_CHAIN,
 		UI_PIPELINE,
 		CONTENT_TYPE_FROM_4500,
 		IDENTIFIED_TRANSLATIONS,
@@ -97,6 +98,7 @@ public class XsltTest {
 		addXsltCases(rows, "globalRoles500Test", globalRoles500TestData());
 		addXsltCases(rows, "depResolver5001Test", depResolver5001TestData());
 		addXsltCases(rows, "siteConfig5000Test", siteConfig5000TestData());
+		addXsltCases(rows, "siteConfig5001Test", siteConfig5001TestData());
 		addXsltCases(rows, "globalPermissions50010Test", globalPermissions50010TestData());
 		addXsltCases(rows, "ui5000Test", ui5000TestData());
 		addXsltCases(rows, "ui5001Test", ui5001TestData());
@@ -106,6 +108,7 @@ public class XsltTest {
 		addXsltCases(rows, "globalPermissions50025Test", globalPermissions50025TestData());
 		addXsltCases(rows, "siteConfigTools407Test", siteConfigTools407TestData());
 		addScenario(rows, "shippedSiteConfigToolsRemoveLegacyContentTypesTool", Scenario.SHIPPED_SITE_CONFIG_TOOLS);
+		addScenario(rows, "cleanedVersion10SiteConfigUpgradeChain", Scenario.SITE_CONFIG_V10_CHAIN);
 		addScenario(rows, "uiPipelineContinuesFrom4500ThroughContentTypeManagement", Scenario.UI_PIPELINE);
 		addScenario(rows, "contentTypeManagementUpgradeFrom4500PreservesCustomConfiguration", Scenario.CONTENT_TYPE_FROM_4500);
 		addScenario(rows, "stockTextLocalizationPreservesIdentifiedTranslations", Scenario.IDENTIFIED_TRANSLATIONS);
@@ -130,6 +133,7 @@ public class XsltTest {
 		switch (scenario) {
 			case XSLT -> testXsltTemplate(template, content, expected, params);
 			case SHIPPED_SITE_CONFIG_TOOLS -> shippedSiteConfigToolsRemoveLegacyContentTypesTool();
+			case SITE_CONFIG_V10_CHAIN -> cleanedVersion10SiteConfigUpgradeChain();
 			case UI_PIPELINE -> uiPipelineContinuesFrom4500ThroughContentTypeManagement();
 			case CONTENT_TYPE_FROM_4500 -> contentTypeManagementUpgradeFrom4500PreservesCustomConfiguration();
 			case IDENTIFIED_TRANSLATIONS -> stockTextLocalizationPreservesIdentifiedTranslations();
@@ -555,6 +559,105 @@ public class XsltTest {
 		testXsltTemplate(template, content, expected, params);
 	}
 
+	/**
+	 * Removes wem-project, site-urls/staging-url, repository/@rootPrefix, repository/folders,
+	 * display-in-widget-patterns and the previewable-mimetypes pattern group.
+	 * Headless /site/items patterns and custom sibling elements stay. Anything nested in folders is removed
+	 * with that element. A file that is already clean is unchanged. The version element is left alone.
+	 */
+	public static Object[][] siteConfig5001TestData() {
+		Resource template =
+			new ClassPathResource("crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.1.xslt");
+		Resource clean = new ClassPathResource("crafter/studio/upgrade/xslt/site-config/5.0.0.1/clean/site-config.xml");
+		return new Object[][]{
+			new Object[]{
+				template,
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config/5.0.0.1/default/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config/5.0.0.1/default/expected.xml"),
+				emptyMap()
+			},
+			new Object[]{
+				template,
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config/5.0.0.1/headless/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config/5.0.0.1/headless/expected.xml"),
+				emptyMap()
+			},
+			new Object[]{
+				template,
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config/5.0.0.1/custom/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config/5.0.0.1/custom/expected.xml"),
+				emptyMap()
+			},
+			new Object[]{
+				template,
+				clean,
+				clean,
+				emptyMap()
+			}
+		};
+	}
+
+	private static final String SITE_CONFIG_PIPELINE = "configurations.studio-site-config.pipeline.versions";
+
+	private static final String SITE_CONFIG_V10_FIXTURE =
+		"crafter/studio/upgrade/xslt/site-config/5.0.0.1/external-v10/input.xml";
+
+	private static final String[] SITE_CONFIG_FROM_V10_TEMPLATES = {
+		"crafter/studio/upgrade/4.0.x/config/site-config/site-config-v4.0.1.1.xslt",
+		"crafter/studio/upgrade/4.0.x/config/site-config/site-config-v4.0.1.2.xslt",
+		"crafter/studio/upgrade/4.2.x/config/site-config/site-config-v4.2.0.0.xslt",
+		"crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.0.xslt",
+		"crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.1.xslt"
+	};
+
+	/**
+	 * A cleaned version-10 external blueprint does not contain the blocks removed in 5.0.0.1.
+	 * Running every site-config template from version 10 must end at 5.0.0.1, keep the ftlh/ftlx
+	 * patterns added by 5.0.0.0, and must not put the removed blocks back.
+	 * The version element itself is updated by the upgrade manager, not these templates.
+	 */
+	public void cleanedVersion10SiteConfigUpgradeChain() throws Exception {
+		HierarchicalConfiguration config = productionUpgradeConfig();
+		List<String> fromV10 = Arrays.asList(SITE_CONFIG_FROM_V10_TEMPLATES);
+
+		assertEquals(templatesFrom(config, SITE_CONFIG_PIPELINE, "10"), fromV10,
+			"version 10 must run each later site-config template, including 5.0.0.1");
+		assertEquals(finalVersion(config, SITE_CONFIG_PIPELINE, "10"), "5.0.0.1");
+		assertEquals(templatesFrom(config, SITE_CONFIG_PIPELINE, "5.0.0.0"),
+			List.of(SITE_CONFIG_FROM_V10_TEMPLATES[SITE_CONFIG_FROM_V10_TEMPLATES.length - 1]),
+			"5.0.0.0 must run only the 5.0.0.1 cleanup");
+		assertEquals(finalVersion(config, SITE_CONFIG_PIPELINE, "5.0.0.0"), "5.0.0.1");
+		assertTrue(templatesFrom(config, SITE_CONFIG_PIPELINE, "5.0.0.1").isEmpty(),
+			"sites already at 5.0.0.1 must not run another site-config step");
+
+		String upgraded = applyTemplates(readResource(SITE_CONFIG_V10_FIXTURE), SITE_CONFIG_FROM_V10_TEMPLATES);
+		Document document = parseXmlString(upgraded);
+		Element siteConfig = document.getDocumentElement();
+		Element repository = childElement(siteConfig, "repository");
+
+		assertEquals(text(siteConfig, "version").trim(), "10");
+		assertEquals(document.getElementsByTagName("wem-project").getLength(), 0);
+		assertEquals(document.getElementsByTagName("staging-url").getLength(), 0);
+		assertEquals(document.getElementsByTagName("folders").getLength(), 0);
+		assertEquals(document.getElementsByTagName("display-in-widget-patterns").getLength(), 0);
+		assertFalse(repository.hasAttribute("rootPrefix"));
+		assertTrue(patternGroupsNamed(document, "previewable-mimetypes").isEmpty());
+
+		assertEquals(patternTexts(document, "rendering-template"), List.of(
+			"/templates/([^<\"]+)\\.ftl",
+			"/templates/([^<\"]+)\\.ftlh",
+			"/templates/([^<\"]+)\\.ftlx"
+		));
+		assertEquals(patternTexts(document, "asset"), List.of("/static-assets/([^<\"']+)"));
+		assertEquals(patternTexts(document, "config"),
+			List.of("/config/(?!studio/content-types/)([^<\"']+)\\.xml"));
+		assertEquals(text(siteConfig, "remoteGitBranch").trim(), "production");
+		assertEquals(text(siteConfig, "authoring-url").trim(), "");
+		assertEquals(text(siteConfig, "live-url").trim(), "");
+		Element monitor = childElement(childElement(siteConfig, "contentMonitoring"), "monitor");
+		assertEquals(childElement(monitor, "name").getTextContent().trim(), "Content Expiring Tomorrow");
+	}
+
 	public static Object[][] globalPermissions50010TestData() {
 		return new Object[][]{
 				new Object[] {
@@ -911,11 +1014,15 @@ public class XsltTest {
 		return new YamlConfigurationProvider(new FileSystemResource(pipelines)).getConfiguration();
 	}
 
-	@SuppressWarnings("rawtypes")
 	private List<String> templatesFrom(HierarchicalConfiguration config, String startVersion) {
+		return templatesFrom(config, "configurations.ui.pipeline", startVersion);
+	}
+
+	@SuppressWarnings("rawtypes")
+	private List<String> templatesFrom(HierarchicalConfiguration config, String pipeline, String startVersion) {
 		List<String> templates = new ArrayList<>();
 		String next = startVersion;
-		for (Object item : config.configurationsAt("configurations.ui.pipeline")) {
+		for (Object item : config.configurationsAt(pipeline)) {
 			HierarchicalConfiguration step = (HierarchicalConfiguration) item;
 			if (!next.equals(step.getString("currentVersion"))) {
 				continue;
@@ -932,16 +1039,42 @@ public class XsltTest {
 		return templates;
 	}
 
-	@SuppressWarnings("rawtypes")
 	private String finalVersion(HierarchicalConfiguration config, String startVersion) {
+		return finalVersion(config, "configurations.ui.pipeline", startVersion);
+	}
+
+	@SuppressWarnings("rawtypes")
+	private String finalVersion(HierarchicalConfiguration config, String pipeline, String startVersion) {
 		String next = startVersion;
-		for (Object item : config.configurationsAt("configurations.ui.pipeline")) {
+		for (Object item : config.configurationsAt(pipeline)) {
 			HierarchicalConfiguration step = (HierarchicalConfiguration) item;
 			if (next.equals(step.getString("currentVersion"))) {
 				next = step.getString("nextVersion");
 			}
 		}
 		return next;
+	}
+
+	private List<Element> patternGroupsNamed(Document document, String name) {
+		List<Element> matches = new ArrayList<>();
+		NodeList groups = document.getElementsByTagName("pattern-group");
+		for (int i = 0; i < groups.getLength(); i++) {
+			Element group = (Element) groups.item(i);
+			if (name.equals(group.getAttribute("name"))) {
+				matches.add(group);
+			}
+		}
+		return matches;
+	}
+
+	private List<String> patternTexts(Document document, String groupName) {
+		List<Element> groups = patternGroupsNamed(document, groupName);
+		assertEquals(groups.size(), 1, groupName);
+		List<String> texts = new ArrayList<>();
+		for (Element pattern : childElements(groups.get(0), "pattern")) {
+			texts.add(pattern.getTextContent().trim());
+		}
+		return texts;
 	}
 
 	private String applyTemplates(String xml, String... templates) throws IOException, TransformerException {
