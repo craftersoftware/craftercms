@@ -333,7 +333,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 				copyStagingBlobsFromLive(siteId);
 			} catch (Exception blobCopyFailure) {
 				try {
-					failBothTargetsForBlobCopy(publishPackage, siteId, blobCopyFailure);
+					failTargetsForBlobCopy(publishPackage, siteId, blobCopyFailure);
 				} catch (Exception failureHandlingError) {
 					blobCopyFailure.addSuppressed(failureHandlingError);
 					throw new StagingBlobCopyException(format("Failed to copy live blobs to staging for site '%s'", siteId), blobCopyFailure);
@@ -440,20 +440,23 @@ public class Publisher implements ApplicationEventPublisherAware {
 	}
 
 	/**
-	 * A baseline blob-copy failure publishes nothing. Record it on both targets and leave the items unpublished.
+	 * A baseline blob-copy failure publishes nothing and leaves the items unpublished. A live package is failed on
+	 * both targets. Any other package is failed only on staging.
 	 */
-	private void failBothTargetsForBlobCopy(final PublishPackage publishPackage, final String siteId, final Exception e)
+	private void failTargetsForBlobCopy(final PublishPackage publishPackage, final String siteId, final Exception e)
 			throws SiteNotFoundException {
-		logger.error("Failed to copy live blobs to staging for site '{}'. The package will not be published to live or staging",
-			siteId, e);
-		String stagingTarget = servicesConfig.getStagingEnvironment(siteId);
 		String liveTarget = servicesConfig.getLiveEnvironment(siteId);
+		boolean livePackage = CS.equals(liveTarget, publishPackage.getTarget());
+		logger.error("Failed to copy live blobs to staging for site '{}'. The package will not be published", siteId, e);
+		String stagingTarget = servicesConfig.getStagingEnvironment(siteId);
 		PublishPackageTO stagingPackage = getPublishPackageTO(publishPackage, false);
 		recordTargetPublishFailure(publishPackage, stagingPackage, stagingTarget, e);
 		finishTargetPublish(publishPackage, stagingPackage);
-		PublishPackageTO livePackage = getPublishPackageTO(publishPackage, true);
-		recordTargetPublishFailure(publishPackage, livePackage, liveTarget, e);
-		finishTargetPublish(publishPackage, livePackage);
+		if (livePackage) {
+			PublishPackageTO livePackageTo = getPublishPackageTO(publishPackage, true);
+			recordTargetPublishFailure(publishPackage, livePackageTo, liveTarget, e);
+			finishTargetPublish(publishPackage, livePackageTo);
+		}
 	}
 
 	private void recordTargetPublishFailure(final PublishPackage publishPackage, final PublishPackageTO packageTO,

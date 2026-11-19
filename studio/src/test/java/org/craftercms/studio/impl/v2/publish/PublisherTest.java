@@ -406,7 +406,7 @@ public class PublisherTest {
 
 		publisher.doPublish(publishPackage);
 
-		assertFailedUnpublishedPackage(packageState, itemState);
+		assertFailedUnpublishedPackage(packageState, itemState, true);
 		verify(siteDAO, never()).setStagingBlobsCopied(SITE_ID, true);
 	}
 
@@ -439,7 +439,7 @@ public class PublisherTest {
 
 		publisher.doPublish(publishPackage);
 
-		assertFailedUnpublishedPackage(packageState, itemState);
+		assertFailedUnpublishedPackage(packageState, itemState, true);
 		verify(siteDAO, never()).setStagingBlobsCopied(anyString(), anyBoolean());
 	}
 
@@ -467,7 +467,7 @@ public class PublisherTest {
 
 		publisher.doPublish(publishPackage);
 
-		assertFailedUnpublishedPackage(packageState, itemState);
+		assertFailedUnpublishedPackage(packageState, itemState, false);
 	}
 
 	@Test
@@ -486,15 +486,22 @@ public class PublisherTest {
 		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
 	}
 
-	private void assertFailedUnpublishedPackage(long[] packageState, long[] itemState) throws Exception {
-		assertEquals(COMPLETED.value | STAGING_FAILED.value | LIVE_FAILED.value, packageState[0]);
+	private void assertFailedUnpublishedPackage(long[] packageState, long[] itemState, boolean liveTarget) throws Exception {
+		long failedBits = liveTarget ? STAGING_FAILED.value | LIVE_FAILED.value : STAGING_FAILED.value;
+		assertEquals(COMPLETED.value | failedBits, packageState[0]);
+		assertTrue(STAGING_FAILED.matches(packageState[0]));
+		assertEquals(liveTarget, LIVE_FAILED.matches(packageState[0]));
 		assertFalse(PROCESSING.matches(packageState[0]));
 		assertFalse(LIVE_SUCCESS.matches(packageState[0]));
-		assertEquals(STAGING_FAILED.value | LIVE_FAILED.value, itemState[0]);
+		assertEquals(failedBits, itemState[0]);
 		assertEquals(0, itemState[0] & PublishItem.PublishState.PROCESSING.value);
 		assertEquals(0, itemState[0] & PublishItem.PublishState.LIVE_SUCCESS.value);
 		verify(publishPackage).setStagingError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
-		verify(publishPackage).setLiveError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
+		if (liveTarget) {
+			verify(publishPackage).setLiveError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
+		} else {
+			verify(publishPackage, never()).setLiveError(anyInt());
+		}
 		verify(publisher, never()).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
 		verify(contentRepository, never()).publish(any(), any(), any());
 	}
