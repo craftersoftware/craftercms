@@ -120,19 +120,31 @@ describe('InsertPositionPicker', () => {
 	it('lists every item except the last in the select, and choosing one selects Insert after', async () => {
 		const { host, positions } = await renderPicker({ value: items.length });
 
+		const combobox = host.querySelector<HTMLElement>('[role="combobox"]');
+		assert.ok(combobox, 'expected insert-after select');
+		const comboboxLabelIds = (combobox.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean);
+		const comboboxLabel = comboboxLabelIds.map((id) => document.getElementById(id)?.textContent ?? '').join(' ');
+		assert.match(comboboxLabel, /Insert after/);
+		assert.match(comboboxLabel, /Control to insert after/);
+
 		await openSelect(host);
-		const options = [...document.querySelectorAll('[role="option"]')].map((option) => option.textContent ?? '');
-		assert.equal(options.length, items.length - 1);
-		assert.ok(options.some((text) => text.includes('Alpha') && text.includes('a')));
-		assert.ok(options.some((text) => text.includes('Beta') && text.includes('b')));
-		assert.equal(
-			options.some((text) => text.includes('Gamma')),
-			false
+		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
+		assert.ok(listbox);
+		const listboxLabelIds = (listbox.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean);
+		const listboxLabel = listboxLabelIds.map((id) => document.getElementById(id)?.textContent ?? '').join(' ');
+		assert.equal(listboxLabel, 'Control to insert after');
+
+		const options = [...document.querySelectorAll('[role="option"]')];
+		assert.deepEqual(
+			options.map((option) => option.textContent ?? ''),
+			['Alphaa', 'Betab']
+		);
+		assert.deepEqual(
+			options.map((option) => option.querySelector('p')?.textContent ?? ''),
+			['a', 'b']
 		);
 
-		const beta = [...document.querySelectorAll('[role="option"]')].find((option) =>
-			(option.textContent ?? '').includes('Beta')
-		);
+		const beta = options.find((option) => (option.textContent ?? '').includes('Beta'));
 		assert.ok(beta instanceof HTMLElement);
 		await act(async () => {
 			beta.click();
@@ -140,6 +152,24 @@ describe('InsertPositionPicker', () => {
 
 		assert.deepEqual(positions, [2]); // after index 1 (Beta)
 		assert.equal(checkedRadioValue(host), 'after');
+	});
+
+	it('disables Insert after and hides the combobox for a one-item list; Last reports length', async () => {
+		const oneItem = [{ id: 'only', label: 'Only' }];
+		const { host, positions } = await renderPicker({ items: oneItem, value: 0 });
+
+		const after = host.querySelector<HTMLInputElement>('input[type="radio"][value="after"]');
+		assert.ok(after);
+		assert.equal(after.disabled, true);
+		assert.equal(host.querySelector('[role="combobox"]'), null);
+
+		const last = host.querySelector<HTMLInputElement>('input[type="radio"][value="last"]');
+		assert.ok(last);
+		await act(async () => {
+			last.click();
+		});
+		assert.deepEqual(positions, [oneItem.length]);
+		assert.equal(checkedRadioValue(host), 'last');
 	});
 
 	it('checks Insert after when value is a mid-list splice index', async () => {
