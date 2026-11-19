@@ -34,6 +34,7 @@ const { ThemeProvider, createTheme } = await import('@mui/material/styles');
 const { createTestIntl } = await import('../../../test/createTestIntl.mjs');
 const { getStudioPaletteOptions } = await import('../../styles/palette.ts');
 const { PreviewSettingsPanel } = await import('./PreviewSettingsPanel.tsx');
+const { accessibleName } = await import('../../../test/accessibleName.ts');
 
 const theme = createTheme({ palette: { mode: 'light', ...getStudioPaletteOptions('light') } });
 
@@ -147,16 +148,20 @@ describe('PreviewSettingsPanel list', () => {
 		assert.ok(shortcutsInput && shortcutsHelper);
 		described(shortcutsInput, shortcutsHelper);
 
-		const radiogroup = list.querySelector('[role="radiogroup"]');
+		const radiogroup = list.querySelector<HTMLElement>('[role="radiogroup"]');
 		const highlight = radiogroup?.closest('li');
 		const highlightHelper = highlight?.querySelector('p');
 		assert.ok(radiogroup && highlightHelper);
 		described(radiogroup, highlightHelper);
+		const heading = host.querySelector('#settingsPanelHighlightModeLabel');
+		assert.equal(heading?.classList.contains('MuiListSubheader-root'), true);
+		assert.equal(accessibleName(radiogroup), heading?.textContent);
 
 		const padding = itemWith(list, 'Padding mode (p)');
 		const paddingInput = padding?.querySelector('input');
 		const paddingHelper = padding?.querySelector('p');
 		assert.ok(paddingInput && paddingHelper);
 		described(paddingInput, paddingHelper);
+		assert.equal(paddingInput.getAttribute('aria-labelledby'), 'paddingModeSwitchLabel');
 	});
 });

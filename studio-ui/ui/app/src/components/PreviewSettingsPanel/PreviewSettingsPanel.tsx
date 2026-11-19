@@ -121,6 +121,7 @@ export function PreviewSettingsPanel() {
 			<ListItem divider disablePadding sx={{ flexDirection: 'column', alignItems: 'stretch' }}>
 				<FormControl sx={{ pt: 0, pb: 0, pl: 2, pr: 2 }}>
 					<RadioGroup
+						aria-labelledby="settingsPanelHighlightModeLabel"
 						aria-describedby="settingsPanelHighlightModeHelper"
 						value={highlightMode}
 						onChange={(e) => {
