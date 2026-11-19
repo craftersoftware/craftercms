@@ -58,6 +58,9 @@ import static org.mockito.Mockito.mock;
  * The system pipeline is loaded with {@link PrototypeUpgradePipelineFactoryImpl} and the bean
  * definitions in {@code studio-upgrade-context.xml}. The test classpath also contains a stub
  * {@code pipelines.yaml}, so the production file is chosen by its collation step.
+ *
+ * <p>This test assumes {@code 4.5.1.3} is the last 4.x system upgrade step. Anyone adding a later
+ * step must update it.</p>
  */
 public class DatabaseCollationUpgradePipelineTest {
 

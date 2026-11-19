@@ -97,6 +97,7 @@ public class DatabaseCollationUpgradeOperation extends AbstractUpgradeOperation 
                     quoteIdentifier(defaults.characterSet()), quoteIdentifier(defaults.collation())));
                 for (String table : getTablesToConvert(connection, schema, defaults.collation())) {
                     logger.info("Convert table '{}.{}' to collation '{}'", schema, table, defaults.collation());
+                    long startedNanos = System.nanoTime();
                     try {
                         statement.execute(format(ALTER_TABLE_SQL, quoteIdentifier(schema) + "." + quoteIdentifier(table),
                             quoteIdentifier(defaults.characterSet()), quoteIdentifier(defaults.collation())));
@@ -106,6 +107,8 @@ public class DatabaseCollationUpgradeOperation extends AbstractUpgradeOperation 
                         }
                         throw e;
                     }
+                    long elapsedMillis = (System.nanoTime() - startedNanos) / 1_000_000L;
+                    logger.info("Converted table '{}.{}' in {} ms", schema, table, elapsedMillis);
                 }
             }
         } catch (SQLException e) {
