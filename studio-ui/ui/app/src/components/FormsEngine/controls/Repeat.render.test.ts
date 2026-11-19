@@ -556,7 +556,7 @@ describe('Repeat add tooltip', () => {
 		await act(async () => {
 			await new Promise((resolve) => setTimeout(resolve, 200));
 		});
-		assert.equal(document.querySelectorAll('[role="tooltip"]').length >= 1, true, 'the tooltip did not open');
+		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
 		assert.equal(add.textContent?.trim(), 'Add');
 		assert.equal(add.getAttribute('aria-labelledby'), null);
 		assert.equal(span.getAttribute('aria-label'), null);

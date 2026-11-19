@@ -50,7 +50,7 @@ export function ActionsBar(props: ActionsBarProps) {
 
 	// MUI's Tooltip copies a string title onto the button as its aria-label, so these stay
 	// formatMessage strings instead of <FormattedMessage />. The explicit aria-label is a guard
-	// for a non-string or translated title.
+	// for a non-string title.
 	const cropLabel = formatMessage({ defaultMessage: 'Crop' });
 	const rotateLeftLabel = formatMessage({ defaultMessage: 'Rotate left' });
 	const rotateRightLabel = formatMessage({ defaultMessage: 'Rotate right' });
