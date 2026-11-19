@@ -86,8 +86,18 @@ export function PreviewSettingsPanel() {
 		<List>
 			<ListItem sx={settingRowSx}>
 				<ListItemText id="settingsPanelEditModeLabel" primary={formatMessage(translations.editMode)} />
-				<EditModeSwitch edge="end" slotProps={{ input: { 'aria-labelledby': 'settingsPanelEditModeLabel' } }} />
-				<FormHelperText sx={settingHelperSx}>{formatMessage(translations.editModeHelperText)}</FormHelperText>
+				<EditModeSwitch
+					edge="end"
+					slotProps={{
+						input: {
+							'aria-labelledby': 'settingsPanelEditModeLabel',
+							'aria-describedby': 'settingsPanelEditModeHelper'
+						}
+					}}
+				/>
+				<FormHelperText id="settingsPanelEditModeHelper" sx={settingHelperSx}>
+					{formatMessage(translations.editModeHelperText)}
+				</FormHelperText>
 			</ListItem>
 			<ListItem sx={settingRowSx} divider>
 				<ListItemText
@@ -96,9 +106,14 @@ export function PreviewSettingsPanel() {
 				/>
 				<KeyboardShortcutsSwitch
 					edge="end"
-					slotProps={{ input: { 'aria-labelledby': 'settingsPanelKeyboardShortcutsLabel' } }}
+					slotProps={{
+						input: {
+							'aria-labelledby': 'settingsPanelKeyboardShortcutsLabel',
+							'aria-describedby': 'settingsPanelKeyboardShortcutsHelper'
+						}
+					}}
 				/>
-				<FormHelperText sx={settingHelperSx}>
+				<FormHelperText id="settingsPanelKeyboardShortcutsHelper" sx={settingHelperSx}>
 					<FormattedMessage defaultMessage="Enable/disable keyboard shortcuts" />
 				</FormHelperText>
 			</ListItem>
@@ -106,6 +121,7 @@ export function PreviewSettingsPanel() {
 			<ListItem divider disablePadding sx={{ flexDirection: 'column', alignItems: 'stretch' }}>
 				<FormControl sx={{ pt: 0, pb: 0, pl: 2, pr: 2 }}>
 					<RadioGroup
+						aria-describedby="settingsPanelHighlightModeHelper"
 						value={highlightMode}
 						onChange={(e) => {
 							dispatch(
@@ -130,7 +146,9 @@ export function PreviewSettingsPanel() {
 							labelPlacement="start"
 						/>
 					</RadioGroup>
-					<FormHelperText sx={formHelperTextSx}>{formatMessage(translations.highlightModeHelperText)}</FormHelperText>
+					<FormHelperText id="settingsPanelHighlightModeHelper" sx={formHelperTextSx}>
+						{formatMessage(translations.highlightModeHelperText)}
+					</FormHelperText>
 				</FormControl>
 			</ListItem>
 			<PaddingModeSwitchListItem component="li" showIcon={false} showHelperText />

@@ -116,4 +116,47 @@ describe('PreviewSettingsPanel list', () => {
 		assert.equal(padding?.tagName, 'LI');
 		assert.ok(padding?.querySelector('p')?.textContent?.includes('Adds padding to collections'));
 	});
+
+	it('describes each switch and the highlight radiogroup with its helper text', async () => {
+		const host = await render();
+		const list = host.querySelector('ul');
+		assert.ok(list);
+
+		const described = (control: Element, helper: Element) => {
+			const describedBy = control.getAttribute('aria-describedby');
+			assert.ok(describedBy, control.outerHTML.slice(0, 180));
+			const text = describedBy
+				.split(/\s+/)
+				.filter(Boolean)
+				.map((id) => host.querySelector<HTMLElement>(`[id="${id}"]`)?.textContent ?? '')
+				.join(' ')
+				.replace(/\s+/g, ' ')
+				.trim();
+			assert.equal(text, helper.textContent?.replace(/\s+/g, ' ').trim());
+		};
+
+		const edit = itemWith(list, 'Edit Mode (e | m)');
+		const editInput = edit?.querySelector('input');
+		const editHelper = edit?.querySelector('p');
+		assert.ok(editInput && editHelper);
+		described(editInput, editHelper);
+
+		const shortcuts = itemWith(list, 'Keyboard shortcuts');
+		const shortcutsInput = shortcuts?.querySelector('input');
+		const shortcutsHelper = shortcuts?.querySelector('p');
+		assert.ok(shortcutsInput && shortcutsHelper);
+		described(shortcutsInput, shortcutsHelper);
+
+		const radiogroup = list.querySelector('[role="radiogroup"]');
+		const highlight = radiogroup?.closest('li');
+		const highlightHelper = highlight?.querySelector('p');
+		assert.ok(radiogroup && highlightHelper);
+		described(radiogroup, highlightHelper);
+
+		const padding = itemWith(list, 'Padding mode (p)');
+		const paddingInput = padding?.querySelector('input');
+		const paddingHelper = padding?.querySelector('p');
+		assert.ok(paddingInput && paddingHelper);
+		described(paddingInput, paddingHelper);
+	});
 });

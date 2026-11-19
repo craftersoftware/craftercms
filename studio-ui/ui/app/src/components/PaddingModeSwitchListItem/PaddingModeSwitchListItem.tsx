@@ -63,12 +63,16 @@ export function PaddingModeSwitchListItem(props: PaddingModeSwitchProps) {
 				onChange={onEditModePaddingChange}
 				slotProps={{
 					input: {
-						'aria-labelledby': 'paddingModeSwitchLabel'
+						'aria-labelledby': 'paddingModeSwitchLabel',
+						...(showHelperText ? { 'aria-describedby': 'paddingModeSwitchHelper' } : {})
 					}
 				}}
 			/>
 			{showHelperText && (
-				<FormHelperText sx={{ flexBasis: '100%', px: 0, pt: 0, pb: 0.5, mt: 1, ...sxs?.helperText }}>
+				<FormHelperText
+					id="paddingModeSwitchHelper"
+					sx={{ flexBasis: '100%', px: 0, pt: 0, pb: 0.5, mt: 1, ...sxs?.helperText }}
+				>
 					<FormattedMessage
 						id="settingsPanel.editModePaddingHelp"
 						defaultMessage="Adds padding to collections for easier interaction in edit-mode. Press `p` at any point to toggle on/off."
