@@ -215,6 +215,7 @@ public class PublishServiceInternalImpl implements PublishService, ApplicationCo
 	public CalculatedPublishPackageResult calculatePublishPackage(final String siteId, final String publishingTarget,
 																  final Collection<PublishRequestPath> publishRequestPaths,
 																  final Collection<String> commitIds) throws ServiceLayerException, IOException {
+		validateTarget(siteId, publishingTarget);
 		Site site = siteService.getSite(siteId);
 		Set<String> corePackagePaths = expandPublishRequestPaths(site, publishingTarget, publishRequestPaths);
 
@@ -239,6 +240,7 @@ public class PublishServiceInternalImpl implements PublishService, ApplicationCo
 	@Override
 	public CalculatedPublishPackageResult recalculatePublishPackage(String siteId, long packageId, String target)
 			throws ServiceLayerException {
+		validateTarget(siteId, target);
 		Map<Boolean, List<String>> publishPaths = publishDao.getUserRequestedPathMap(siteId, packageId);
 
 		Set<String> corePackagePaths = new HashSet<>(publishPaths.get(false));

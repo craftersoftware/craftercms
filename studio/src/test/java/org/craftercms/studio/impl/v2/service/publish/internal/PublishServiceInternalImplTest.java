@@ -30,6 +30,8 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.io.IOException;
+
 import static java.util.Collections.emptyList;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -95,5 +97,39 @@ public class PublishServiceInternalImplTest {
 				null, "Publish test", "Testing with invalid target", false, false);
 
 		verify(service).validateTarget(siteId, "thelivetarget");
+	}
+
+	@Test(expected = InvalidTargetException.class)
+	public void testCalculateInvalidTargetFails() throws ServiceLayerException, IOException {
+		String siteId = "site1";
+		when(servicesConfig.getLiveEnvironment(siteId)).thenReturn("live");
+
+		service.calculatePublishPackage(siteId, "bogus", emptyList(), emptyList());
+	}
+
+	@Test(expected = InvalidTargetException.class)
+	public void testCalculateStagingFailsIfNotEnabled() throws ServiceLayerException, IOException {
+		String siteId = "site1";
+		when(servicesConfig.getLiveEnvironment(siteId)).thenReturn("live");
+		when(servicesConfig.isStagingEnvironmentEnabled(siteId)).thenReturn(false);
+
+		service.calculatePublishPackage(siteId, "staging", emptyList(), emptyList());
+	}
+
+	@Test(expected = InvalidTargetException.class)
+	public void testRecalculateInvalidTargetFails() throws ServiceLayerException {
+		String siteId = "site1";
+		when(servicesConfig.getLiveEnvironment(siteId)).thenReturn("live");
+
+		service.recalculatePublishPackage(siteId, 42L, "bogus");
+	}
+
+	@Test(expected = InvalidTargetException.class)
+	public void testRecalculateStagingFailsIfNotEnabled() throws ServiceLayerException {
+		String siteId = "site1";
+		when(servicesConfig.getLiveEnvironment(siteId)).thenReturn("live");
+		when(servicesConfig.isStagingEnvironmentEnabled(siteId)).thenReturn(false);
+
+		service.recalculatePublishPackage(siteId, 42L, "staging");
 	}
 }
