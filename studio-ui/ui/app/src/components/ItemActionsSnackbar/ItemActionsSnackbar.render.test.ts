@@ -110,6 +110,18 @@ describe('ItemActionsSnackbar list', () => {
 		);
 	});
 
+	it('does not render an empty list item when append is true', async () => {
+		await render({
+			options: [{ id: 'edit', label: 'Edit' }],
+			append: true
+		});
+		const list = actionList();
+		assert.deepEqual(
+			Array.from(list.children).map((child) => child.textContent),
+			['Edit']
+		);
+	});
+
 	it('does not render an empty list item when append is an empty string', async () => {
 		await render({
 			options: [{ id: 'edit', label: 'Edit' }],
