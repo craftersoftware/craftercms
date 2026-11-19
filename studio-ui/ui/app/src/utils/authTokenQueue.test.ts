@@ -21,18 +21,22 @@
  * the session was never extended. An extend now waits for the in-flight request and runs right after it.
  */
 
+import '../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
 import { after, before, describe, it, mock } from 'node:test';
-import {
+import { applyClientLocalExpiry } from './clientLocalExpiry.ts';
+import type { ObtainAuthTokenResponse } from '../services/auth';
+
+const {
 	createAuthTokenQueue,
 	getAccessTokenRefreshInterval,
 	getNextRefreshDelay,
+	getTokenSchedule,
 	refreshAtFactor,
+	sameSessionLimitWindowMs,
 	sessionCleanupGraceMs,
 	sessionWarningCheckpointLeadMs
-} from './authTokenQueue.ts';
-import { applyClientLocalExpiry } from './clientLocalExpiry.ts';
-import type { ObtainAuthTokenResponse } from '../services/auth';
+} = await import('./authTokenQueue.ts');
 
 const warningLeadTimeMs = 60 * 1000;
 const token = (name: string) => ({ token: name, expiresAt: 0, sessionExpiresAt: null });
@@ -144,6 +148,103 @@ describe('getNextRefreshDelay', () => {
 		assert.equal(local.expiresAt, expiresAt);
 		assert.equal(local.sessionExpiresAt, sessionExpiresAt);
 		assert.equal(getAccessTokenRefreshInterval(local.expiresAt, now), 600 * 1000 * refreshAtFactor);
+	});
+});
+
+describe('getTokenSchedule', () => {
+	it('schedules from the client clock when the server clock is 90s ahead', () => {
+		const now = 1_000_000;
+		const skewMs = 90 * 1000;
+		const expiresIn = 600;
+		const sessionExpiresIn = 90;
+		const token = {
+			token: 't',
+			expiresAt: now + skewMs + expiresIn * 1000,
+			expiresIn,
+			sessionExpiresAt: now + skewMs + sessionExpiresIn * 1000,
+			sessionExpiresIn
+		};
+
+		const schedule = getTokenSchedule(token, warningLeadTimeMs, now);
+		const unconvertedRefresh = getAccessTokenRefreshInterval(token.expiresAt, now);
+		const unconvertedDelay = getNextRefreshDelay(token, unconvertedRefresh, warningLeadTimeMs, now);
+
+		// The warning checkpoint is due before the regular refresh, so the delay is the session countdown. Comparing
+		// the server's absolute timestamps with this clock instead would schedule both the refresh and the warning
+		// 90s late.
+		assert.equal(schedule.current.expiresAt, now + expiresIn * 1000);
+		assert.equal(schedule.current.sessionExpiresAt, now + sessionExpiresIn * 1000);
+		assert.equal(schedule.refreshInterval, expiresIn * 1000 * refreshAtFactor);
+		assert.equal(schedule.delay, sessionExpiresIn * 1000 - warningLeadTimeMs - sessionWarningCheckpointLeadMs);
+		assert.notEqual(schedule.refreshInterval, unconvertedRefresh);
+		assert.notEqual(schedule.delay, unconvertedDelay);
+	});
+
+	it('keeps the previous session expiry when a refresh reports the same limit', () => {
+		const now = 1_000_000;
+		const first = getTokenSchedule(
+			{
+				token: 'a',
+				expiresAt: now + 90_000 + 600_000,
+				expiresIn: 600,
+				sessionExpiresAt: now + 90_000 + 30_000,
+				sessionExpiresIn: 30
+			},
+			warningLeadTimeMs,
+			now
+		);
+		assert.equal(first.current.sessionExpiresAt, now + 30_000);
+
+		// 5.3s later the server floors the same limit to 25s, which would land 300ms later than the value above.
+		const later = now + 5300;
+		const refreshed = getTokenSchedule(
+			{
+				token: 'b',
+				expiresAt: now + 90_000 + 600_000,
+				expiresIn: 595,
+				sessionExpiresAt: now + 90_000 + 30_000,
+				sessionExpiresIn: 25
+			},
+			warningLeadTimeMs,
+			later,
+			first.current
+		);
+
+		assert.equal(later + 25_000 - first.current.sessionExpiresAt, 300);
+		assert.ok(later + 25_000 - first.current.sessionExpiresAt < sameSessionLimitWindowMs);
+		assert.equal(refreshed.current.sessionExpiresAt, first.current.sessionExpiresAt);
+	});
+
+	it('adopts a new session expiry when the limit is extended', () => {
+		const now = 1_000_000;
+		const first = getTokenSchedule(
+			{
+				token: 'a',
+				expiresAt: now + 600_000,
+				expiresIn: 600,
+				sessionExpiresAt: now + 30_000,
+				sessionExpiresIn: 30
+			},
+			warningLeadTimeMs,
+			now
+		);
+		const later = now + 5300;
+		const extendedByMs = 8 * 60 * 60 * 1000;
+		const extended = getTokenSchedule(
+			{
+				token: 'b',
+				expiresAt: later + 600_000,
+				expiresIn: 600,
+				sessionExpiresAt: later + extendedByMs,
+				sessionExpiresIn: extendedByMs / 1000
+			},
+			warningLeadTimeMs,
+			later,
+			first.current
+		);
+
+		assert.equal(extended.current.sessionExpiresAt, later + extendedByMs);
+		assert.notEqual(extended.current.sessionExpiresAt, first.current.sessionExpiresAt);
 	});
 });
 

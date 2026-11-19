@@ -97,7 +97,9 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	private static final String JWE_ALGORITHM_HEADER_VALUE = PBES2_HS512_A256KW;
 	private static final String JWE_ENCRYPTION_METHOD_HEADER_VALUE = AES_256_CBC_HMAC_SHA_512;
 	/**
-	 * Time limits of this length (in minutes) or longer are not reported to the UI for a warning (WCAG 2.1 SC 2.2.1)
+	 * Time limits of this length (in minutes) or longer are not reported to the UI for a warning (WCAG 2.1 SC 2.2.1).
+	 * The extension decision does not use this cutoff: a longer absolute limit is still restarted when it is the one
+	 * reached next.
 	 */
 	private static final int SESSION_WARNING_MAX_MINUTES = 20 * 60;
 	/**
@@ -249,13 +251,15 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 
 	/**
 	 * Refreshes the inactivity time. Restarts the absolute session time ({@code refresh_token.created_on}) and uses
-	 * one extension only when that limit is the one reached next. An inactivity warning does not consume an extension.
+	 * one extension only when that limit is the one reached next, including when it is 20 hours or longer. An
+	 * inactivity prompt does not consume an extension. The 20 hour cutoff applies only to the warning.
 	 */
 	protected void extendSession(Authentication auth) {
 		var userId = getUserId(auth);
 		// Read both limits before refreshing activity. The activity cache is what the inactivity limit is read from,
-		// and the decision is about the limit the user is being warned about, not the limit after the refresh.
-		var sessionLimit = getSessionLimitExpiration(userId);
+		// and the decision is about the limit that is about to be reached, not the limit after the refresh.
+		// The absolute deadline is the configured one. A limit of 20 hours or more is omitted from the warning only.
+		var sessionLimit = getConfiguredSessionLimitExpiration(userId);
 		var inactivityLimit = getInactivityExpiration(userId);
 		updateUserActivity(auth);
 		if (isSessionLimitNext(sessionLimit, inactivityLimit)) {
@@ -267,7 +271,9 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	}
 
 	/**
-	 * Gets the earliest moment at which the refresh token of the user can be deleted because of the session time limit.
+	 * The session deadline reported to the UI. Limits of {@link #SESSION_WARNING_MAX_MINUTES} or longer are omitted
+	 * (WCAG 2.1 SC 2.2.1). {@link #extendSession} uses {@link #getConfiguredSessionLimitExpiration} instead, so a
+	 * longer limit can still be extended when it is the one reached next.
 	 *
 	 * @return the moment, or null if the limit is 20 hours or longer or the user has no refresh token
 	 */
@@ -275,6 +281,16 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		if (sessionTimeout >= SESSION_WARNING_MAX_MINUTES) {
 			return null;
 		}
+		return getConfiguredSessionLimitExpiration(userId);
+	}
+
+	/**
+	 * The absolute session deadline from the configured timeout, including a limit of
+	 * {@link #SESSION_WARNING_MAX_MINUTES} or more.
+	 *
+	 * @return the moment, or null if the user has no refresh token
+	 */
+	protected Instant getConfiguredSessionLimitExpiration(long userId) {
 		// The clean up deletes the tokens that are older than the timeout in whole minutes
 		Long expirationSeconds = securityDao.getRefreshTokenExpiration(userId, sessionTimeout + 1);
 		return expirationSeconds != null ? Instant.ofEpochSecond(expirationSeconds) : null;
@@ -295,8 +311,8 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 
 	/**
 	 * The absolute session limit is the one reached next unless there is no session limit, or the inactivity limit
-	 * plus {@link #SESSION_LIMITS_TOLERANCE_SECONDS} is reached first. This is the same choice {@link #canExtendSession}
-	 * uses to decide whether staying signed in still depends on the extension cap.
+	 * plus {@link #SESSION_LIMITS_TOLERANCE_SECONDS} is reached first. {@link #canExtendSession} uses this comparison
+	 * on the warning deadlines; {@link #extendSession} uses it on the configured absolute deadline.
 	 */
 	protected boolean isSessionLimitNext(Instant sessionLimit, Instant inactivityLimit) {
 		if (sessionLimit == null) {
@@ -413,6 +429,8 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		var responseTime = now();
 		accessToken.setExpiresIn(secondsRemaining(expireAt, responseTime));
 		var userId = getUserId(auth);
+		// Warning values. A limit of 20 hours or more is omitted here and from canExtendSession, so the button matches
+		// the warning. Extending uses the configured deadline instead.
 		var sessionLimit = getSessionLimitExpiration(userId);
 		var inactivityLimit = getInactivityExpiration(userId);
 		if (sessionLimit != null || inactivityLimit != null) {

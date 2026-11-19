@@ -20,6 +20,7 @@
  * or the next warning starts, and must not be cleared by the countdown ticking.
  */
 
+import '../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
 import { after, before, beforeEach, describe, it, mock } from 'node:test';
 import { JSDOM } from 'jsdom';
@@ -42,6 +43,7 @@ const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
 const { useSessionTimeoutWarning } = await import('./useSessionTimeoutWarning.ts');
 const { applyClientLocalExpiry } = await import('../utils/clientLocalExpiry.ts');
+const { getTokenSchedule } = await import('../utils/authTokenQueue.ts');
 
 const leadTime = 60 * 1000;
 const now = Date.now();
@@ -205,6 +207,92 @@ describe('useSessionTimeoutWarning', () => {
 
 		await harness.render(false, now + 10 * 1000);
 		assert.equal(harness.state.visible, false);
+
+		await unmount();
+	});
+
+	it('stays dismissed when a refresh reports the same server limit a few seconds later', async () => {
+		const { harness, unmount } = await mountWarning();
+		const start = Date.now();
+		const first = getTokenSchedule(
+			{
+				token: 'a',
+				expiresAt: start + 90_000 + 600_000,
+				expiresIn: 600,
+				sessionExpiresAt: start + 90_000 + 30_000,
+				sessionExpiresIn: 30
+			},
+			leadTime,
+			start
+		);
+		await harness.render(true, first.current.sessionExpiresAt);
+		assert.equal(harness.state.visible, true);
+
+		await act(async () => harness.state.dismiss());
+		assert.equal(harness.state.visible, false);
+
+		// The server floors the same limit. Re-basing those seconds on the later clock would move the expiry by 300ms
+		// and reopen the warning if that value were stored as-is.
+		await act(async () => mock.timers.tick(5300));
+		const later = Date.now();
+		const refreshed = getTokenSchedule(
+			{
+				token: 'b',
+				expiresAt: start + 90_000 + 600_000,
+				expiresIn: 595,
+				sessionExpiresAt: start + 90_000 + 30_000,
+				sessionExpiresIn: 25
+			},
+			leadTime,
+			later,
+			first.current
+		);
+		assert.equal(refreshed.current.sessionExpiresAt, first.current.sessionExpiresAt);
+
+		await harness.render(true, refreshed.current.sessionExpiresAt);
+		assert.equal(harness.state.visible, false);
+
+		await unmount();
+	});
+
+	it('shows a new warning when an extension moves the session limit', async () => {
+		const { harness, unmount } = await mountWarning();
+		const start = Date.now();
+		const first = getTokenSchedule(
+			{
+				token: 'a',
+				expiresAt: start + 600_000,
+				expiresIn: 600,
+				sessionExpiresAt: start + 30_000,
+				sessionExpiresIn: 30
+			},
+			leadTime,
+			start
+		);
+		await harness.render(true, first.current.sessionExpiresAt);
+		await act(async () => harness.state.dismiss());
+		assert.equal(harness.state.visible, false);
+
+		const extendedIn = 3 * 60;
+		const extended = getTokenSchedule(
+			{
+				token: 'b',
+				expiresAt: start + 600_000,
+				expiresIn: 600,
+				sessionExpiresAt: start + extendedIn * 1000,
+				sessionExpiresIn: extendedIn
+			},
+			leadTime,
+			start,
+			first.current
+		);
+		assert.notEqual(extended.current.sessionExpiresAt, first.current.sessionExpiresAt);
+
+		await harness.render(true, extended.current.sessionExpiresAt);
+		assert.equal(harness.state.visible, false);
+
+		await act(async () => mock.timers.tick(extendedIn * 1000 - leadTime + 1000));
+		assert.equal(harness.state.visible, true);
 
 		await unmount();
 	});

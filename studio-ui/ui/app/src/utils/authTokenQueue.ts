@@ -16,6 +16,7 @@
 
 import type { Observable } from 'rxjs';
 import type { ObtainAuthTokenResponse } from '../services/auth';
+import { applyClientLocalExpiry } from './clientLocalExpiry';
 
 /**
  * Fraction of the token lifetime at which it is refreshed.
@@ -60,6 +61,43 @@ export function getNextRefreshDelay(
 		}
 	}
 	return refreshInterval;
+}
+
+/**
+ * How far a newly received client-local session expiry may sit from the previous one and still be the same server
+ * limit. The server counts whole seconds and each response is re-based on the clock at receipt, so a routine refresh
+ * lands up to about a second off, plus a little delay before the response is read. A real extension moves the limit
+ * by minutes.
+ */
+export const sameSessionLimitWindowMs = 2000;
+
+/**
+ * The client-local token, the access-token refresh interval, and the delay until the next refresh.
+ *
+ * `sessionExpiresAt` is kept from `previous` when the new value is within `sameSessionLimitWindowMs`. AuthMonitor and
+ * useSessionTimeoutWarning compare that value by equality, so a refresh that did not move the server limit must not
+ * look like a new expiry. The countdown and the refresh delay still use the client-local value.
+ */
+export function getTokenSchedule(
+	token: ObtainAuthTokenResponse,
+	warningLeadTimeMs: number,
+	receivedAt = Date.now(),
+	previous?: Pick<ObtainAuthTokenResponse, 'sessionExpiresAt'> | null
+): { current: ObtainAuthTokenResponse; refreshInterval: number; delay: number } {
+	const local = applyClientLocalExpiry(token, receivedAt);
+	const previousSessionExpiresAt = previous?.sessionExpiresAt;
+	const current =
+		previousSessionExpiresAt != null &&
+		local.sessionExpiresAt != null &&
+		Math.abs(local.sessionExpiresAt - previousSessionExpiresAt) < sameSessionLimitWindowMs
+			? { ...local, sessionExpiresAt: previousSessionExpiresAt }
+			: local;
+	const refreshInterval = getAccessTokenRefreshInterval(current.expiresAt, receivedAt);
+	return {
+		current,
+		refreshInterval,
+		delay: getNextRefreshDelay(current, refreshInterval, warningLeadTimeMs, receivedAt)
+	};
 }
 
 /**

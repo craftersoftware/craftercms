@@ -173,7 +173,10 @@ public class AccessTokenServiceInternalImplTest {
 	@Test
 	public void inactivityExtendRefreshesActivityWithoutConsumingAnExtension() {
 		var service = createService(480, 30);
-		service.updateUserActivity(auth);
+		// Last activity 29 minutes ago, so the inactivity limit is about 2 minutes away. Reading it after the refresh
+		// would move it about 31 minutes out and make the absolute limit the next one.
+		Instant lastActivity = Instant.now().minus(29, ChronoUnit.MINUTES);
+		service.userActivity.put(USER_ID, lastActivity);
 		Instant inactivityLimit = service.getInactivityExpiration(USER_ID);
 		// Further out than the inactivity limit plus the tolerance, so inactivity is the one reached next
 		when(securityDao.getRefreshTokenExpiration(USER_ID, 481))
@@ -183,6 +186,9 @@ public class AccessTokenServiceInternalImplTest {
 
 		verify(securityDao, never()).extendSession(anyLong(), anyInt());
 		assertEquals(1, service.userActivity.size());
+		Instant refreshed = service.userActivity.getIfPresent(USER_ID);
+		assertNotNull(refreshed);
+		assertTrue(refreshed.isAfter(lastActivity));
 	}
 
 	@Test
@@ -216,12 +222,52 @@ public class AccessTokenServiceInternalImplTest {
 	@Test
 	public void extendWithoutASessionLimitOnlyRefreshesActivity() {
 		var service = createService(20 * 60, 30);
+		// No refresh token, so there is no absolute deadline. A limit of 20 hours or more is still looked up; the
+		// warning cutoff must not skip that lookup.
+		when(securityDao.getRefreshTokenExpiration(USER_ID, 20 * 60 + 1)).thenReturn(null);
+
+		service.extendSession(auth);
+
+		verify(securityDao).getRefreshTokenExpiration(USER_ID, 20 * 60 + 1);
+		verify(securityDao, never()).extendSession(anyLong(), anyInt());
+		assertEquals(1, service.userActivity.size());
+		assertNull(service.getSessionLimitExpiration(USER_ID));
+	}
+
+	@Test
+	public void longSessionLimitDoesNotUseAnExtensionWhenInactivityIsNext() {
+		var service = createService(20 * 60, 30);
+		service.userActivity.put(USER_ID, Instant.now().minus(29, ChronoUnit.MINUTES));
+		Instant inactivityLimit = service.getInactivityExpiration(USER_ID);
+		when(securityDao.getRefreshTokenExpiration(USER_ID, 20 * 60 + 1))
+			.thenReturn(inactivityLimit.plus(2, ChronoUnit.HOURS).getEpochSecond());
+		when(securityDao.getSessionExtensions(USER_ID)).thenReturn(MAX_EXTENSIONS);
 
 		service.extendSession(auth);
 
 		verify(securityDao, never()).extendSession(anyLong(), anyInt());
-		verify(securityDao, never()).getRefreshTokenExpiration(anyLong(), anyInt());
-		assertEquals(1, service.userActivity.size());
+		// The warning still hides the long limit, and canExtendSession follows that warning rather than the cap.
+		assertNull(service.getSessionLimitExpiration(USER_ID));
+		assertTrue(service.canExtendSession(USER_ID, null, inactivityLimit));
+	}
+
+	@Test
+	public void longSessionLimitUsesAnExtensionWhenItIsNext() {
+		var service = createService(20 * 60, 30);
+		// Inactivity is about 31 minutes away. The absolute limit is 2 minutes away, so it is next even though a
+		// limit of 20 hours or more is not shown in the warning.
+		service.updateUserActivity(auth);
+		when(securityDao.getRefreshTokenExpiration(USER_ID, 20 * 60 + 1))
+			.thenReturn(Instant.now().plusSeconds(120).getEpochSecond());
+		when(securityDao.extendSession(USER_ID, MAX_EXTENSIONS)).thenReturn(1);
+		when(securityDao.getSessionExtensions(USER_ID)).thenReturn(MAX_EXTENSIONS);
+
+		assertNull(service.getSessionLimitExpiration(USER_ID));
+		assertTrue(service.canExtendSession(USER_ID, null, service.getInactivityExpiration(USER_ID)));
+
+		service.extendSession(auth);
+
+		verify(securityDao).extendSession(USER_ID, MAX_EXTENSIONS);
 	}
 
 	@Test

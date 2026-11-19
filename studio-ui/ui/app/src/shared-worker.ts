@@ -1,8 +1,7 @@
 /// <reference lib="webworker" />
 
 import { extendSession, obtainAuthToken, ObtainAuthTokenResponse } from './services/auth';
-import { createAuthTokenQueue, getAccessTokenRefreshInterval, getNextRefreshDelay } from './utils/authTokenQueue';
-import { applyClientLocalExpiry } from './utils/clientLocalExpiry';
+import { createAuthTokenQueue, getTokenSchedule } from './utils/authTokenQueue';
 import StandardAction from './models/StandardAction';
 import {
 	logout,
@@ -143,18 +142,16 @@ const authTokenQueue = createAuthTokenQueue({
 		clearTimeout(timeout);
 		log('New token received');
 		status = 'active';
-		// Turn the server's seconds remaining into a client-local expiry before scheduling the refresh and before
-		// tabs store the token, so a skewed client clock does not shorten either one.
+		// Convert on this clock, and keep the previous session expiry when the server limit did not move, before
+		// scheduling the refresh and before tabs store the token.
 		const receivedAt = Date.now();
-		current = applyClientLocalExpiry(token, receivedAt);
+		const schedule = getTokenSchedule(token, SESSION_TIMEOUT_WARNING_MS, receivedAt, current);
+		current = schedule.current;
 		broadcast(sharedWorkerToken(current));
-		refreshInterval = getAccessTokenRefreshInterval(current.expiresAt, receivedAt);
+		refreshInterval = schedule.refreshInterval;
 		if (clients.length) {
 			// If there are clients connected, keep the token refresh going
-			timeout = self.setTimeout(
-				() => authTokenQueue.retrieve(),
-				getNextRefreshDelay(current, refreshInterval, SESSION_TIMEOUT_WARNING_MS)
-			);
+			timeout = self.setTimeout(() => authTokenQueue.retrieve(), schedule.delay);
 		} else {
 			// Do SharedWorkers stop as soon as all their tabs are terminated?
 			clearTimeout(timeout);
