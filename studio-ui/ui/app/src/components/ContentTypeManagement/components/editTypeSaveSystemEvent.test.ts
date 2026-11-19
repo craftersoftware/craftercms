@@ -21,13 +21,34 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { of, firstValueFrom } from 'rxjs';
+import { merge, Subject } from 'rxjs';
+import { ofType } from 'redux-observable';
+import { switchMap } from 'rxjs/operators';
 import '../../../../test/registerTsLoader.mjs';
 
-const { contentTypeSaveSystemEvent } = await import('./editTypeSaveSystemEvent.ts');
+const { contentTypeSaveSystemEvent, editTypeSaveSuccessActions } = await import('./editTypeSaveSystemEvent.ts');
 const { contentTypeCreated, contentTypeUpdated, emitSystemEvent } = await import('../../../state/actions/system.ts');
 const { emitSystemEventEpic } = await import('../../../state/epics/system.ts');
 const { getHostToHostBus } = await import('../../../utils/subjects.ts');
+const { batchActions } = await import('../../../state/actions/misc.ts');
+
+/** Same flatten as the root batchActions epic, then the system emitSystemEvent epic. */
+function runSaveSuccessThroughHostBus(isNew: boolean, contentTypeId: string) {
+	const action$ = new Subject();
+	const batchEpic = (actions$) =>
+		actions$.pipe(
+			ofType(batchActions.type),
+			switchMap(({ payload }) => payload)
+		);
+	const epicOut$ = merge(batchEpic(action$), emitSystemEventEpic(action$));
+	const feedback = epicOut$.subscribe((action) => action$.next(action));
+	const received = [];
+	const busSub = getHostToHostBus().subscribe((action) => received.push(action));
+	action$.next(batchActions(editTypeSaveSuccessActions(isNew, contentTypeId, 'Save successful.')));
+	feedback.unsubscribe();
+	busSub.unsubscribe();
+	return received;
+}
 
 describe('contentTypeSaveSystemEvent', () => {
 	it('emits contentTypeCreated wrapped in emitSystemEvent for a new type', () => {
@@ -41,19 +62,20 @@ describe('contentTypeSaveSystemEvent', () => {
 		assert.deepEqual(action, emitSystemEvent(contentTypeUpdated({ contentTypeId: '123' })));
 		assert.equal(action.payload.payload.contentTypeId, '123');
 	});
+});
 
-	it('publishes exactly one CONTENT_TYPE_UPDATED on the host bus for an existing type save', async () => {
-		const received = [];
-		const subscription = getHostToHostBus().subscribe((action) => {
-			received.push(action);
-		});
-		try {
-			await firstValueFrom(emitSystemEventEpic(of(contentTypeSaveSystemEvent(false, '123'))));
-			const updated = received.filter((action) => action.type === contentTypeUpdated.type);
-			assert.equal(updated.length, 1);
-			assert.deepEqual(updated[0], contentTypeUpdated({ contentTypeId: '123' }));
-		} finally {
-			subscription.unsubscribe();
-		}
+describe('editTypeSaveSuccessActions', () => {
+	it('includes exactly one contentTypeSaveSystemEvent for an existing type', () => {
+		const actions = editTypeSaveSuccessActions(false, '123', 'Save successful.');
+		const systemEvents = actions.filter((action) => action.type === emitSystemEvent.type);
+		assert.equal(systemEvents.length, 1);
+		assert.deepEqual(systemEvents[0], contentTypeSaveSystemEvent(false, '123'));
+	});
+
+	it('publishes exactly one CONTENT_TYPE_UPDATED on the host bus per existing-type save', () => {
+		const received = runSaveSuccessThroughHostBus(false, '123');
+		const updated = received.filter((action) => action.type === contentTypeUpdated.type);
+		assert.equal(updated.length, 1);
+		assert.deepEqual(updated[0], contentTypeUpdated({ contentTypeId: '123' }));
 	});
 });

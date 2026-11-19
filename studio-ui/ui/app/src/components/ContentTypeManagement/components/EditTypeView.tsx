@@ -119,7 +119,7 @@ import useSelection from '../../../hooks/useSelection';
 import { getXmlBuilder, valueSerializersLookup } from '../../FormsEngine/lib/valueSerializers';
 import { pushErrorDialog } from '../../../utils/system';
 import { contentTypeDeleted, emitSystemEvent, showSystemNotification } from '../../../state/actions/system';
-import { contentTypeSaveSystemEvent } from './editTypeSaveSystemEvent';
+import { editTypeSaveSuccessActions } from './editTypeSaveSystemEvent';
 import { extractErrorPayload } from '../../../utils/ajax';
 import Typography from '@mui/material/Typography';
 import { AjaxError } from 'rxjs/ajax';
@@ -728,13 +728,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							setContentItemReloadToken((token) => token + 1);
 						}
 						dispatch(
-							batchActions([
-								contentTypeSaveSystemEvent(isNew, typeToSave.id),
-								fetchContentTypes(),
-								showSystemNotification({
-									message: formatMessage({ defaultMessage: 'Save successful.' })
-								})
-							])
+							batchActions(
+								editTypeSaveSuccessActions(isNew, typeToSave.id, formatMessage({ defaultMessage: 'Save successful.' }))
+							)
 						);
 						if (action === 'saveAndClose') {
 							if (postSubmitEdits) {
