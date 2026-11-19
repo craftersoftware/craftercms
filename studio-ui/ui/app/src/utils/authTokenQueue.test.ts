@@ -25,10 +25,13 @@ import assert from 'node:assert/strict';
 import { after, before, describe, it, mock } from 'node:test';
 import {
 	createAuthTokenQueue,
+	getAccessTokenRefreshInterval,
 	getNextRefreshDelay,
+	refreshAtFactor,
 	sessionCleanupGraceMs,
 	sessionWarningCheckpointLeadMs
 } from './authTokenQueue.ts';
+import { applyClientLocalExpiry } from './clientLocalExpiry.ts';
 import type { ObtainAuthTokenResponse } from '../services/auth';
 
 const warningLeadTimeMs = 60 * 1000;
@@ -105,6 +108,42 @@ describe('getNextRefreshDelay', () => {
 	it('falls back to the regular refresh without a session expiry (20 h or more, or unknown)', () => {
 		assert.equal(getNextRefreshDelay({ sessionExpiresAt: null }, 90 * 1000, warningLeadTimeMs, 0), 90 * 1000);
 		assert.equal(getNextRefreshDelay({}, 90 * 1000, warningLeadTimeMs, 0), 90 * 1000);
+	});
+
+	it('schedules from the server seconds remaining when the client clock is behind', () => {
+		const now = 1_000_000;
+		const skewMs = 90 * 1000;
+		const expiresIn = 600;
+		const sessionExpiresIn = 10 * 60;
+		// Absolute instants as a slow client would read them: the server clock is 90s ahead.
+		const absoluteExpiresAt = now + skewMs + expiresIn * 1000;
+		const absoluteSessionExpiresAt = now + skewMs + sessionExpiresIn * 1000;
+		const local = applyClientLocalExpiry(
+			{ expiresAt: absoluteExpiresAt, expiresIn, sessionExpiresAt: absoluteSessionExpiresAt, sessionExpiresIn },
+			now
+		);
+
+		assert.equal(getAccessTokenRefreshInterval(local.expiresAt, now), expiresIn * 1000 * refreshAtFactor);
+		assert.ok(
+			getAccessTokenRefreshInterval(absoluteExpiresAt, now) > getAccessTokenRefreshInterval(local.expiresAt, now)
+		);
+		const delay = getNextRefreshDelay(local, 60 * 60 * 1000, warningLeadTimeMs, now);
+		assert.equal(delay, sessionExpiresIn * 1000 - warningLeadTimeMs - sessionWarningCheckpointLeadMs);
+
+		// A second pass, after the seconds were dropped at receipt, does not move the expiry.
+		const later = now + 5 * 1000;
+		assert.equal(applyClientLocalExpiry(local, later).sessionExpiresAt, local.sessionExpiresAt);
+	});
+
+	it('falls back to the absolute timestamp when the server omits the seconds remaining', () => {
+		const now = 1_000_000;
+		const expiresAt = now + 600 * 1000;
+		const sessionExpiresAt = now + 10 * 60 * 1000;
+		const local = applyClientLocalExpiry({ expiresAt, sessionExpiresAt }, now);
+
+		assert.equal(local.expiresAt, expiresAt);
+		assert.equal(local.sessionExpiresAt, sessionExpiresAt);
+		assert.equal(getAccessTokenRefreshInterval(local.expiresAt, now), 600 * 1000 * refreshAtFactor);
 	});
 });
 

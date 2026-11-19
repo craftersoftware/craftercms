@@ -357,8 +357,9 @@ studio.objectState.bulkOperationsBatchSize: 500
 ##########################################################
 # Time in minutes after which active users will be required to log in again
 studio.security.sessionTimeout: 480
-# Number of times a user can extend the session timeout (by choosing to stay signed in when warned that the session is
-# about to expire) before having to log in again
+# Number of times a user can extend the absolute session time limit before having to log in again. An extension is
+# used only when that limit is the one about to expire (Stay signed in). Staying signed in on an inactivity warning
+# only refreshes the activity time and does not use an extension. WCAG 2.1 SC 2.2.1 asks for at least 10 extensions.
 studio.security.sessionMaxExtensions: 10
 # Time in minutes after which inactive users will be required to log in again
 studio.security.inactivityTimeout: 30

@@ -57,6 +57,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.beans.ConstructorProperties;
 import java.security.Key;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -100,7 +101,8 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	 */
 	private static final int SESSION_WARNING_MAX_MINUTES = 20 * 60;
 	/**
-	 * Limits that are this close are treated as simultaneous, as extending the session restarts both
+	 * When the two limits fall within this many seconds, the absolute session limit is the one reached next.
+	 * Extending that limit restarts both clocks, so a slightly earlier inactivity limit is not a separate warning.
 	 */
 	private static final long SESSION_LIMITS_TOLERANCE_SECONDS = 60;
 
@@ -246,14 +248,21 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	}
 
 	/**
-	 * Restarts the inactivity time limit and, unless the user already used all the extensions, the session time limit
+	 * Refreshes the inactivity time. Restarts the absolute session time ({@code refresh_token.created_on}) and uses
+	 * one extension only when that limit is the one reached next. An inactivity warning does not consume an extension.
 	 */
 	protected void extendSession(Authentication auth) {
 		var userId = getUserId(auth);
+		// Read both limits before refreshing activity. The activity cache is what the inactivity limit is read from,
+		// and the decision is about the limit the user is being warned about, not the limit after the refresh.
+		var sessionLimit = getSessionLimitExpiration(userId);
+		var inactivityLimit = getInactivityExpiration(userId);
 		updateUserActivity(auth);
-		int updated = retryingDatabaseOperationFacade.retry(() -> securityDao.extendSession(userId, sessionMaxExtensions));
-		if (updated == 0) {
-			logger.debug("User '{}' can't extend the session any more", auth.getName());
+		if (isSessionLimitNext(sessionLimit, inactivityLimit)) {
+			int updated = retryingDatabaseOperationFacade.retry(() -> securityDao.extendSession(userId, sessionMaxExtensions));
+			if (updated == 0) {
+				logger.debug("User '{}' can't extend the session any more", auth.getName());
+			}
 		}
 	}
 
@@ -285,13 +294,25 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	}
 
 	/**
-	 * Indicates if choosing to stay signed in would move the moment in which the session expires, which is not the
-	 * case when the session time limit is the next one to be reached and the user used all the extensions.
+	 * The absolute session limit is the one reached next unless there is no session limit, or the inactivity limit
+	 * plus {@link #SESSION_LIMITS_TOLERANCE_SECONDS} is reached first. This is the same choice {@link #canExtendSession}
+	 * uses to decide whether staying signed in still depends on the extension cap.
+	 */
+	protected boolean isSessionLimitNext(Instant sessionLimit, Instant inactivityLimit) {
+		if (sessionLimit == null) {
+			return false;
+		}
+		return inactivityLimit == null ||
+			!inactivityLimit.plusSeconds(SESSION_LIMITS_TOLERANCE_SECONDS).isBefore(sessionLimit);
+	}
+
+	/**
+	 * Indicates if choosing to stay signed in would move the moment at which the session expires. It would not when
+	 * the absolute session limit is the next one reached and the user has used all the extensions. An inactivity
+	 * limit that is reached first can always be extended, because that only refreshes the activity time.
 	 */
 	protected boolean canExtendSession(long userId, Instant sessionLimit, Instant inactivityLimit) {
-		if (sessionLimit == null ||
-			(inactivityLimit != null &&
-				inactivityLimit.plusSeconds(SESSION_LIMITS_TOLERANCE_SECONDS).isBefore(sessionLimit))) {
+		if (!isSessionLimitNext(sessionLimit, inactivityLimit)) {
 			return true;
 		}
 		Integer extensions = securityDao.getSessionExtensions(userId);
@@ -387,6 +408,10 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		var accessToken = new AccessToken();
 		accessToken.setToken(token);
 		accessToken.setExpiresAt(expireAt);
+		// Seconds remaining are counted on this clock so the UI can count down without comparing these instants to
+		// the client clock (WCAG 2.1 SC 2.2.1). Truncating to whole seconds opens the warning at most a second early.
+		var responseTime = now();
+		accessToken.setExpiresIn(secondsRemaining(expireAt, responseTime));
 		var userId = getUserId(auth);
 		var sessionLimit = getSessionLimitExpiration(userId);
 		var inactivityLimit = getInactivityExpiration(userId);
@@ -394,6 +419,7 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 			accessToken.setSessionExpiresAt(sessionLimit == null || (inactivityLimit != null &&
 				inactivityLimit.isBefore(sessionLimit)) ? inactivityLimit : sessionLimit);
 		}
+		accessToken.setSessionExpiresIn(secondsRemaining(accessToken.getSessionExpiresAt(), responseTime));
 		accessToken.setCanExtendSession(canExtendSession(userId, sessionLimit, inactivityLimit));
 
 		return accessToken;
@@ -532,6 +558,16 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 
 	protected long getUserId(Authentication auth) {
 		return ((User) auth.getPrincipal()).getId();
+	}
+
+	/**
+	 * Whole seconds from {@code from} until {@code until}, never negative. Null when there is no moment to count down to.
+	 */
+	private static Long secondsRemaining(Instant until, Instant from) {
+		if (until == null) {
+			return null;
+		}
+		return Math.max(0L, Duration.between(from, until).getSeconds());
 	}
 
 	protected String createToken(Instant issuedAt, Instant expiresAt, String username, Long id)

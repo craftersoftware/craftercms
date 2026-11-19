@@ -32,9 +32,17 @@ export const sessionCleanupGraceMs = 61 * 1000;
 export const sessionWarningCheckpointLeadMs = 5000;
 
 /**
+ * Half of the access token's remaining lifetime. `expiresAt` is a client-local expiry (the server's seconds remaining,
+ * added to the clock at receipt), so this does not compare the server's absolute timestamp with the client clock.
+ */
+export function getAccessTokenRefreshInterval(expiresAt: number, now = Date.now()): number {
+	return Math.floor((expiresAt - now) * refreshAtFactor);
+}
+
+/**
  * Delay before the next token refresh: the regular one, or sooner to check the session right before the warning is due
  * (so tabs warn based on up to date information, as the session may have been extended by activity) and right after it
- * should have expired.
+ * should have expired. `sessionExpiresAt` is a client-local expiry derived from the server's seconds remaining.
  */
 export function getNextRefreshDelay(
 	current: Pick<ObtainAuthTokenResponse, 'sessionExpiresAt'>,
@@ -62,7 +70,7 @@ export type TokenRequest = Promise<ObtainAuthTokenResponse> | Pick<Observable<Ob
 export interface AuthTokenQueueCallbacks {
 	/** Gets new tokens. */
 	obtain: () => TokenRequest;
-	/** Gets new tokens and restarts the session time limits. */
+	/** Gets new tokens and extends the limit the user is being warned about. */
 	extend: (xsrfToken: string) => TokenRequest;
 	/** Called with each new set of tokens. */
 	onToken: (token: ObtainAuthTokenResponse) => void;

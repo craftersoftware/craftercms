@@ -41,6 +41,7 @@ const { createElement } = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
 const { useSessionTimeoutWarning } = await import('./useSessionTimeoutWarning.ts');
+const { applyClientLocalExpiry } = await import('../utils/clientLocalExpiry.ts');
 
 const leadTime = 60 * 1000;
 const now = Date.now();
@@ -167,6 +168,31 @@ describe('useSessionTimeoutWarning', () => {
 
 		await act(async () => mock.timers.tick(2 * 60 * 1000 + 1000));
 		assert.equal(harness.state.visible, true);
+
+		await unmount();
+	});
+
+	it('counts down the server seconds remaining when the client clock is behind', async () => {
+		const { harness, unmount } = await mountWarning();
+		const clientNow = Date.now();
+		const skewMs = 90 * 1000;
+		const sessionExpiresIn = 90;
+		// The server clock is 90s ahead and 90s of session remain. Compared with this client clock, that absolute
+		// instant looks 180s away, so a 60s warning would open after the session had already ended.
+		const serverAbsolute = clientNow + skewMs + sessionExpiresIn * 1000;
+		const sessionExpiresAt = applyClientLocalExpiry(
+			{ sessionExpiresAt: serverAbsolute, sessionExpiresIn },
+			clientNow
+		).sessionExpiresAt;
+
+		await harness.render(true, sessionExpiresAt);
+		assert.equal(harness.state.visible, false);
+		assert.equal(harness.state.secondsLeft, 90);
+
+		await act(async () => mock.timers.tick(30 * 1000));
+		assert.equal(harness.state.visible, true);
+		assert.equal(harness.state.secondsLeft, 60);
+		assert.ok(serverAbsolute - Date.now() > leadTime);
 
 		await unmount();
 	});

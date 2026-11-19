@@ -1,7 +1,8 @@
 /// <reference lib="webworker" />
 
 import { extendSession, obtainAuthToken, ObtainAuthTokenResponse } from './services/auth';
-import { createAuthTokenQueue, getNextRefreshDelay, refreshAtFactor } from './utils/authTokenQueue';
+import { createAuthTokenQueue, getAccessTokenRefreshInterval, getNextRefreshDelay } from './utils/authTokenQueue';
+import { applyClientLocalExpiry } from './utils/clientLocalExpiry';
 import StandardAction from './models/StandardAction';
 import {
 	logout,
@@ -142,9 +143,12 @@ const authTokenQueue = createAuthTokenQueue({
 		clearTimeout(timeout);
 		log('New token received');
 		status = 'active';
-		current = token;
+		// Turn the server's seconds remaining into a client-local expiry before scheduling the refresh and before
+		// tabs store the token, so a skewed client clock does not shorten either one.
+		const receivedAt = Date.now();
+		current = applyClientLocalExpiry(token, receivedAt);
 		broadcast(sharedWorkerToken(current));
-		refreshInterval = Math.floor((current.expiresAt - Date.now()) * refreshAtFactor);
+		refreshInterval = getAccessTokenRefreshInterval(current.expiresAt, receivedAt);
 		if (clients.length) {
 			// If there are clients connected, keep the token refresh going
 			timeout = self.setTimeout(

@@ -31,8 +31,12 @@ export interface SessionTimeoutWarningState {
  * Watches the clock rather than waiting for `sessionExpiresAt` to change, because the worker refreshes the token when
  * the warning is due and that refresh may report the same expiry.
  *
+ * `sessionExpiresAt` is a client-local expiry: the server's seconds remaining added to the clock when the token
+ * arrived. Counting down from that, instead of from the server's absolute timestamp, keeps the warning at least 20
+ * seconds long when the client clock is slow.
+ *
  * @param active whether the user has a session
- * @param sessionExpiresAt the earliest moment at which the session may expire, null if there is nothing to warn about
+ * @param sessionExpiresAt client-local moment at which the session may expire, null if there is nothing to warn about
  * @param warningLeadTimeMs how long before the expiry the warning starts
  */
 export function useSessionTimeoutWarning(

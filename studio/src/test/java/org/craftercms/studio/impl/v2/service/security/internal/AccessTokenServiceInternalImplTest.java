@@ -101,6 +101,22 @@ public class AccessTokenServiceInternalImplTest {
 
 		assertNotNull(first.getSessionExpiresAt());
 		assertEquals(first.getSessionExpiresAt(), second.getSessionExpiresAt());
+		assertSecondsMatch(first.getExpiresAt(), first.getExpiresIn());
+		assertSecondsMatch(first.getSessionExpiresAt(), first.getSessionExpiresIn());
+	}
+
+	@Test
+	public void noSessionExpiryOmitsTheSessionSeconds() throws Exception {
+		var service = createService(20 * 60, 20 * 60);
+		service.setAudience("test-instance");
+		service.setRefreshTokenCookieManager(mock(NamedCookieManager.class));
+		service.setPreviewCookieManager(mock(NamedCookieManager.class));
+
+		var token = service.createTokens(auth, mock(HttpServletRequest.class), mock(HttpServletResponse.class), false);
+
+		assertNull(token.getSessionExpiresAt());
+		assertNull(token.getSessionExpiresIn());
+		assertSecondsMatch(token.getExpiresAt(), token.getExpiresIn());
 	}
 
 	@Test
@@ -129,6 +145,8 @@ public class AccessTokenServiceInternalImplTest {
 	@Test
 	public void extendingRestartsTheSessionLimitWhileBelowTheCap() {
 		var service = createService(480, 30);
+		// No recorded activity, so the absolute session limit is the one reached next
+		when(securityDao.getRefreshTokenExpiration(USER_ID, 481)).thenReturn(Instant.now().plusSeconds(120).getEpochSecond());
 		when(securityDao.extendSession(USER_ID, MAX_EXTENSIONS)).thenReturn(1);
 
 		service.extendSession(auth);
@@ -140,6 +158,7 @@ public class AccessTokenServiceInternalImplTest {
 	@Test
 	public void extendingIsRefusedOnceTheCapIsReached() {
 		var service = createService(480, 30);
+		when(securityDao.getRefreshTokenExpiration(USER_ID, 481)).thenReturn(Instant.now().plusSeconds(120).getEpochSecond());
 		// The query only updates the token when the extensions used are below the maximum
 		when(securityDao.extendSession(eq(USER_ID), eq(MAX_EXTENSIONS))).thenReturn(0);
 
@@ -147,6 +166,62 @@ public class AccessTokenServiceInternalImplTest {
 
 		verify(securityDao).extendSession(USER_ID, MAX_EXTENSIONS);
 		verify(securityDao, never()).resetSessionExtensions(anyLong());
+		// Activity is still refreshed, but it does not move the session limit that is about to expire
+		assertEquals(1, service.userActivity.size());
+	}
+
+	@Test
+	public void inactivityExtendRefreshesActivityWithoutConsumingAnExtension() {
+		var service = createService(480, 30);
+		service.updateUserActivity(auth);
+		Instant inactivityLimit = service.getInactivityExpiration(USER_ID);
+		// Further out than the inactivity limit plus the tolerance, so inactivity is the one reached next
+		when(securityDao.getRefreshTokenExpiration(USER_ID, 481))
+			.thenReturn(inactivityLimit.plusSeconds(180).getEpochSecond());
+
+		service.extendSession(auth);
+
+		verify(securityDao, never()).extendSession(anyLong(), anyInt());
+		assertEquals(1, service.userActivity.size());
+	}
+
+	@Test
+	public void limitsWithinTheToleranceCountAsTheSessionLimit() {
+		var service = createService(480, 30);
+		service.updateUserActivity(auth);
+		Instant inactivityLimit = service.getInactivityExpiration(USER_ID);
+		when(securityDao.getRefreshTokenExpiration(USER_ID, 481))
+			.thenReturn(inactivityLimit.plusSeconds(60).getEpochSecond());
+		when(securityDao.extendSession(USER_ID, MAX_EXTENSIONS)).thenReturn(1);
+
+		service.extendSession(auth);
+
+		verify(securityDao).extendSession(USER_ID, MAX_EXTENSIONS);
+	}
+
+	@Test
+	public void inactivityJustPastTheToleranceDoesNotConsumeAnExtension() {
+		var service = createService(480, 30);
+		service.updateUserActivity(auth);
+		Instant inactivityLimit = service.getInactivityExpiration(USER_ID);
+		when(securityDao.getRefreshTokenExpiration(USER_ID, 481))
+			.thenReturn(inactivityLimit.plusSeconds(61).getEpochSecond());
+
+		service.extendSession(auth);
+
+		verify(securityDao, never()).extendSession(anyLong(), anyInt());
+		assertEquals(1, service.userActivity.size());
+	}
+
+	@Test
+	public void extendWithoutASessionLimitOnlyRefreshesActivity() {
+		var service = createService(20 * 60, 30);
+
+		service.extendSession(auth);
+
+		verify(securityDao, never()).extendSession(anyLong(), anyInt());
+		verify(securityDao, never()).getRefreshTokenExpiration(anyLong(), anyInt());
+		assertEquals(1, service.userActivity.size());
 	}
 
 	@Test
@@ -201,6 +276,18 @@ public class AccessTokenServiceInternalImplTest {
 		service.resetSessionExtensions(auth);
 
 		verify(securityDao).resetSessionExtensions(USER_ID);
+	}
+
+	/**
+	 * {@code reported} was counted just before the token was returned, so it is the remaining whole seconds, or a
+	 * second or two more if time passed since then.
+	 */
+	private static void assertSecondsMatch(Instant until, Long reported) {
+		assertNotNull(until);
+		assertNotNull(reported);
+		long remaining = Math.max(0, Duration.between(Instant.now(), until).getSeconds());
+		assertTrue(reported >= remaining && reported - remaining <= 5,
+			"reported " + reported + " seconds, about " + remaining + " remain until " + until);
 	}
 
 }

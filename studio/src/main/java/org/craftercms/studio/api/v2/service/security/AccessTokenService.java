@@ -67,7 +67,8 @@ public interface AccessTokenService {
 	 * @param auth     the current authentication
 	 * @param request  the request
 	 * @param response the response
-	 * @param extendSession true to restart the session and inactivity time limits of the user
+	 * @param extendSession true to refresh the inactivity time and, when the absolute session limit is the one
+	 *                      reached next, restart that limit and use one extension
 	 * @return the access token
 	 * @throws ServiceLayerException if there is any error creating the access token
 	 */
