@@ -158,10 +158,11 @@ describe('PreviewSettingsPanel list', () => {
 		assert.equal(accessibleName(radiogroup), heading?.textContent);
 
 		const padding = itemWith(list, 'Padding mode (p)');
-		const paddingInput = padding?.querySelector('input');
+		const paddingInput = padding?.querySelector<HTMLElement>('input');
 		const paddingHelper = padding?.querySelector('p');
 		assert.ok(paddingInput && paddingHelper);
 		described(paddingInput, paddingHelper);
 		assert.equal(paddingInput.getAttribute('aria-labelledby'), 'paddingModeSwitchLabel');
+		assert.equal(accessibleName(paddingInput), 'Padding mode (p)');
 	});
 });
