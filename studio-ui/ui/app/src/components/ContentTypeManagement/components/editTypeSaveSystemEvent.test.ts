@@ -28,15 +28,25 @@ const { contentTypeCreated, contentTypeUpdated, emitSystemEvent } = await import
 
 describe('contentTypeSaveSystemEvent', () => {
 	it('emits contentTypeCreated wrapped in emitSystemEvent for a new type', () => {
-		assert.deepEqual(contentTypeSaveSystemEvent(true), emitSystemEvent(contentTypeCreated()));
+		const action = contentTypeSaveSystemEvent(true, '123');
+		assert.deepEqual(action, emitSystemEvent(contentTypeCreated({ contentTypeId: '123' })));
+		assert.equal(action.payload.payload.contentTypeId, '123');
 	});
 
 	it('emits contentTypeUpdated wrapped in emitSystemEvent for an existing type', () => {
-		assert.deepEqual(contentTypeSaveSystemEvent(false), emitSystemEvent(contentTypeUpdated()));
+		const action = contentTypeSaveSystemEvent(false, '123');
+		assert.deepEqual(action, emitSystemEvent(contentTypeUpdated({ contentTypeId: '123' })));
+		assert.equal(action.payload.payload.contentTypeId, '123');
 	});
 
 	it('does not emit contentTypeUpdated when creating, or contentTypeCreated when updating', () => {
-		assert.notDeepEqual(contentTypeSaveSystemEvent(true), emitSystemEvent(contentTypeUpdated()));
-		assert.notDeepEqual(contentTypeSaveSystemEvent(false), emitSystemEvent(contentTypeCreated()));
+		assert.notDeepEqual(
+			contentTypeSaveSystemEvent(true, '123'),
+			emitSystemEvent(contentTypeUpdated({ contentTypeId: '123' }))
+		);
+		assert.notDeepEqual(
+			contentTypeSaveSystemEvent(false, '123'),
+			emitSystemEvent(contentTypeCreated({ contentTypeId: '123' }))
+		);
 	});
 });

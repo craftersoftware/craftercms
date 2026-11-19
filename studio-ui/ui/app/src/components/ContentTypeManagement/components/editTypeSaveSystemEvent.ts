@@ -20,6 +20,6 @@ import { contentTypeCreated, contentTypeUpdated, emitSystemEvent } from '../../.
  * Host-bus system event for a successful Type Builder save.
  * New types emit CONTENT_TYPE_CREATED; existing types emit CONTENT_TYPE_UPDATED.
  */
-export function contentTypeSaveSystemEvent(isNew: boolean) {
-	return emitSystemEvent(isNew ? contentTypeCreated() : contentTypeUpdated());
+export function contentTypeSaveSystemEvent(isNew: boolean, contentTypeId: string) {
+	return emitSystemEvent(isNew ? contentTypeCreated({ contentTypeId }) : contentTypeUpdated({ contentTypeId }));
 }

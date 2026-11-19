@@ -633,7 +633,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			}
 			case 'deleted':
 				onUpdateHasPendingChanges(false);
-				dispatch(batchActions([emitSystemEvent(contentTypeDeleted()), fetchContentTypes()]));
+				dispatch(batchActions([emitSystemEvent(contentTypeDeleted({ contentTypeId: type.id })), fetchContentTypes()]));
 				onExit?.();
 				break;
 		}
@@ -729,7 +729,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						}
 						dispatch(
 							batchActions([
-								contentTypeSaveSystemEvent(isNew),
+								contentTypeSaveSystemEvent(isNew, typeToSave.id),
 								fetchContentTypes(),
 								showSystemNotification({
 									message: formatMessage({ defaultMessage: 'Save successful.' })

@@ -59,7 +59,7 @@ function handleSystemEvent(action: StandardAction): StandardAction[] {
 	} else if (targetPath === '/config/studio/site-config.xml') {
 		return [fetchSiteConfig()];
 	} else if (/^\/config\/studio\/content-types\/.*\/form-definition\.xml$/.test(targetPath)) {
-		return [contentTypeUpdated(), fetchQuickCreateList()];
+		return [contentTypeUpdated({ contentTypeId: action.payload.contentTypeId }), fetchQuickCreateList()];
 	}
 	return [];
 }
