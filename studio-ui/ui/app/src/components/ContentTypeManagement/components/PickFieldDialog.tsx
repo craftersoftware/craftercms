@@ -349,7 +349,7 @@ export function SelectField(props: {
 		<ListItemButton
 			key={key}
 			// Double-click or Enter selects the field (inserts at current position on large screens).
-			onClick={(e) => {
+			onClick={() => {
 				if (ignoreClickAfterEnterRef.current) {
 					ignoreClickAfterEnterRef.current = false;
 					return;
