@@ -214,7 +214,7 @@ CREATE TABLE _meta (
   PRIMARY KEY (`version`)
 ) ;
 
-INSERT INTO _meta (version, studio_id) VALUES ('4.5.1.2', UUID()) ;
+INSERT INTO _meta (version, studio_id) VALUES ('4.5.1.3', UUID()) ;
 
 CREATE TABLE IF NOT EXISTS `audit` (
   `id`                        BIGINT(20)    NOT NULL AUTO_INCREMENT,
@@ -238,7 +238,6 @@ CREATE TABLE IF NOT EXISTS `audit` (
   KEY `audit_primary_target_value_idx` (`primary_target_value`)
 )
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `audit_parameters` (
@@ -254,7 +253,6 @@ CREATE TABLE IF NOT EXISTS `audit_parameters` (
     KEY `audit_parameters_target_value_idx` (`target_value`)
     )
     ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
     ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `dependency` (
@@ -270,7 +268,6 @@ CREATE TABLE IF NOT EXISTS `dependency` (
   KEY `dependency_targetpath_idx` (`target_path`(1000))
 )
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `navigation_order_sequence` (
@@ -282,7 +279,6 @@ CREATE TABLE IF NOT EXISTS `navigation_order_sequence` (
   KEY `navigationorder_folder_idx` (`folder_id`)
 )
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `publish_request` (
@@ -309,7 +305,6 @@ CREATE TABLE IF NOT EXISTS `publish_request` (
   INDEX `publish_request_state_idx` (`state` ASC)
 )
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `site` (
@@ -333,7 +328,6 @@ CREATE TABLE IF NOT EXISTS `site` (
 )
 
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `processed_commits`
@@ -346,7 +340,6 @@ CREATE TABLE IF NOT EXISTS `processed_commits`
     FOREIGN KEY `ingested_commits_site_id` (`site_id`) REFERENCES `site` (`id`)
 )
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `user`
@@ -371,7 +364,6 @@ CREATE TABLE IF NOT EXISTS `user`
   INDEX `user_ix_last_name` (`last_name`)
 )
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `activity_stream` (
@@ -390,7 +382,6 @@ CREATE TABLE IF NOT EXISTS `activity_stream` (
     INDEX `activity_action_idx` (`action` ASC)
 )
     ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
     ROW_FORMAT = DYNAMIC ;
 
 INSERT IGNORE INTO `user` (id, record_last_updated, username, password, first_name, last_name,
@@ -416,7 +407,6 @@ CREATE TABLE IF NOT EXISTS `user_properties`
   UNIQUE INDEX `user_property_ix_property_key` (`user_id`, `site_id`, `property_key`)
 )
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `group`
@@ -431,7 +421,6 @@ CREATE TABLE IF NOT EXISTS `group`
   UNIQUE INDEX `group_ix_group_name` (`group_name`)
 )
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 INSERT IGNORE INTO `group` (id, record_last_updated, group_name, group_description, externally_managed)
@@ -466,7 +455,6 @@ CREATE TABLE IF NOT EXISTS group_user
   INDEX `group_member_ix_record_last_updated` (`record_last_updated` DESC)
 )
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `item` (
@@ -503,7 +491,6 @@ CREATE TABLE IF NOT EXISTS `item` (
   INDEX item_i_previous_path (`previous_path`)
 )
     ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
     ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `item_translation` (
@@ -518,7 +505,6 @@ CREATE TABLE IF NOT EXISTS `item_translation` (
   FOREIGN KEY `item_translation_ix_translation`(`translation_id`) REFERENCES `item` (`id`) ON DELETE CASCADE
 )
     ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
     ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS workflow
@@ -543,7 +529,6 @@ CREATE TABLE IF NOT EXISTS workflow
     FOREIGN KEY `workflow_ix_reviewer`(`reviewer_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
 )
     ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
     ROW_FORMAT = DYNAMIC ;
 
 
@@ -563,7 +548,6 @@ CREATE TABLE IF NOT EXISTS remote_repository
   INDEX `remoterepository_site_idx` (`site_id` ASC)
 )
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS cluster
@@ -585,7 +569,6 @@ CREATE TABLE IF NOT EXISTS cluster
   UNIQUE `uq_cl_git_remote_name` (`git_remote_name`)
 )
   ENGINE = InnoDB
-  DEFAULT CHARSET = utf8
   ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `refresh_token`
@@ -596,7 +579,6 @@ CREATE TABLE IF NOT EXISTS `refresh_token`
     `created_on` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
     ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
     ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `access_token`
@@ -610,7 +592,6 @@ CREATE TABLE IF NOT EXISTS `access_token`
     `expires_at` TIMESTAMP NULL DEFAULT NULL
 )
     ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
     ROW_FORMAT = DYNAMIC ;
 
 CREATE TABLE IF NOT EXISTS `system_properties`
@@ -622,7 +603,6 @@ CREATE TABLE IF NOT EXISTS `system_properties`
 	UNIQUE INDEX `system_properties_ix_property_name` (`property_name`)
 )
 	ENGINE = InnoDB
-	DEFAULT CHARSET = utf8
 	ROW_FORMAT = DYNAMIC ;
 
 INSERT IGNORE INTO site (site_id, name, description, system, state)

@@ -806,6 +806,12 @@ pipelines:
         operations:
           - type: dbScriptUpgrader
             filename: upgrade/4.5.x/4.5.1.1-to-4.5.1.2.sql
+      # Future scripts must not set DEFAULT CHARSET = utf8 on new tables, so those tables
+      # inherit the database collation. This step converts only by table-level collation.
+      - currentVersion: 4.5.1.2
+        nextVersion: 4.5.1.3
+        operations:
+          - type: databaseCollationUpgrader
 
   # Pipeline to upgrade site repositories
   site:
