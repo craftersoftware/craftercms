@@ -18,6 +18,8 @@ package org.craftercms.studio.api.v2.service.publish;
 
 import org.craftercms.commons.rest.parameters.SortField;
 import org.craftercms.commons.validation.annotations.param.ValidExistingContentPath;
+
+import jakarta.validation.constraints.NotBlank;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
@@ -331,7 +333,7 @@ public interface PublishService {
 	 * @param includeChildren whether to include the children of the path
 	 * @param includeSoftDeps whether to include the soft dependencies of the path (and children's soft-deps when including children)
 	 */
-	record PublishRequestPath(@ValidExistingContentPath String path, boolean includeChildren, boolean includeSoftDeps) {
+	record PublishRequestPath(@NotBlank @ValidExistingContentPath String path, boolean includeChildren, boolean includeSoftDeps) {
 	}
 
 	/**
