@@ -438,6 +438,7 @@ export function TokenManagement() {
 											<TableCell align="right" sx={{ width: '150px', padding: '5px 20px' }}>
 												{(token.expiresAt === null || moment(token.expiresAt) > moment()) && (
 													<Tooltip
+														describeChild
 														title={
 															token.enabled ? (
 																<FormattedMessage defaultMessage="Disable" />

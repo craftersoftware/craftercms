@@ -523,6 +523,27 @@ describe('Repeat reorder', () => {
 
 const addButton = (host: HTMLElement) =>
 	host.querySelector('button[aria-label="Add items to Rows"]') as HTMLButtonElement;
+
+describe('Repeat add tooltip', () => {
+	it('keeps the Add name and leaves the wrapper unnamed while the tooltip is open', async () => {
+		const { host } = await mount([a()]);
+		const add = addButton(host);
+		assert.ok(add, 'the header Add button is found by its accessible name');
+		const span = add.parentElement;
+		assert.equal(span?.tagName, 'SPAN');
+		await act(async () => {
+			span.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
+		assert.equal(add.getAttribute('aria-label'), 'Add items to Rows');
+		assert.equal(add.getAttribute('aria-labelledby'), null);
+		assert.equal(span.getAttribute('aria-label'), null);
+		assert.equal(span.getAttribute('aria-labelledby'), null);
+	});
+});
 const withLimits = (limits: { minCount?: number; maxCount?: number }) =>
 	({
 		...field,

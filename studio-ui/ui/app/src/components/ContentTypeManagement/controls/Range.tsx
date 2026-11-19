@@ -80,7 +80,7 @@ export function Range(props: RangeProps) {
 					}}
 				>
 					<Tooltip title={formatMessage({ defaultMessage: 'Switch mode' })}>
-						<IconButton onClick={switchRange}>
+						<IconButton onClick={switchRange} aria-label={formatMessage({ defaultMessage: 'Switch mode' })}>
 							<CompareArrowsOutlinedIcon />
 						</IconButton>
 					</Tooltip>

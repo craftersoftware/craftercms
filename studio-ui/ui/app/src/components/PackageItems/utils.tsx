@@ -114,6 +114,7 @@ export function renderTreeNode(props: {
 							</IconButton>
 							{isSoft && (
 								<Tooltip
+									describeChild
 									title={
 										!itemMap[node.path].canRequestPublish ? (
 											<FormattedMessage defaultMessage="This reference can't be selected because you don't have permission to publish it." />
