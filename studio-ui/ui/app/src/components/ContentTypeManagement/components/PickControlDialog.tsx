@@ -99,7 +99,6 @@ export function PickControlDialog(props: PickControlDialogProps) {
 			typesCurrentList={sectionFields}
 			currentFields={currentFields}
 			systemFieldsIds={systemFieldsIds}
-			insertAfterSelectLabel={<FormattedMessage defaultMessage="Control to insert after" />}
 		/>
 	);
 }
