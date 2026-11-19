@@ -21,10 +21,13 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { of, firstValueFrom } from 'rxjs';
 import '../../../../test/registerTsLoader.mjs';
 
 const { contentTypeSaveSystemEvent } = await import('./editTypeSaveSystemEvent.ts');
 const { contentTypeCreated, contentTypeUpdated, emitSystemEvent } = await import('../../../state/actions/system.ts');
+const { emitSystemEventEpic } = await import('../../../state/epics/system.ts');
+const { getHostToHostBus } = await import('../../../utils/subjects.ts');
 
 describe('contentTypeSaveSystemEvent', () => {
 	it('emits contentTypeCreated wrapped in emitSystemEvent for a new type', () => {
@@ -39,14 +42,18 @@ describe('contentTypeSaveSystemEvent', () => {
 		assert.equal(action.payload.payload.contentTypeId, '123');
 	});
 
-	it('does not emit contentTypeUpdated when creating, or contentTypeCreated when updating', () => {
-		assert.notDeepEqual(
-			contentTypeSaveSystemEvent(true, '123'),
-			emitSystemEvent(contentTypeUpdated({ contentTypeId: '123' }))
-		);
-		assert.notDeepEqual(
-			contentTypeSaveSystemEvent(false, '123'),
-			emitSystemEvent(contentTypeCreated({ contentTypeId: '123' }))
-		);
+	it('publishes exactly one CONTENT_TYPE_UPDATED on the host bus for an existing type save', async () => {
+		const received = [];
+		const subscription = getHostToHostBus().subscribe((action) => {
+			received.push(action);
+		});
+		try {
+			await firstValueFrom(emitSystemEventEpic(of(contentTypeSaveSystemEvent(false, '123'))));
+			const updated = received.filter((action) => action.type === contentTypeUpdated.type);
+			assert.equal(updated.length, 1);
+			assert.deepEqual(updated[0], contentTypeUpdated({ contentTypeId: '123' }));
+		} finally {
+			subscription.unsubscribe();
+		}
 	});
 });
