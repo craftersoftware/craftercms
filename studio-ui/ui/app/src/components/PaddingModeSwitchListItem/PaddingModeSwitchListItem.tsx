@@ -25,13 +25,15 @@ import { Theme } from '@mui/material/styles';
 import Icon from '@mui/icons-material/SpaceBarRounded';
 
 export interface PaddingModeSwitchProps extends ListItemProps {
+	/** Element the row renders as. Pass `li` when it is placed inside a `List`. Defaults to `div`, as a standalone widget. */
+	component?: React.ElementType;
 	sxs?: Partial<Record<'listItemIcon' | 'listItemText' | 'switch' | 'helperText', SxProps<Theme>>>;
 	showHelperText?: boolean;
 	showIcon?: boolean;
 }
 
 export function PaddingModeSwitchListItem(props: PaddingModeSwitchProps) {
-	const { sxs, showHelperText = false, showIcon = true, ...listItemProps } = props;
+	const { sxs, showHelperText = false, showIcon = true, component = 'div', ...listItemProps } = props;
 	const dispatch = useDispatch();
 	const { editModePadding } = usePreviewState();
 	const onEditModePaddingChange = (e) => {
@@ -39,7 +41,7 @@ export function PaddingModeSwitchListItem(props: PaddingModeSwitchProps) {
 	};
 	return (
 		<>
-			<ListItem {...listItemProps}>
+			<ListItem component={component} {...listItemProps}>
 				{showIcon && (
 					<ListItemIcon sx={sxs?.listItemIcon}>
 						<Icon sx={{ mr: 0.5 }} />

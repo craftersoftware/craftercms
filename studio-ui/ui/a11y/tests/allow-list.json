@@ -1,1 +1,14 @@
-[]
+[
+	{
+		"rule": "list",
+		"screen": "edit mode tools panel > Settings",
+		"theme": "dark",
+		"nodes": ["ul <ul class=\"MuiList-padding MuiList-root\">"]
+	},
+	{
+		"rule": "list",
+		"screen": "edit mode tools panel > Settings",
+		"theme": "light",
+		"nodes": ["ul <ul class=\"MuiList-padding MuiList-root\">"]
+	}
+]

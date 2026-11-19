@@ -96,4 +96,13 @@ it('names the edit user dialog by its visible title', async () => {
 	assert.equal(title.tagName, 'H2');
 	assert.equal(title.textContent?.trim(), 'Ada Lovelace');
 	assert.equal(document.querySelectorAll(`[id="${labelledBy}"]`).length, 1);
+	const enabled = document.querySelector<HTMLInputElement>('input[type="checkbox"]');
+	assert.ok(enabled, 'enabled switch');
+	const enabledLabel = enabled.getAttribute('aria-labelledby');
+	assert.ok(enabledLabel, 'the enabled switch has no aria-labelledby');
+	assert.equal(document.getElementById(enabledLabel)?.textContent?.trim(), 'Enabled');
+	assert.equal(
+		enabled.closest('.MuiSwitch-root')?.querySelector('.MuiSwitch-switchBase')?.getAttribute('aria-label'),
+		null
+	);
 });

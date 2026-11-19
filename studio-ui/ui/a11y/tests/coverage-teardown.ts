@@ -64,12 +64,12 @@ function listDeclaredTests(config: FullConfig) {
  * per-test check in `fixtures.ts` can't see because no test matches it). Entries whose test was filtered out (`--grep`,
  * one project, some files...) are skipped, so partial runs don't fail. See `coverage.ts` for the rules.
  *
- * The check is off with `A11Y_CAPTURE=1`: capture rewrites the allow-list from the run and keeps the entries of screens
+ * The check is off with `A11Y_CAPTURE` (`1` or `prune`): capture rewrites the allow-list from the run and keeps the entries of screens
  * it did not reach (`capture-teardown.ts`), so a capture run is not a verification of the current allow-list.
  */
 export default async function coverageTeardown(config: FullConfig) {
 	if (process.env.A11Y_CAPTURE) {
-		console.log('Allow-list coverage: skipped, A11Y_CAPTURE rewrites the allow-list from this run.');
+		console.log('Allow-list coverage: skipped, A11Y_CAPTURE rewrites or prunes the allow-list from this run.');
 		return;
 	}
 	if (!allowList.length) return;

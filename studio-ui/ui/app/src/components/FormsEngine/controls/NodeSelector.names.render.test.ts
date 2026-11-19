@@ -71,7 +71,7 @@ function storedAsset(path: string, label: string) {
 	};
 }
 
-async function renderSelector(readonly: boolean) {
+async function renderSelector(readonly: boolean, field = fieldFor('nodes_o', 'node-selector')) {
 	const store = createItemsStore({
 		...baseItems(),
 		// Embedded rows display the form item. It needs a state map or the publishing icon crashes.
@@ -102,7 +102,7 @@ async function renderSelector(readonly: boolean) {
 						FormHost,
 						{ entry: createEntry(['nodes_o']) },
 						React.createElement(NodeSelector, {
-							field: fieldFor('nodes_o', 'node-selector'),
+							field,
 							value: [
 								{ key: articlePath, value: 'Article', include: articlePath },
 								{ key: 'hero', value: 'Hero', component: { 'file-name': 'hero' } },
@@ -213,5 +213,28 @@ describe('NodeSelector row button names', () => {
 		await clickRow(readonly, scriptPath);
 		assert.equal(lastCodeEditorAction()?.payload?.path, scriptPath);
 		assert.equal(lastCodeEditorAction()?.payload?.readonly, true);
+	});
+
+	it('keeps the add button name and leaves its wrapper unnamed while the tooltip is open', async () => {
+		const field = fieldFor('nodes_o', 'node-selector');
+		field.validations = { maxCount: { id: 'maxCount', value: '1' } } as never;
+		const host = await renderSelector(false, field);
+		const button = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label]')).find((candidate) =>
+			candidate.getAttribute('aria-label')?.startsWith('Maximum amount of items reached')
+		);
+		assert.ok(button, 'no add button named for the limit');
+		const span = button.parentElement;
+		assert.equal(span?.tagName, 'SPAN');
+		await act(async () => {
+			span.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
+		assert.equal(button.getAttribute('aria-label'), 'Maximum amount of items reached for Label of nodes_o');
+		assert.equal(button.getAttribute('aria-labelledby'), null);
+		assert.equal(span.getAttribute('aria-label'), null);
+		assert.equal(span.getAttribute('aria-labelledby'), null);
 	});
 });

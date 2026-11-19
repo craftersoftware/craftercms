@@ -16,6 +16,7 @@
 
 import { Locator, Page } from '@playwright/test';
 import { checkA11y } from './axe';
+import { verifyDashboardBaseline, verifySearchBaseline, verifyUsersBaseline } from './baseline';
 import { expect, test } from './fixtures';
 import { previewPage, project } from './env';
 import { dashboardReady, errorState, panelDestination, ReadyState, settle, siteToolsReady } from './readiness';
@@ -56,10 +57,14 @@ async function checkPanelPages(page: Page, testInfo: Parameters<typeof checkA11y
 		const destination = panelDestination(page, panel, label, screen);
 		await panel.locator('.MuiListItemButton-root', { hasText: label }).first().click();
 		await settle(page, screen, destination.ready);
+		if (label === 'Dashboard') await verifyDashboardBaseline(destination.root, testInfo);
 		await checkA11y(page, testInfo, screen);
 		if (destination.kind === 'dialog') {
 			await page.keyboard.press('Escape');
 			await expect(page.getByRole('dialog')).toHaveCount(0);
+			// Escape returns focus to the opener with keyboard modality, which adds Mui-focusVisible to it and to the
+			// CSS path axe builds for it. Blurring keeps the next scan on the same selectors as a pointer run.
+			await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 		} else {
 			await panel.getByRole('button', { name: 'Back' }).first().click();
 			await settle(page, name, panelRoot(panel));
@@ -85,7 +90,11 @@ test.describe('Global app', () => {
 
 	test('users', async ({ page }, testInfo) => {
 		await page.goto('/studio/#/users');
-		await settle(page, 'users', { loaded: page.getByRole('grid').or(page.getByRole('table')).first() });
+		await settle(page, 'users', {
+			loaded: page.getByRole('grid').or(page.getByRole('table')).first(),
+			error: errorState(page.locator('body'))
+		});
+		await verifyUsersBaseline(page.locator('body'), testInfo);
 		await checkA11y(page, testInfo, 'users');
 	});
 
@@ -103,6 +112,7 @@ test.describe('Project screens', () => {
 	test('dashboard', async ({ page }, testInfo) => {
 		await page.goto('/studio/site-dashboard');
 		await settle(page, 'dashboard', dashboardReady(page.locator('body')));
+		await verifyDashboardBaseline(page.locator('body'), testInfo);
 		await checkA11y(page, testInfo, 'dashboard');
 	});
 
@@ -114,7 +124,11 @@ test.describe('Project screens', () => {
 
 	test('search', async ({ page }, testInfo) => {
 		await page.goto('/studio/search');
-		await settle(page, 'search', { loaded: page.getByRole('heading', { name: 'Search', level: 2 }) });
+		await settle(page, 'search', {
+			loaded: page.getByRole('heading', { name: 'Search', level: 2 }),
+			error: errorState(page.locator('body'))
+		});
+		await verifySearchBaseline(page.locator('body'), testInfo);
 		await checkA11y(page, testInfo, 'search');
 	});
 });

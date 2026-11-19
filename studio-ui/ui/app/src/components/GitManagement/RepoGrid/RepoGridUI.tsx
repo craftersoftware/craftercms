@@ -54,7 +54,7 @@ export function RepoGridUI(props: RepoGridUIProps) {
 							<GlobalAppGridCell align="left">{repository.fetch}</GlobalAppGridCell>
 							<GlobalAppGridCell align="left">{repository.pushUrl}</GlobalAppGridCell>
 							<GlobalAppGridCell align="right">
-								<Tooltip title={<FormattedMessage id="words.pull" defaultMessage="Pull" />}>
+								<Tooltip describeChild title={<FormattedMessage id="words.pull" defaultMessage="Pull" />}>
 									<span>
 										<IconButton
 											onClick={() => onPullClick(repository.name, repository.branches)}
@@ -66,7 +66,7 @@ export function RepoGridUI(props: RepoGridUIProps) {
 										</IconButton>
 									</span>
 								</Tooltip>
-								<Tooltip title={<FormattedMessage id="words.push" defaultMessage="Push" />}>
+								<Tooltip describeChild title={<FormattedMessage id="words.push" defaultMessage="Push" />}>
 									<span>
 										<IconButton
 											onClick={() => onPushClick(repository.name, repository.branches)}

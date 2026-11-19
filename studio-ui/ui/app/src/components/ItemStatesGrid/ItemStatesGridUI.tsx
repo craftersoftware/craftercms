@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -19,10 +19,10 @@ import TableHead from '@mui/material/TableHead';
 import GlobalAppGridRow, { GlobalAppGridRowAction } from '../GlobalAppGridRow';
 import GlobalAppGridCell from '../GlobalAppGridCell';
 import Typography from '@mui/material/Typography';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
-import React from 'react';
+import React, { useId } from 'react';
 import Checkbox from '@mui/material/Checkbox';
 import ItemDisplay from '../ItemDisplay';
 import { ContentItem } from '../../models/Item';
@@ -56,6 +56,8 @@ export function ItemStatesGridUI(props: WorkflowStatesGridUIProps) {
 		hasThisPageItemsChecked,
 		isThisPageIndeterminate
 	} = props;
+	const { formatMessage } = useIntl();
+	const rowLabelId = useId();
 	return (
 		<>
 			<TableContainer>
@@ -67,6 +69,7 @@ export function ItemStatesGridUI(props: WorkflowStatesGridUIProps) {
 									checked={allItemsSelected || hasThisPageItemsChecked}
 									indeterminate={hasThisPageItemsChecked ? isThisPageIndeterminate : false}
 									onClick={(e) => onToggleSelectedItems()}
+									slotProps={{ input: { 'aria-label': formatMessage({ defaultMessage: 'Select all' }) } }}
 								/>
 							</GlobalAppGridCell>
 							<GlobalAppGridCell className="width60 pl0">
@@ -97,7 +100,7 @@ export function ItemStatesGridUI(props: WorkflowStatesGridUIProps) {
 						</GlobalAppGridRow>
 					</TableHead>
 					<TableBody>
-						{itemStates.map((item) => (
+						{itemStates.map((item, index) => (
 							<GlobalAppGridRow
 								key={item.id}
 								onClick={() => onRowSelected(item)}
@@ -114,10 +117,11 @@ export function ItemStatesGridUI(props: WorkflowStatesGridUIProps) {
 										onChange={(e) => {
 											onItemSelected(item, e.target.checked);
 										}}
+										slotProps={{ input: { 'aria-labelledby': `${rowLabelId}-${index}` } }}
 									/>
 								</GlobalAppGridCell>
 								<GlobalAppGridCell className="ellipsis maxWidth300 pl0">
-									<ItemDisplay item={item} />
+									<ItemDisplay item={item} labelTypographyProps={{ id: `${rowLabelId}-${index}` }} />
 									<GlobalAppGridRowAction>
 										<Typography
 											title={item.path}

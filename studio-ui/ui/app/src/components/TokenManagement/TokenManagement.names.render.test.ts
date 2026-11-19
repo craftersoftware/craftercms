@@ -132,6 +132,24 @@ describe('TokenManagement control names', () => {
 		assert.deepEqual(switches, ['Enable CI build', 'Enable Deploy']);
 	});
 
+	it('keeps the token in the switch name and leaves the span unnamed while the tooltip is open', async () => {
+		const host = await render();
+		const input = host.querySelector<HTMLInputElement>('input[role="switch"][aria-label="Enable CI build"]');
+		assert.ok(input, 'no enable switch named for the token');
+		const span = input.closest<HTMLElement>('.MuiSwitch-switchBase');
+		assert.ok(span, 'enable switch root');
+		await act(async () => {
+			span.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
+		assert.equal(input.getAttribute('aria-label'), 'Enable CI build');
+		assert.equal(span.getAttribute('aria-label'), null);
+		assert.equal(span.getAttribute('aria-labelledby'), null);
+	});
+
 	it('leaves one visible select-all checkbox once a token is checked', async () => {
 		const host = await render();
 		const selectAll = () =>

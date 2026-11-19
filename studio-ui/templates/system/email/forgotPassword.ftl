@@ -14,7 +14,7 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 
-<html>
+<html lang="en">
 <body>
 <p>Hello!</p>
 <p>

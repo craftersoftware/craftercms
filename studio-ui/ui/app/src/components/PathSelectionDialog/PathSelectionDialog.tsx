@@ -147,6 +147,10 @@ export function PathSelectionDialogContainer(props: PathSelectionDialogProps) {
 												setRoot('');
 												setCurrentPath('');
 											}}
+											aria-label={formatMessage({
+												id: 'pathSelectionDialog.changeRootButtonLabel',
+												defaultMessage: 'Change root'
+											})}
 										>
 											<KeyboardArrowLeftRoundedIcon />
 										</IconButton>

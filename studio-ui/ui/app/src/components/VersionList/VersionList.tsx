@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,7 +15,7 @@
  */
 
 import { FormattedDateParts, FormattedMessage, FormattedTime, useIntl } from 'react-intl';
-import React from 'react';
+import React, { useId } from 'react';
 import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import Chip from '@mui/material/Chip';
@@ -70,6 +70,7 @@ export function VersionList(props: VersionListProps) {
 	const locale = useSelection<GlobalState['uiConfig']['locale']>((state) => state.uiConfig.locale);
 	const selectedLookup = createPresenceTable(selected);
 	const { formatMessage } = useIntl();
+	const versionLabelId = useId();
 	return (
 		<List
 			component="div"
@@ -82,6 +83,7 @@ export function VersionList(props: VersionListProps) {
 		>
 			{versions.map((version: ItemHistoryEntry, i: number) => {
 				const isSelected = Boolean(selectedLookup[version.versionNumber]);
+				const labelId = `${versionLabelId}-${i}`;
 				return (
 					<ListItemButton
 						key={version.versionNumber}
@@ -93,7 +95,9 @@ export function VersionList(props: VersionListProps) {
 						secondaryAction={
 							onOpenMenu || isSelectMode ? (
 								<>
-									{isSelectMode && <Checkbox checked={isSelected} />}
+									{isSelectMode && (
+										<Checkbox checked={isSelected} slotProps={{ input: { 'aria-labelledby': labelId } }} />
+									)}
 									{!isSelectMode && onOpenMenu && (
 										<IconButton
 											edge="end"
@@ -119,7 +123,7 @@ export function VersionList(props: VersionListProps) {
 						<ListItemText
 							sx={{ margin: 0 }}
 							slotProps={{
-								primary: { sx: { display: 'flex', alignItems: 'center' } },
+								primary: { id: labelId, sx: { display: 'flex', alignItems: 'center' } },
 								secondary: { sx: { whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' } }
 							}}
 							primary={

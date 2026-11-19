@@ -17,7 +17,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, Page, TestInfo } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
-import type { CapturedScan } from './capture';
+import { captureMode, type CapturedScan } from './capture';
 import { AllowListEntry, allowList, inTicketScope, ruleTickets, Theme } from './allow-list';
 import { RUN_RECORD_PREFIX, RunRecord, SCAN_RECORD_PREFIX, ScanRecord } from './coverage';
 import { applyAllowList, blockingFindings, Finding, StaleNode } from './filter';
@@ -27,7 +27,7 @@ const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 /** Annotation type `checkA11y` records each scanned screen under, so unscanned allow-list entries can be reported. */
 export const SCAN_ANNOTATION = 'a11y-scan';
 
-/** With `A11Y_CAPTURE=1`, every scan also writes its in-scope findings for `capture-teardown.ts` to record. */
+/** With `A11Y_CAPTURE` set (`1` or `prune`), every scan also writes its in-scope findings for `capture-teardown.ts` to record. */
 export const CAPTURE_FILE_PREFIX = 'a11y-capture-';
 
 /** Records that a test ran, so the suite-wide coverage check can tell tests that ran from tests filtered out. */
@@ -75,7 +75,7 @@ export async function checkA11y(page: Page, testInfo: TestInfo, name: string) {
 			contentType: 'text/plain'
 		});
 	}
-	if (process.env.A11Y_CAPTURE) {
+	if (captureMode()) {
 		const nodes = findings.filter((finding) => inTicketScope(finding.rule, name, theme));
 		const slug = name.replace(/[^a-z0-9]+/gi, '-');
 		writeFileSync(

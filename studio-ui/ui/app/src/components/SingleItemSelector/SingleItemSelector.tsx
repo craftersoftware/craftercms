@@ -423,6 +423,7 @@ export function SingleItemSelector(props: SingleItemSelectorProps) {
 						disabled={disabled}
 						onClick={disabled ? null : () => handleDropdownClick(selectedItem)}
 						size={buttonSize}
+						aria-label={tooltip}
 					>
 						<SelectIcon className={classes?.selectIcon} sx={sxs?.selectIcon} />
 					</IconButton>

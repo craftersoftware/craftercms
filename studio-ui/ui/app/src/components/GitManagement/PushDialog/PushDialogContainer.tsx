@@ -94,7 +94,7 @@ export function PushDialogContainer(props: PushDialogContainerProps) {
 						<FormattedMessage id="repositories.remoteBranchToPush" defaultMessage="Remote Branch to Push" />
 					</InputLabel>
 					<Select
-						labelId="remoteBranchToPullLabel"
+						labelId="remoteBranchToPushLabel"
 						name="branch"
 						value={selectedBranch}
 						onChange={onChange}

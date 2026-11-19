@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -82,5 +82,26 @@ describe('SelectionList', () => {
 	it('renders no label or checkbox when the list is not selectable', async () => {
 		const host = await render({ paths: ['/a.xml'], selectedItems: {} });
 		assert.equal(host.querySelectorAll('ul label, ul input').length, 0);
+	});
+
+	it('names select-all from the hidden Select all text plus the visible title, and each row from its path', async () => {
+		const host = await render({
+			paths: ['/a.xml'],
+			selectedItems: { '/a.xml': false },
+			onItemClicked() {},
+			onSelectAllClicked() {}
+		});
+		const inputs = host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+		assert.equal(inputs.length, 2);
+		const selectAll = inputs[0].getAttribute('aria-labelledby') ?? '';
+		const selectAllName = selectAll
+			.split(/\s+/)
+			.map((id) => host.querySelector(`[id="${id}"]`)?.textContent ?? '')
+			.join(' ')
+			.replace(/\s+/g, ' ')
+			.trim();
+		assert.equal(selectAllName, 'Select all Items');
+		assert.equal(inputs[1].labels?.[0]?.textContent, '/a.xml');
+		assert.equal(inputs[0].closest('.MuiCheckbox-root')?.getAttribute('aria-label'), null);
 	});
 });

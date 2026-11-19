@@ -21,6 +21,7 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import React, { ReactNode, useCallback, useEffect, useState } from 'react';
 import {
 	DashletEmptyMessage,
+	getDashletRevealOnHoverSx,
 	getItemSkeleton,
 	List,
 	Pager,
@@ -45,6 +46,7 @@ import { asLocalizedDateTime } from '../../utils/datetime';
 import { nnou, reversePluckProps } from '../../utils/object';
 import IconButton from '@mui/material/IconButton';
 import { COMPLETED_MASK, PACKAGE_TYPE_INITIAL_PUBLISH } from '../../utils/constants';
+import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 
@@ -198,77 +200,79 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
 			{Boolean(publishingPackages?.length) && (
 				<List sx={{ pb: 0 }}>
 					{publishingPackages.map((pkg, index) => (
-						<ListItemButton
+						<ListItem
 							key={index}
-							sx={{ pt: 0, pb: 0 }}
+							disablePadding
 							onMouseEnter={() => onPackageMouseOver(pkg.id)}
 							onMouseLeave={onPackageMouseLeave}
-							onClick={() => onPackageClick(pkg.id)}
+							sx={{ '&:focus-within .MuiListItem-secondaryAction .MuiIconButton-root': { opacity: 1 } }}
+							secondaryAction={
+								<IconButton
+									onClick={(e) => contextMenu?.openContextMenu(e, pkg)}
+									aria-label={formatMessage({ defaultMessage: 'Package options' })}
+									sx={getDashletRevealOnHoverSx(hoveredPackage === pkg.id)}
+								>
+									<MoreVertRoundedIcon />
+								</IconButton>
+							}
 						>
-							{pkg.submitter && (
-								<PersonAvatar
-									person={pkg.submitter}
-									sx={{
-										display: 'inline-flex',
-										mr: 1,
-										width: 30,
-										height: 30,
-										fontSize: '1.1rem'
-									}}
+							<ListItemButton sx={{ pt: 0, pb: 0 }} onClick={() => onPackageClick(pkg.id)}>
+								{pkg.submitter && (
+									<PersonAvatar
+										person={pkg.submitter}
+										sx={{
+											display: 'inline-flex',
+											mr: 1,
+											width: 30,
+											height: 30,
+											fontSize: '1.1rem'
+										}}
+									/>
+								)}
+								<ListItemText
+									primary={
+										<FormattedMessage
+											defaultMessage="<bold>{title}</bold> ({initialPublish, select, 1 {Initial publish} other {{total} {total, plural, one {item} other {items}}}})"
+											values={{
+												title: pkg.title,
+												total: pkg.itemCount,
+												initialPublish: pkg.packageType === PACKAGE_TYPE_INITIAL_PUBLISH ? 1 : 0,
+												bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>
+											}}
+										/>
+									}
+									secondary={
+										<FormattedMessage
+											defaultMessage="Approved by {name} to go {publishingTarget, select, live { <render_target>live</render_target>} other {<render_target>staging</render_target>}} on {submittedDate}"
+											values={{
+												// If a reviewer approved, show their name; otherwise show submitter name
+												name: pkg.reviewer?.username ?? pkg.submitter?.username,
+												publishingTarget: pkg.target,
+												render_target(target: ReactNode[]) {
+													return (
+														<Box
+															component="span"
+															sx={{
+																color: target[0] === 'live' ? LIVE_COLOUR : STAGING_COLOUR
+															}}
+														>
+															{messages[target[0] as string]
+																? formatMessage(messages[target[0] as string]).toLowerCase()
+																: target[0]}
+														</Box>
+													);
+												},
+												submittedDate: asLocalizedDateTime(
+													pkg.submittedOn,
+													locale.localeCode,
+													locale.dateTimeFormatOptions
+												)
+											}}
+										/>
+									}
 								/>
-							)}
-							<ListItemText
-								primary={
-									<FormattedMessage
-										defaultMessage="<bold>{title}</bold> ({initialPublish, select, 1 {Initial publish} other {{total} {total, plural, one {item} other {items}}}})"
-										values={{
-											title: pkg.title,
-											total: pkg.itemCount,
-											initialPublish: pkg.packageType === PACKAGE_TYPE_INITIAL_PUBLISH ? 1 : 0,
-											bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>
-										}}
-									/>
-								}
-								secondary={
-									<FormattedMessage
-										defaultMessage="Approved by {name} to go {publishingTarget, select, live { <render_target>live</render_target>} other {<render_target>staging</render_target>}} on {submittedDate}"
-										values={{
-											// If a reviewer approved, show their name; otherwise show submitter name
-											name: pkg.reviewer?.username ?? pkg.submitter?.username,
-											publishingTarget: pkg.target,
-											render_target(target: ReactNode[]) {
-												return (
-													<Box
-														component="span"
-														sx={{
-															color: target[0] === 'live' ? LIVE_COLOUR : STAGING_COLOUR
-														}}
-													>
-														{messages[target[0] as string]
-															? formatMessage(messages[target[0] as string]).toLowerCase()
-															: target[0]}
-													</Box>
-												);
-											},
-											submittedDate: asLocalizedDateTime(
-												pkg.submittedOn,
-												locale.localeCode,
-												locale.dateTimeFormatOptions
-											)
-										}}
-									/>
-								}
-							/>
-							<IconButton
-								onClick={(e) => {
-									e.stopPropagation();
-									contextMenu?.openContextMenu(e, pkg);
-								}}
-								sx={{ visibility: hoveredPackage === pkg.id ? 'visible' : 'hidden' }}
-							>
-								<MoreVertRoundedIcon />
-							</IconButton>
-						</ListItemButton>
+							</ListItemButton>
+						</ListItem>
 					))}
 				</List>
 			)}

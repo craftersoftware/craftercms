@@ -15,7 +15,8 @@ tests per theme and 24 in total. The preview iframe is excluded: it hosts the pr
 
 ## Run
 
-Against a running Studio (default `http://localhost:8080`) that has a project and an administrator account:
+Against a running Studio (default `http://localhost:8080`) that has a freshly created Website Editorial project with no
+edits (see [Content baseline guards](#content-baseline-guards)) and an administrator account:
 
 ```bash
 yarn install
@@ -29,15 +30,15 @@ In this workspace, `test:light` and `test:dark` run a single theme, and `test:un
 (`html/` and `results.json`). Every scan attaches its complete axe result, plus the allowed, blocking and stale nodes,
 as JSON to the HTML report.
 
-| Variable               | Default                 | Purpose                                                           |
-| ---------------------- | ----------------------- | ----------------------------------------------------------------- |
-| `STUDIO_URL`           | `http://localhost:8080` | Studio origin                                                     |
-| `STUDIO_USERNAME`      | `admin`                 | Login user (needs edit and publish permissions)                   |
-| `STUDIO_PASSWORD`      | `admin`                 | Login password                                                    |
-| `STUDIO_PROJECT`       | `editorial`             | Existing Website Editorial project used by project screens        |
-| `STUDIO_PREVIEW_PAGE`  | `/`                     | Preview page used for the edit form and publish dialog            |
-| `A11Y_BROWSER_CHANNEL` | (bundled Chromium)      | `chrome` runs the installed Google Chrome instead                 |
-| `A11Y_CAPTURE`         | (off)                   | `1` records the run's ticketed findings (see [Capture](#capture)) |
+| Variable               | Default                 | Purpose                                                                                            |
+| ---------------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `STUDIO_URL`           | `http://localhost:8080` | Studio origin                                                                                      |
+| `STUDIO_USERNAME`      | `admin`                 | Login user (needs edit and publish permissions)                                                    |
+| `STUDIO_PASSWORD`      | `admin`                 | Login password                                                                                     |
+| `STUDIO_PROJECT`       | `editorial`             | Freshly created Website Editorial project, no edits (see below)                                    |
+| `STUDIO_PREVIEW_PAGE`  | `/`                     | Preview page used for the edit form and publish dialog                                             |
+| `A11Y_BROWSER_CHANNEL` | (bundled Chromium)      | `chrome` runs the installed Google Chrome instead                                                  |
+| `A11Y_CAPTURE`         | (off)                   | `1` records the run's ticketed findings, `prune` only removes fixed ones (see [Capture](#capture)) |
 
 ## CI
 
@@ -57,10 +58,28 @@ Known exceptions are node-level and ticketed:
   themes that ticket lists. A rule without a ticket cannot be allow-listed.
 - `tests/allow-list.json` lists, per rule, screen (the key passed to `checkA11y`, e.g. `edit mode tools panel > Search`)
   and theme, the fingerprint of each node allowed to fail. Entries are validated at load: the rule needs a ticket, the
-  ticket must list the screen and theme, and every entry names at least one node.
+  ticket must list the screen and theme, every entry names at least one node, and every node fingerprint carries a
+  stable token. A stable token is a `Mui*` or authored class, an authored id, an attribute selector with a literal
+  value, the start tag's `role`, or an anchor's `href`. A bare tag, `:nth-child` and generated `.mui-*`, `.css-*` or
+  `#*` parts are not stable, so a fingerprint made only of them (which could match any node at that position) is
+  rejected with the list of offenders.
 
-A node fingerprint is axe's CSS path to the node, with emotion class hashes, tss-react hashes and React/MUI generated
-ids normalised away (`filter.ts`). Each fingerprint allows exactly one node. So:
+A node fingerprint is axe's CSS path to the node followed by a normalised copy of its start tag, for example
+`.MuiInput-input.mui-*.MuiSelect-select <div role="combobox" class="MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard">`.
+`filter.ts` normalises it: emotion and MUI class hashes (`.css-*`, `.mui-*`, `css-<hash>` classes) and tss-react hashes
+are dropped from the path and the tag, React/MUI generated ids (`_r_1_`, `:r1:`) become `*` in id selectors, in whole
+tokens of id reference attributes such as `[aria-labelledby]` and in an anchor's `#fragment` (other attribute values
+are kept), and the tag keeps only its name, `role`, sorted authored classes (`Mui*` and project classes) and, for an
+`<a>`, its `href`. `.mui-fixed` is a stable MUI marker, not a hash, so it is kept. Transient interaction state classes
+(`Mui-focusVisible`, `Mui-focused`, and component scoped ones such as `MuiButton-focusVisible`) are
+dropped from the path and the tag, because they follow whatever the run focused last and would make the same node look
+new and stale at once. `checkPanelPages` blurs after an Escape so the opener does not keep `Mui-focusVisible`; dropping
+them covers any other starting focus (an autofocused field, a focus a dialog restores). Deterministic state classes
+(`Mui-checked`, `Mui-selected`, `Mui-expanded`, `Mui-disabled`, `Mui-active`) come from props and data, so they are kept
+(`Mui-active`'s one pointer driven use, a `Slider` thumb while dragged, never happens in a scan): the two
+`Mui-checked` entries of the edit mode Settings switch stay as captured. The start tag is what identifies a
+node when the path alone is positional (`.mui-*:nth-child(8)`), so a reordered list does not silently allow a different
+node. Each fingerprint allows exactly one node. So:
 
 - a new failure of an allow-listed rule on the same screen and theme fails the run;
 - an allowed node that no longer fails is reported as **stale** and fails the run: delete it in the PR that fixed it;
@@ -68,7 +87,8 @@ ids normalised away (`filter.ts`). Each fingerprint allows exactly one node. So:
   for its own screens (its title, or `title > page`); the suite-wide check below covers the rest.
 
 A markup change on an allowed node changes its fingerprint, which shows up as one stale and one blocking node. Review
-it and recapture.
+it and recapture. A change to the fingerprint format makes the committed file invalid (it is validated at load): run
+`yarn capture`, which loads the file unvalidated, and validates the new entries before writing them.
 
 ### Suite-wide coverage check
 
@@ -87,11 +107,12 @@ screen key, which must be the title of the test that scans it. Each entry is the
 So partial runs do not false-fail, and no flags are parsed: `--grep`, `test:light`, `test:dark`, one spec file, a shard
 or an early stop leave the entries of tests that did not run unjudged, while an entry whose test is gone fails in any of
 them. If the listing can't be read, a warning is logged and only tests that ran are judged. The check passes trivially
-while the allow-list is empty and is off with `A11Y_CAPTURE=1`, which rewrites the allow-list from the run.
+while the allow-list is empty and is off with `A11Y_CAPTURE` set (either mode).
 
 ### Capture
 
-On a live Studio:
+On a live Studio, against a freshly created Website Editorial project with no edits (see
+[Content baseline guards](#content-baseline-guards)):
 
 ```bash
 yarn workspace @craftercms/studio-a11y capture
@@ -101,6 +122,65 @@ runs both themes and rewrites `tests/allow-list.json` with every serious or crit
 screen and theme. Screens the run did not reach keep their existing entries. Findings no ticket covers are never
 recorded; `report/capture-summary.md` lists them with a rule/ticket/screen/theme/node-count table for reconciling
 against the tickets. Capture records whatever fails, so review the diff before committing it.
+
+A capture does not enforce the content guards: it logs what each one observed and goes on, and the Search guard reads
+its total once instead of waiting for the index to settle (see [Content baseline guards](#content-baseline-guards)), so
+let the project's search index finish building before you recapture.
+
+The committed baseline was captured on 2026-11-17 in both themes against a live authoring Studio built from `develop`
+at `f2950f2c` (the Website Editorial blueprint, project `editorial`, user `admin`), and recaptured on 2026-11-17 on
+this branch's build to move to start-tag fingerprints (same 62 entries and 658 nodes).
+
+#### Prune-only capture
+
+A PR that fixes allow-listed nodes should delete their entries without recording anything new:
+
+```bash
+yarn workspace @craftercms/studio-a11y capture:prune     # A11Y_CAPTURE=prune
+```
+
+It runs both themes and removes the allowed fingerprints that no longer fail on the screens it scanned (a node that
+fails more than once with the same fingerprint is counted per node). It never adds an entry, so a new regression still
+fails the next normal run. Entries of screens the run did not reach are kept, so `--grep` limits the run. Removed
+nodes are listed in `report/capture-summary.md`. The content guards below stay on in this mode, since a project that
+is not in its baseline state would prune wrongly.
+
+### Content baseline guards
+
+The allow-list was captured against a freshly created Website Editorial project with no edits, and `STUDIO_PROJECT`
+must be one. Some entries are keyed by row position, so editing, publishing or deleting content, or adding a user,
+would leave them stale and fail the run without saying why. Before scanning, the screens below read their listing and
+compare it with a constant in `tests/baseline.ts`. On a mismatch they fail with "the project is not in its baseline
+state", naming the screen, what was observed, what was expected and the entries it affects: recreate the project from
+the Website Editorial blueprint (and remove extra users), or recapture.
+
+| Screen                               | Constant             | Observed                                      | Baseline              |
+| ------------------------------------ | -------------------- | --------------------------------------------- | --------------------- |
+| `dashboard`, tools panel > Dashboard | `DASHBOARD_BASELINE` | Unpublished Work "1-50 of N" total, row count | 228 items, 50 rows    |
+| `search`                             | `SEARCH_BASELINE`    | "N results" total, result card count          | 103 results, 21 cards |
+| `users` (global app)                 | `USERS_BASELINE`     | users table total and rows                    | 2 users, 2 rows       |
+
+Limits: the guards compare counts, not content. The Users guard does not check usernames or avatars, and the Search
+guard does not check which items are listed. Other screens (site tools, preview pages) have no content-dependent
+entries.
+
+The Search guard waits for the results to settle before it compares them, because a project created moments ago keeps
+adding results while its search index builds. The search page runs its query when it mounts and again only after a
+content event, so an open page never picks up a growing index: between two reads the guard waits `pollMs` (2s),
+reloads the page and waits for it to load, which runs the search again. It passes as soon as the total and card count
+match `SEARCH_BASELINE`. A state that differs but shows the same non-empty total for 5s is taken as final and reported
+as a baseline mismatch. If the total is still changing, empty or unreadable after 60s, it fails with "the search
+results did not settle" and the last state it saw: wait for the index to finish and run again. A Search error state fails
+it at once, with the error's title. The intervals are `SEARCH_SETTLE` in `tests/baseline.ts`. The dashboard and Users
+guards read once.
+
+A capture (`A11Y_CAPTURE=1`) skips the guards, since a recapture is how the baseline changes. It logs `<Screen>
+baseline observed: total=N rows=M` (and attaches it to the report): set the constants to those values in the same
+commit as the new allow-list. The Search guard does not wait in a capture: it reads the total once, without reloading
+and without throwing (an unreadable or empty list is logged and attached instead of failing the capture), so a
+recapture on a project that is off the baseline does not stall. That also means the value it logs is only the baseline
+when the search index has finished building, so wait for the index before you recapture. A prune-only capture keeps the
+guards enforced, including the wait.
 
 ## Readiness
 
