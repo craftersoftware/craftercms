@@ -347,7 +347,10 @@ export function SelectField(props: {
 		<ListItemButton
 			key={key}
 			// Double-click or Enter selects the field (inserts at current position on large screens).
-			onClick={() => setSelectedField(field)}
+			onClick={(e) => {
+				// MUI onClick is called for both clicks and enter keydowns, so we need to check the type.
+				if (e.type !== 'keydown') setSelectedField(field);
+			}}
 			onDoubleClick={() => confirmField(field)}
 			onKeyDown={(e) => {
 				if (e.key === 'Enter') {
