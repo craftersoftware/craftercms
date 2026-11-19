@@ -158,7 +158,6 @@
 			<pattern-group name="rendering-template">
 				<pattern>/templates/([^&lt;"]+)\.ftl</pattern>
 			</pattern-group>
-
 		</patterns>
 
 	</repository>

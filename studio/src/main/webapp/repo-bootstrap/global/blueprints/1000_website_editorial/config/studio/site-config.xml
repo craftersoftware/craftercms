@@ -162,7 +162,6 @@
 			<pattern-group name="config">
 				<pattern>/config/(?!studio/content-types/)([^&lt;"']+)\.xml</pattern>
 			</pattern-group>
-
 		</patterns>
 
 	</repository>

@@ -65,6 +65,7 @@ public class XsltTest {
 	private enum Scenario {
 		XSLT,
 		SHIPPED_SITE_CONFIG_TOOLS,
+		SHIPPED_SITE_CONFIG,
 		SITE_CONFIG_V10_CHAIN,
 		UI_PIPELINE,
 		CONTENT_TYPE_FROM_4500,
@@ -108,6 +109,7 @@ public class XsltTest {
 		addXsltCases(rows, "globalPermissions50025Test", globalPermissions50025TestData());
 		addXsltCases(rows, "siteConfigTools407Test", siteConfigTools407TestData());
 		addScenario(rows, "shippedSiteConfigToolsRemoveLegacyContentTypesTool", Scenario.SHIPPED_SITE_CONFIG_TOOLS);
+		addScenario(rows, "shippedSiteConfigOmitsUnusedElements", Scenario.SHIPPED_SITE_CONFIG);
 		addScenario(rows, "cleanedVersion10SiteConfigUpgradeChain", Scenario.SITE_CONFIG_V10_CHAIN);
 		addScenario(rows, "uiPipelineContinuesFrom4500ThroughContentTypeManagement", Scenario.UI_PIPELINE);
 		addScenario(rows, "contentTypeManagementUpgradeFrom4500PreservesCustomConfiguration", Scenario.CONTENT_TYPE_FROM_4500);
@@ -133,6 +135,7 @@ public class XsltTest {
 		switch (scenario) {
 			case XSLT -> testXsltTemplate(template, content, expected, params);
 			case SHIPPED_SITE_CONFIG_TOOLS -> shippedSiteConfigToolsRemoveLegacyContentTypesTool();
+			case SHIPPED_SITE_CONFIG -> shippedSiteConfigOmitsUnusedElements();
 			case SITE_CONFIG_V10_CHAIN -> cleanedVersion10SiteConfigUpgradeChain();
 			case UI_PIPELINE -> uiPipelineContinuesFrom4500ThroughContentTypeManagement();
 			case CONTENT_TYPE_FROM_4500 -> contentTypeManagementUpgradeFrom4500PreservesCustomConfiguration();
@@ -825,6 +828,39 @@ public class XsltTest {
 		assertFalse(sampleTools.contains("content-types"), sample);
 		assertTrue(sampleTools.contains("encrypt-tool"), sample);
 		assertTrue(sampleTools.contains("plugin-management"), sample);
+	}
+
+	/**
+	 * New sites ship without the unused site-config blocks, so creation does not need the 5.0.0.0 to
+	 * 5.0.0.1 step to remove them. The four blueprints are already at 5.0.0.1. The sample is not a
+	 * versioned site file.
+	 */
+	public void shippedSiteConfigOmitsUnusedElements() throws Exception {
+		String[] blueprints = {
+			"repo-bootstrap/global/blueprints/1000_website_editorial/config/studio/site-config.xml",
+			"repo-bootstrap/global/blueprints/2000_headless_store/config/studio/site-config.xml",
+			"repo-bootstrap/global/blueprints/4000_empty/config/studio/site-config.xml",
+			"repo-bootstrap/global/blueprints/5000_headless_blog/config/studio/site-config.xml"
+		};
+		for (String path : blueprints) {
+			assertEquals(version(path), "5.0.0.1", path);
+			assertUnusedSiteConfigElementsAbsent(path);
+		}
+		assertUnusedSiteConfigElementsAbsent(
+			"repo-bootstrap/global/configuration/samples/sample-site-config.xml");
+	}
+
+	private void assertUnusedSiteConfigElementsAbsent(String path) throws Exception {
+		Document document = parseXml(path);
+		assertEquals(document.getElementsByTagName("wem-project").getLength(), 0, path);
+		assertEquals(document.getElementsByTagName("staging-url").getLength(), 0, path);
+		assertEquals(document.getElementsByTagName("folders").getLength(), 0, path);
+		assertEquals(document.getElementsByTagName("display-in-widget-patterns").getLength(), 0, path);
+		assertTrue(patternGroupsNamed(document, "previewable-mimetypes").isEmpty(), path);
+		NodeList repositories = document.getElementsByTagName("repository");
+		for (int i = 0; i < repositories.getLength(); i++) {
+			assertFalse(((Element) repositories.item(i)).hasAttribute("rootPrefix"), path);
+		}
 	}
 
 	/**
