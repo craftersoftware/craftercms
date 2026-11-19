@@ -97,12 +97,12 @@ Retrieves the current redux store state.
 ### getItem
 Creates an action to get an Item from the content store.
 
-`getItem(itemUrl: string)`
+`getItem({ url, config? })`
 
 | Parameters    |                |
 | ------------- |:--------------:|
-| 
-path           | The item’s path in the content store |
+| url           | The item’s path in the content store |
+| config        | Crafter configuration. Optional. Default value in [CrafterConfig](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/crafter-config.ts). |
 
 #### Example
 
@@ -113,29 +113,11 @@ path           | The item’s path in the content store |
 
   const itemUrl = '/site/website/index.xml';
 
-  store.dispatch(getItem(itemUrl));
+  store.dispatch(getItem({ url: itemUrl }));
 ```
 
 ### getDescriptor
-Creates an action to get the descriptor data of an Item in the content store.
-
-`getDescriptor(path: string)`
-
-| Parameters    |                |
-| ------------- |:--------------:|
-| path           | The item’s path in the content store |
-
-#### Example
-
-- Dispatch action to get the index page descriptor from the site into your store
-
-```typescript
-  import { getDescriptor } from '@craftercms/redux';
-
-  const itemUrl = '/site/website/index.xml';
-
-  store.dispatch(getDescriptor(itemUrl));
-```
+The Get Descriptor API is deprecated. Please use getItem instead.
 
 ### getChildren
 Creates an action to get the list of Items directly under a folder into your store.
