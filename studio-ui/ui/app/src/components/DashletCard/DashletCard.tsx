@@ -79,6 +79,10 @@ export function DashletCard(props: DashletCardProps) {
 	const showCardBody = isExpanded || isMaximized;
 	const isToggleable = collapsible && !isMaximized;
 	const [disableHeaderToggleRipple, setDisableHeaderToggleRipple] = useState(false);
+	// A visible title is the toggle's accessible name (2.5.3). headerAction alone still renders the header,
+	// and that toggle would otherwise be an empty button.
+	const titleNamesToggle = typeof title === 'string' ? title.trim() !== '' : Boolean(title);
+	const untitledToggleLabel = formatMessage({ defaultMessage: 'Toggle section' });
 
 	const updateMaximized = () => {
 		setIsMaximized(!isMaximized);
@@ -129,6 +133,7 @@ export function DashletCard(props: DashletCardProps) {
 								type="button"
 								disableRipple={disableHeaderToggleRipple}
 								aria-expanded={isExpanded}
+								aria-label={titleNamesToggle ? undefined : untitledToggleLabel}
 								onClick={() => setIsExpanded(!isExpanded)}
 								sx={{
 									position: 'static',
