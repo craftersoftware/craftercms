@@ -78,14 +78,18 @@ public class WorkflowController {
 														  int offset,
 														  @PositiveOrZero @RequestParam(value = REQUEST_PARAM_LIMIT, required = false, defaultValue = "10")
 														  int limit) throws SiteNotFoundException, InvalidParametersException {
-		if (!isPathRegexValid(path)) {
-			throw new InvalidParametersException("Parameter 'path' is not valid regular expression.");
+		String pathRegex = null;
+		if (StringUtils.isNotEmpty(path)) {
+			if (!isPathRegexValid(path)) {
+				throw new InvalidParametersException("Parameter 'path' is not valid regular expression.");
+			}
+			pathRegex = path;
 		}
-		int total = workflowService.getItemStatesTotal(siteId, path, states);
+		int total = workflowService.getItemStatesTotal(siteId, pathRegex, states);
 		List<ContentItem> items = emptyList();
 
 		if (total > offset) {
-			items = workflowService.getItemsByStates(siteId, path, states, offset, limit);
+			items = workflowService.getItemsByStates(siteId, pathRegex, states, offset, limit);
 		}
 
 		PaginatedResultList<ContentItem> result = new PaginatedResultList<>();
