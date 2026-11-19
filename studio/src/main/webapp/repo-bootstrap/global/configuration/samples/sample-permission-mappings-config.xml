@@ -29,12 +29,12 @@
   View the sample for a good starting point.
 -->
 <permissions>
-	<version>5.0.0</version>
+	<version>5.0.0.3</version>
 	<role name="author">
-		<rule regex="/site/website/.*|/site/components(/.*)?|/static-assets(/.*)?">
+		<rule regex="/site/website(/.*)?|/site/components(/.*)?|/static-assets(/.*)?">
 			<allowed-permissions>
 				<permission>content_write</permission>
-				<permission>content_create</permission>
+				<permission>content_move</permission>
 				<permission>folder_create</permission>
 				<permission>content_copy</permission>
 			</allowed-permissions>
@@ -61,7 +61,7 @@
 		<rule regex="/site/.*|/static-assets.*">
 			<allowed-permissions>
 				<permission>content_write</permission>
-				<permission>content_create</permission>
+				<permission>content_move</permission>
 				<permission>folder_create</permission>
 				<permission>content_copy</permission>
 			</allowed-permissions>
@@ -99,9 +99,9 @@
 		<rule regex=".*">
 			<allowed-permissions>
 				<permission>content_write</permission>
+				<permission>content_move</permission>
 				<permission>publish_cancel</permission>
 				<permission>folder_create</permission>
-				<permission>content_create</permission>
 				<permission>change_content_type</permission>
 				<permission>add_remote</permission>
 				<permission>list_remotes</permission>
@@ -145,9 +145,9 @@
 		<rule regex=".*">
 			<allowed-permissions>
 				<permission>content_write</permission>
+				<permission>content_move</permission>
 				<permission>publish_cancel</permission>
 				<permission>folder_create</permission>
-				<permission>content_create</permission>
 				<permission>change_content_type</permission>
 				<permission>add_remote</permission>
 				<permission>list_remotes</permission>

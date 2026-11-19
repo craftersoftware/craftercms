@@ -45,6 +45,7 @@
 				<permission>content_read</permission>
 				<permission>content_copy</permission>
 				<permission>content_write</permission>
+				<permission>content_move</permission>
 				<permission>folder_create</permission>
 				<permission>create_site</permission>
 				<permission>duplicate_site</permission>
@@ -87,7 +88,6 @@
 				<permission>view_logs</permission>
 				<permission>view_log_levels</permission>
 				<permission>configure_log_levels</permission>
-				<permission>content_create</permission>
 				<permission>publish_get_queue</permission>
 				<permission>change_content_type</permission>
 				<permission>site_status</permission>

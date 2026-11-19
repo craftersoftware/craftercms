@@ -214,7 +214,6 @@ public class ContentServiceImpl implements ContentService {
 	@RequireSiteReady
 	@RequireSiteBootstrapComplete
 	@ValidateAction(type = Type.RENAME)
-	@HasPermission(type = CompositePermission.class, action = PERMISSION_CONTENT_WRITE)
 	public void renameContent(@SiteId String site,
 							  @ContentPath @ActionTargetPath String path, @ActionTargetFilename String name)
 			throws ServiceLayerException, UserNotFoundException, ValidationException, AuthenticationException {
@@ -225,7 +224,6 @@ public class ContentServiceImpl implements ContentService {
 	@RequireSiteReady
 	@RequireSiteBootstrapComplete
 	@ValidateAction(type = Type.MOVE)
-	@HasPermission(type = CompositePermission.class, action = PERMISSION_CONTENT_WRITE)
 	public PasteContentResult move(@SiteId String siteId, @ActionSourcePath String sourcePath, @ActionTargetPath @ContentPath String targetPath)
 			throws ServiceLayerException, UserNotFoundException, AuthenticationException {
 		return contentServiceInternal.move(siteId, sourcePath, targetPath);
@@ -235,7 +233,6 @@ public class ContentServiceImpl implements ContentService {
 	@RequireSiteReady
 	@RequireSiteBootstrapComplete
 	@ValidateAction(type = Type.MOVE)
-	@HasPermission(type = CompositePermission.class, action = PERMISSION_CONTENT_WRITE)
 	public PasteContentResult moveToParentPath(@SiteId String siteId, @ActionSourcePath String sourcePath, @ActionTargetPath String targetParent)
 			throws ServiceLayerException, UserNotFoundException, AuthenticationException {
 		return contentServiceInternal.moveToParentPath(siteId, sourcePath, targetParent);
@@ -245,7 +242,6 @@ public class ContentServiceImpl implements ContentService {
 	@RequireSiteReady
 	@RequireSiteBootstrapComplete
 	@ValidateAction(type = Type.MOVE)
-	@HasPermission(type = CompositePermission.class, action = PERMISSION_CONTENT_WRITE)
 	public WriteContentResult moveAndUpdate(@SiteId String siteId, @ActionSourcePath String sourcePath,
 											@ActionTargetPath String targetPath, String content)
 			throws AuthenticationException, ServiceLayerException, UserNotFoundException {

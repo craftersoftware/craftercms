@@ -19,10 +19,10 @@ package org.craftercms.studio.impl.v2.security;
 import java.util.List;
 import java.util.Set;
 
-import static org.craftercms.studio.api.v2.security.ContentItemAvailableActionsConstants.BITMAP_CONTENT_CREATE;
 import static org.craftercms.studio.api.v2.security.ContentItemAvailableActionsConstants.BITMAP_CONTENT_READ;
+import static org.craftercms.studio.api.v2.security.ContentItemAvailableActionsConstants.BITMAP_CONTENT_WRITE;
 import static org.craftercms.studio.api.v2.security.ContentItemAvailableActionsConstants.mapPermissionsToContentItemAvailableActions;
-import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_CREATE;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_COPY;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_READ;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_WRITE;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_GET_CHILDREN;
@@ -51,11 +51,11 @@ public class RolePermissionMappingsImplTest {
 		mappings.addRuleContentItemPermissionsMapping("/site/website/.*",
 			List.of(PERMISSION_CONTENT_READ));
 		mappings.addRuleContentItemPermissionsMapping("/site/website/articles/.*",
-			List.of(PERMISSION_CONTENT_CREATE));
+			List.of(PERMISSION_CONTENT_WRITE));
 
 		long actions = mappings.getActionsForPath("/site/website/articles/2024/index.xml");
 
-		assertEquals(BITMAP_CONTENT_READ | BITMAP_CONTENT_CREATE, actions);
+		assertEquals(BITMAP_CONTENT_READ | BITMAP_CONTENT_WRITE, actions);
 	}
 
 	@Test
@@ -71,12 +71,12 @@ public class RolePermissionMappingsImplTest {
 		mappings.addRuleContentItemPermissionsMapping("/site/website/.*",
 			List.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_WRITE));
 		mappings.addRuleContentItemPermissionsMapping("/site/components/.*",
-			List.of(PERMISSION_CONTENT_CREATE));
+			List.of(PERMISSION_CONTENT_COPY));
 
 		Set<String> permissions = mappings.getPermissionsForPath("/site/website/index.xml");
 
 		assertEquals(Set.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_WRITE), permissions);
-		assertFalse(permissions.contains(PERMISSION_CONTENT_CREATE));
+		assertFalse(permissions.contains(PERMISSION_CONTENT_COPY));
 	}
 
 	@Test
@@ -84,10 +84,10 @@ public class RolePermissionMappingsImplTest {
 		mappings.addRuleContentItemPermissionsMapping("/site/website/.*",
 			List.of(PERMISSION_CONTENT_READ));
 		mappings.addRuleContentItemPermissionsMapping("/site/components/.*",
-			List.of(PERMISSION_CONTENT_CREATE));
+			List.of(PERMISSION_CONTENT_COPY));
 
 		assertEquals(
-			Set.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_CREATE),
+			Set.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_COPY),
 			Set.copyOf(mappings.getAllPermissions()));
 	}
 
@@ -114,10 +114,10 @@ public class RolePermissionMappingsImplTest {
 	@Test
 	public void addRuleStoresMappedActionsBitmap() {
 		mappings.addRuleContentItemPermissionsMapping("/site/website/.*",
-			List.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_CREATE));
+			List.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_WRITE));
 
 		long expected = mapPermissionsToContentItemAvailableActions(
-			List.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_CREATE));
+			List.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_WRITE));
 
 		assertEquals(expected, mappings.getActionsForPath("/site/website/index.xml"));
 	}

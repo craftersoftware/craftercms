@@ -26,7 +26,6 @@ public final class StudioPermissionsConstants {
 	public static final String PERMISSION_AUDIT_LOG = "audit_log";
 	public static final String PERMISSION_CANCEL_FAILED_PULL = "cancel_failed_pull";
 	public static final String PERMISSION_COMMIT_RESOLUTION = "commit_resolution";
-	public static final String PERMISSION_CONTENT_CREATE = "content_create";
 	public static final String PERMISSION_FOLDER_CREATE = "folder_create";
 	public static final String PERMISSION_CREATE_GROUPS = "create_groups";
 	public static final String PERMISSION_CREATE_USERS = "create_users";
@@ -66,6 +65,7 @@ public final class StudioPermissionsConstants {
 	public static final String PERMISSION_WEBDAV_READ = "webdav_read";
 	public static final String PERMISSION_WEBDAV_WRITE = "webdav_write";
 	public static final String PERMISSION_CONTENT_WRITE = "content_write";
+	public static final String PERMISSION_CONTENT_MOVE = "content_move";
 	public static final String PERMISSION_WRITE_CONFIGURATION = "write_configuration";
 	public static final String PERMISSION_READ_CONFIGURATION = "read_configuration";
 	public static final String PERMISSION_WRITE_GLOBAL_CONFIGURATION = "write_global_configuration";

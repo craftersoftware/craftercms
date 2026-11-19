@@ -92,6 +92,19 @@ export interface UseSaveFormProps {
 const wrapOnSaveProp: (onSaveProp: FormsEngineProps['onSave']) => FormsEngineProps['onSave'] = (onSaveProp) => (args) =>
 	onSaveProp?.(args) ?? Promise.resolve({ close: false });
 
+/**
+ * move_and_update answers HTTP 403 with ApiResponse.UNAUTHORIZED (code 2001, message "Unauthorized").
+ * The denied action stays on the server exception and is not in the body, so content_move and content_write
+ * look the same to the form.
+ */
+function isMoveAndUpdateForbidden(error: unknown): boolean {
+	if (typeof error !== 'object' || error === null) {
+		return false;
+	}
+	const ajaxError = error as { name?: string; status?: number };
+	return ajaxError.name === 'AjaxError' && ajaxError.status === 403;
+}
+
 /** What `save` tells the Save card. A plugin or policy block returns void instead. */
 export type SaveFormResult = 'revealed' | 'invalid' | 'saved';
 
@@ -144,12 +157,13 @@ export function useSaveForm(props: UseSaveFormProps) {
 		}
 		setIsSubmitting(true);
 
-		const showSaveError = (error: AjaxError | Error) => {
+		const showSaveError = (error: AjaxError | Error, messageOverride?: string) => {
 			setIsSubmitting(false);
 			const message =
-				error instanceof AjaxError
+				messageOverride ??
+				(error instanceof AjaxError
 					? (error.response?.response?.message ?? error.response?.message)
-					: (error as Error).message;
+					: (error as Error).message);
 			showAlert({
 				dispatch,
 				children: (
@@ -546,7 +560,21 @@ export function useSaveForm(props: UseSaveFormProps) {
 							showSaveError(error as AjaxError | Error);
 						}
 					},
-					error: showSaveError
+					error: (error) => {
+						// A 403 does not say whether content_move or content_write was denied. Name both, and the
+						// path the user tried to save to. The body does not include it.
+						if (isRename && isMoveAndUpdateForbidden(error)) {
+							showSaveError(
+								error,
+								formatMessage(
+									{ defaultMessage: 'You don\'t have permission to rename or move this item to "{path}".' },
+									{ path }
+								)
+							);
+							return;
+						}
+						showSaveError(error);
+					}
 				};
 
 				// Validate minimum requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
