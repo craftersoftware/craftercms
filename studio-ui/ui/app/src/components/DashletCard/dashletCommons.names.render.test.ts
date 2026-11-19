@@ -28,7 +28,7 @@ const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { RawIntlProvider, createIntl } = await import('react-intl');
-const { Pager } = await import('./dashletCommons.tsx');
+const { Pager, getItemSkeleton } = await import('./dashletCommons.tsx');
 
 const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
 
@@ -99,5 +99,20 @@ describe('dashlet page picker name', () => {
 		assert.ok(listbox, 'the page picker listbox did not open');
 		assert.equal(listbox.getAttribute('aria-label'), 'Page');
 		assert.equal(listbox.hasAttribute('aria-labelledby'), false, 'the listbox points at a label that is not shown');
+	});
+});
+
+describe('dashlet row skeleton', () => {
+	it('hides the placeholder checkbox from the accessibility tree', async () => {
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		const root = createRoot(host);
+		mounted.push({ unmount: () => root.unmount(), host });
+		await act(async () => {
+			root.render(React.createElement(RawIntlProvider, { value: intl }, getItemSkeleton({ showCheckbox: true })));
+		});
+		const input = host.querySelector<HTMLInputElement>('input[type="checkbox"]');
+		assert.ok(input, 'placeholder checkbox');
+		assert.equal(input.getAttribute('aria-hidden'), 'true');
 	});
 });

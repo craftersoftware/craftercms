@@ -92,7 +92,10 @@ export function CopyDependencies(props: CopyDependenciesProps) {
 						}}
 					>
 						<Tooltip title={formatMessage({ defaultMessage: 'Remove Reference' })}>
-							<IconButton onClick={() => removeDependency(index)}>
+							<IconButton
+								onClick={() => removeDependency(index)}
+								aria-label={formatMessage({ defaultMessage: 'Remove Reference' })}
+							>
 								<RemoveCircleOutlineRoundedIcon />
 							</IconButton>
 						</Tooltip>
@@ -106,7 +109,7 @@ export function CopyDependencies(props: CopyDependenciesProps) {
 				}}
 			>
 				<Tooltip title={formatMessage({ defaultMessage: 'Add Reference' })}>
-					<IconButton onClick={() => addDependency()}>
+					<IconButton onClick={() => addDependency()} aria-label={formatMessage({ defaultMessage: 'Add Reference' })}>
 						<AddCircleOutlineRoundedIcon />
 					</IconButton>
 				</Tooltip>

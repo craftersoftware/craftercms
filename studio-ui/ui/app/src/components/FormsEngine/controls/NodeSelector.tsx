@@ -794,6 +794,7 @@ function NodeSelector(props: NodeSelectorProps) {
 				length={value.length}
 				action={
 					<Tooltip
+						describeChild
 						title={
 							isAddDisabled ? (
 								maxLimitReached ? (

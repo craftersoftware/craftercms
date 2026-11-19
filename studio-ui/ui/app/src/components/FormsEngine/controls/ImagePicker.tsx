@@ -269,6 +269,7 @@ export function ImagePicker(props: ImagePickerProps) {
 														setAddMenuOpen(true);
 													}
 												}}
+												aria-label={formatMessage({ defaultMessage: 'Replace' })}
 											>
 												<EditOutlined />
 											</IconButton>
@@ -279,12 +280,18 @@ export function ImagePicker(props: ImagePickerProps) {
 												onClick={() => {
 													if (value) downloadMedia(guestBase, value);
 												}}
+												aria-label={formatMessage({ defaultMessage: 'Download' })}
 											>
 												<DownloadOutlined />
 											</IconButton>
 										</Tooltip>
 										<Tooltip title={formatMessage({ defaultMessage: 'Delete' })}>
-											<IconButton size="small" onClick={handleRemoveImage} disabled={readonly}>
+											<IconButton
+												size="small"
+												onClick={handleRemoveImage}
+												disabled={readonly}
+												aria-label={formatMessage({ defaultMessage: 'Delete' })}
+											>
 												<DeleteOutlined />
 											</IconButton>
 										</Tooltip>

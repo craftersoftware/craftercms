@@ -256,7 +256,10 @@ export function SearchUI(props: SearchUIProps) {
 						borderBottom: `1px solid ${theme.palette.divider}`
 					})}
 				>
-					<Tooltip title={<FormattedMessage id="search.selectAll" defaultMessage="Select all on this page" />}>
+					<Tooltip
+						describeChild
+						title={<FormattedMessage id="search.selectAll" defaultMessage="Select all on this page" />}
+					>
 						<Checkbox
 							checked={areAllSelected}
 							onChange={(e) => handleSelectAll(e.target.checked)}

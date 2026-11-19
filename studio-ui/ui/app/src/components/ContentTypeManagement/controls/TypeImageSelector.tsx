@@ -151,13 +151,19 @@ export function TypeImageSelector(props: TypeImageSelectorProps) {
 					<>
 						{value && (
 							<Tooltip title={formatMessage({ defaultMessage: 'Remove image' })}>
-								<IconButton onClick={() => onDeleteImage()}>
+								<IconButton
+									onClick={() => onDeleteImage()}
+									aria-label={formatMessage({ defaultMessage: 'Remove image' })}
+								>
 									<DeleteOutlineRoundedIcon />
 								</IconButton>
 							</Tooltip>
 						)}
 						<Tooltip title={formatMessage({ defaultMessage: 'Upload Image' })}>
-							<IconButton onClick={() => onUploadImage()}>
+							<IconButton
+								onClick={() => onUploadImage()}
+								aria-label={formatMessage({ defaultMessage: 'Upload Image' })}
+							>
 								<UploadRoundedIcon />
 							</IconButton>
 						</Tooltip>

@@ -141,6 +141,9 @@ describe('browse files dialog select-all name', () => {
 		});
 		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
 		assert.equal(input.getAttribute('aria-label'), 'Select all');
+		const span = input.closest<HTMLElement>('.MuiCheckbox-root');
+		assert.equal(span?.getAttribute('aria-label'), null);
+		assert.equal(span?.getAttribute('aria-labelledby'), null);
 	});
 });
 
