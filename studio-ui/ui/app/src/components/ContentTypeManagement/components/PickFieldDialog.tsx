@@ -17,7 +17,7 @@
 import { EnhancedDialog, EnhancedDialogProps } from '../../EnhancedDialog';
 import { ContentType, ContentTypeField, DataSource } from '../../../models';
 import { FormattedMessage, useIntl } from 'react-intl';
-import React, { ReactNode, useMemo, useState } from 'react';
+import React, { ReactNode, useMemo, useRef, useState } from 'react';
 import { applyTranslations, DescriptorContentType, DescriptorField, PartialContentType } from '../utils';
 import { DialogBody } from '../../DialogBody';
 import { SearchBar, SearchBarProps } from '../../SearchBar';
@@ -302,6 +302,8 @@ export function SelectField(props: {
 	const collator = useMemo(() => new Intl.Collator(locale), [locale]);
 	const currentFieldTypes = Object.values(currentFields).map((field) => field.type);
 	const confirmField = onConfirmField ?? setSelectedField;
+	// MUI ButtonBase synthesizes a click after Enter; skip that click when onKeyDown already confirmed.
+	const ignoreClickAfterEnterRef = useRef(false);
 
 	const systemFields = sortFieldsByName(
 		typesFullList
@@ -348,13 +350,17 @@ export function SelectField(props: {
 			key={key}
 			// Double-click or Enter selects the field (inserts at current position on large screens).
 			onClick={(e) => {
-				// MUI onClick is called for both clicks and enter keydowns, so we need to check the type.
-				if (e.type !== 'keydown') setSelectedField(field);
+				if (ignoreClickAfterEnterRef.current) {
+					ignoreClickAfterEnterRef.current = false;
+					return;
+				}
+				setSelectedField(field);
 			}}
 			onDoubleClick={() => confirmField(field)}
 			onKeyDown={(e) => {
 				if (e.key === 'Enter') {
 					e.preventDefault();
+					ignoreClickAfterEnterRef.current = true;
 					confirmField(field);
 				}
 			}}
