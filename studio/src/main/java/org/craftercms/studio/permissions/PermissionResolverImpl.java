@@ -71,12 +71,7 @@ public class PermissionResolverImpl implements PermissionResolver<String, Map<St
 				}
 			}
 			if (resourceIds.containsKey(PATH_RESOURCE_ID)) {
-				// A missing item_states path is stored as a null map value. Keep the
-				// site-root default so permission matching does not see a null path.
-				String resourcePath = (String) resourceIds.get(PATH_RESOURCE_ID);
-				if (StringUtils.isNotBlank(resourcePath)) {
-					path = resourcePath;
-				}
+				path = (String) resourceIds.get(PATH_RESOURCE_ID);
 			}
 		}
 
