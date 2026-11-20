@@ -39,7 +39,6 @@ export interface ViewVersionDialogBaseProps {
 }
 
 export interface ViewVersionDialogProps extends ViewVersionDialogBaseProps, EnhancedDialogProps {
-	contentTypesBranch?: EntityState<ContentType>;
 	leftActions?: DialogHeaderActionProps[];
 	rightActions?: DialogHeaderActionProps[];
 }
@@ -51,8 +50,7 @@ export interface ViewVersionDialogStateProps extends ViewVersionDialogBaseProps,
 	onClosed?: StandardAction;
 }
 
-export interface ViewVersionDialogContainerProps
-	extends ViewVersionDialogBaseProps, Pick<ViewVersionDialogProps, 'contentTypesBranch'> {
+export interface ViewVersionDialogContainerProps extends ViewVersionDialogBaseProps {
 	showXml: boolean;
 }
 

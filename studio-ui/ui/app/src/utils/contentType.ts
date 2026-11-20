@@ -27,6 +27,7 @@ import { ContentItem } from '../models/Item';
 import type { BuiltInControlType } from '../components/FormsEngine/lib/controlMap';
 import { defineMessages, IntlShape } from 'react-intl';
 import { XmlKeys } from '../components/FormsEngine/lib/formConsts';
+import { mergeAdditionalFieldIds } from './additionalFields';
 
 const messages = defineMessages({
 	[XmlKeys.displayTemplate]: {
@@ -325,3 +326,110 @@ export const componentsDataSourceContentTypesPropertyNames = [
 	'allowedSharedContentTypes',
 	'allowedSharedExistingContentTypes'
 ];
+
+type AdditionalFieldsControls = LookupTable<{ metadata?: { additionalFields?: string[] | null } }>;
+
+let cachedById: LookupTable<ContentType> | undefined;
+let cachedControls: AdditionalFieldsControls | undefined;
+let cachedResult: LookupTable<ContentType> | undefined;
+
+/**
+ * Form-definition XML is the authoritative source for a field's `additionalFields`.
+ * Control descriptors in the site UI config backfill ids that were never persisted.
+ * A persisted id that differs from the descriptor is kept.
+ *
+ * Runtime callers should use `contentTypesForParse` (via `useContentTypes` in React) and pass that
+ * lookup into `parseContentXML`. Returns the store lookup until UI config has loaded once, so guest
+ * load is not held for the backfill. After a successful merge, the last result is cached by
+ * `(byId, controls)` reference and reused (including while a UI-config refetch is in flight) so all
+ * callers share one lookup and dependent effects do not re-run on identity alone. A guest that checks
+ * in before UI config loads still logs missing companion fields once for form definitions that don't
+ * persist `additionalFields` yet.
+ */
+export function contentTypesForParse(
+	byId: LookupTable<ContentType>,
+	uiConfig: {
+		isFetching: boolean | null;
+		controls: AdditionalFieldsControls;
+	}
+): LookupTable<ContentType> {
+	if (!byId) return byId;
+	if (byId === cachedById && uiConfig?.controls === cachedControls && cachedResult !== undefined) {
+		return cachedResult;
+	}
+	if (uiConfig?.isFetching !== false) return byId;
+	const result = addConfiguredAdditionalFields(byId, uiConfig.controls);
+	cachedById = byId;
+	cachedControls = uiConfig.controls;
+	cachedResult = result;
+	return result;
+}
+
+/**
+ * Backfills one field's `additionalFields` from its control descriptor, then recurses into
+ * `field.fields` (e.g. repeat-group children) so nested depths match save-time merge in
+ * `convertFieldStructToXmlStruct`. Returns the same reference when nothing changes.
+ */
+function mergeFieldConfiguredAdditionalFields(
+	field: ContentTypeField,
+	controls: AdditionalFieldsControls
+): ContentTypeField {
+	const persistedAdditionalFields = field.additionalFields ?? [];
+	const additionalFields = mergeAdditionalFieldIds(
+		field.id,
+		persistedAdditionalFields,
+		controls[field.type]?.metadata?.additionalFields
+	);
+	const additionalFieldsChanged = additionalFields.length !== persistedAdditionalFields.length;
+
+	let nestedFields = field.fields;
+	let nestedChanged = false;
+	if (field.fields) {
+		const nextNested = Object.fromEntries(
+			Object.entries(field.fields).map(([childId, child]) => {
+				const nextChild = mergeFieldConfiguredAdditionalFields(child, controls);
+				if (nextChild !== child) nestedChanged = true;
+				return [childId, nextChild];
+			})
+		);
+		if (nestedChanged) nestedFields = nextNested;
+	}
+
+	if (!additionalFieldsChanged && !nestedChanged) return field;
+	return {
+		...field,
+		...(additionalFieldsChanged ? { additionalFields } : null),
+		...(nestedChanged ? { fields: nestedFields } : null)
+	};
+}
+
+/**
+ * Returns a content-type lookup with control-descriptor `additionalFields` merged onto every field
+ * (root and nested). Form-def ids stay authoritative via `mergeAdditionalFieldIds`. Unchanged types
+ * and fields keep their original references.
+ */
+export function addConfiguredAdditionalFields(
+	contentTypes: LookupTable<ContentType>,
+	controls: AdditionalFieldsControls
+): LookupTable<ContentType> {
+	if (!contentTypes || !controls) return contentTypes;
+
+	let contentTypesChanged = false;
+	const result = Object.fromEntries(
+		Object.entries(contentTypes).map(([contentTypeId, contentType]) => {
+			let fieldsChanged = false;
+			const fields = Object.fromEntries(
+				Object.entries(contentType.fields).map(([fieldId, field]) => {
+					const nextField = mergeFieldConfiguredAdditionalFields(field, controls);
+					if (nextField !== field) fieldsChanged = true;
+					return [fieldId, nextField];
+				})
+			);
+			if (!fieldsChanged) return [contentTypeId, contentType];
+			contentTypesChanged = true;
+			return [contentTypeId, { ...contentType, fields }];
+		})
+	);
+
+	return contentTypesChanged ? result : contentTypes;
+}

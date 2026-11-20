@@ -386,6 +386,11 @@ function parseLegacyFormDefinitionFields(
 			field.properties.plugin = legacyField.plugin;
 		}
 
+		const additionalFields = asArray(legacyField.additionalFields?.id);
+		if (additionalFields.length > 0) {
+			field.additionalFields = additionalFields;
+		}
+
 		asArray<LegacyFormDefinitionProperty>(legacyField.properties?.property).forEach((legacyProp) => {
 			let value;
 			switch (legacyProp.type) {

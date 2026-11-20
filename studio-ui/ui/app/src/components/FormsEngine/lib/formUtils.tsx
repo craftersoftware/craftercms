@@ -102,6 +102,7 @@ import {
 import { createComponentId } from '../../../utils/system';
 import { showErrorDialog } from '../../../state/actions/dialogs';
 import { ensureSingleSlash } from '../../../utils/string';
+import { expandAdditionalFieldTemplates, processAdditionalFieldMacro } from '../../../utils/additionalFields';
 import { createObjectGroupId, getFileNameFromPath, isPagePath } from '../../../utils/path';
 import { nnou, nou } from '../../../utils/object';
 import {
@@ -1711,10 +1712,16 @@ export function composePathForType(basePath: string, fileName: string, contentTy
 	}
 }
 
+/**
+ * Companion field ids declared on a control descriptor for `fieldId`.
+ * Expands `descriptor.metadata.additionalFields` templates (e.g. `{id}_tz` → `publishDate_dt_tz`).
+ * Returns an empty array when the descriptor has no additionalFields.
+ */
 export function getAdditionalFieldsIdsFromDescriptor(fieldId: string, descriptor: DescriptorContentType): string[] {
-	const additionalFields = descriptor.metadata?.additionalFields ?? [];
-	return additionalFields.map((additionalField) => processAdditionalFieldMacro(fieldId, additionalField));
+	return expandAdditionalFieldTemplates(fieldId, descriptor.metadata?.additionalFields);
 }
+
+export { processAdditionalFieldMacro };
 
 /**
  * Additional field ids declared by `field`'s control descriptor after `{id}` expansion.
@@ -1759,9 +1766,4 @@ export function resolveControlDescriptors(
 	customControls?: LookupTable<DescriptorContentType>
 ): LookupTable<DescriptorContentType> {
 	return { ...customControls, ...controlDescriptors };
-}
-
-// TODO: are there going to be other placeholders besides {id}?
-export function processAdditionalFieldMacro(parentFieldId: string, fieldId: string): string {
-	return fieldId.replaceAll('{id}', parentFieldId);
 }
