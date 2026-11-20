@@ -25,13 +25,27 @@ import PaginationOptions from '../models/PaginationOptions';
 import { PublishingPackageApproveParams, PublishingPackagesApproveParams, PublishPackage } from '../models/Publishing';
 import { ApiResponse } from '../models';
 
+/**
+ * Fetches item workflow states for a site.
+ *
+ * @param siteId site id
+ * @param path optional path regular expression. Omit it, or pass an empty value, to apply no path filter and
+ * return item states for the whole site. The API returns 400 when `path` is blank or is not a valid regular expression.
+ * @param states optional states bitmap mask
+ * @param options pagination options
+ */
 export function fetchItemStates(
 	siteId: string,
 	path?: string,
 	states?: number,
 	options?: PaginationOptions
 ): Observable<PagedArray<ContentItem>> {
-	const qs = toQueryString({ path, states, ...options });
+	const query: { path?: string; states?: number } & PaginationOptions = { states, ...options };
+	// An empty filter must not be sent as path= ; the API treats a blank path as 400.
+	if (path?.trim()) {
+		query.path = path;
+	}
+	const qs = toQueryString(query);
 	return get(`/studio/api/2/workflow/${siteId}/item_states${qs}`).pipe(
 		map((response) => {
 			const { items, total, offset, limit } = response?.response ?? {};
