@@ -865,8 +865,8 @@ async function recordInvalidField(
 /**
  * Subscribes each validation atom and updates only that field's membership in {@link FormsEngineAtoms.invalidFieldIds}.
  * `ready` settles after the first pass. The caller unsubscribes. Each field awaits its own validation;
- * a slow or hanging validator does not hold the others back. `ready` therefore waits for the slowest
- * field, not the sum.
+ * a slow or hanging validator does not hold the others back. `ready` is `Promise.all` over those seeds, so it
+ * waits for every field — including one that never settles — not merely the slowest among those that finish.
  */
 export function watchInvalidFieldIds(
 	store: InvalidFieldIdsStore,

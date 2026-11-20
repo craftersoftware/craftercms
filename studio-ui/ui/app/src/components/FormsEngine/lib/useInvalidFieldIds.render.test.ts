@@ -91,6 +91,23 @@ describe('useInvalidFieldIds', () => {
 		assert.deepEqual(latest(), ['title_s']);
 	});
 
+	it('shows settled invalid fields when another validator never settles', async () => {
+		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
+		entry.atoms = {
+			relevanceVersion: atom(0),
+			invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
+			validationByFieldId: {
+				title_s: atom(Promise.resolve({ isValid: false })),
+				hung_s: atom(new Promise(() => undefined))
+			}
+		} as never;
+		const { latest } = await renderHook({ entry });
+		assert.deepEqual(latest(), [], 'still waiting out the first-read cap while a seed hangs');
+
+		await act(async () => pause(invalidFieldReadDebounceMs + 50));
+		assert.deepEqual(latest(), ['title_s']);
+	});
+
 	it('waits for a trailing pause before later updates', async () => {
 		const title = atom('bad');
 		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });

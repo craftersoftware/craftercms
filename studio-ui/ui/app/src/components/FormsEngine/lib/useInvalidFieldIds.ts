@@ -26,7 +26,8 @@ const noInvalidFieldIds: string[] = [];
 
 /**
  * Live ids of fields that fail validation, excluding controller-irrelevant fields.
- * The first seeded read applies immediately; later membership changes wait out {@link invalidFieldReadDebounceMs}.
+ * The first seeded read applies as soon as every seed settles, or after {@link invalidFieldReadDebounceMs}
+ * if a seed is still pending; later membership changes wait out the same pause.
  * A rejected plugin validator leaves the last ids in place.
  */
 export function useInvalidFieldIds(entry: StableFormContextProps | null | undefined, parentPath?: string): string[] {
@@ -41,7 +42,12 @@ export function useInvalidFieldIds(entry: StableFormContextProps | null | undefi
 		let cancelled = false;
 		initial.current = true;
 		const { unsubscribe, ready } = watchInvalidFieldIds(jotai, entry.atoms);
-		void ready.then(() => {
+		// Cap the first read so a hung seed cannot leave `initial` true for the session.
+		const firstRead = Promise.race([
+			ready,
+			new Promise<void>((resolve) => window.setTimeout(resolve, invalidFieldReadDebounceMs))
+		]);
+		void firstRead.then(() => {
 			if (cancelled) return;
 			setIds(jotai.get(idsAtom));
 			initial.current = false;
