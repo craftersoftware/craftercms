@@ -18,19 +18,41 @@ package org.craftercms.studio.impl.v2.publish;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
 import org.junit.Test;
 
+import java.util.Map;
+
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class PublishingQueueProbeTaskTest {
 
 	@Test
 	public void schedulerStartResetsProcessingPackages() {
 		Publisher publisher = mock(Publisher.class);
-		PublishingQueueProbeTask task = new PublishingQueueProbeTask(mock(PublishDAO.class), 1);
-		task.setPublisher(publisher);
+		PublishingQueueProbeTask task = task(publisher);
 
-		task.onSchedulerStart();
+		task.doExecute();
 
 		verify(publisher).resetProcessingPackages();
+	}
+
+	@Test
+	public void resetProcessingPackagesRunsOnlyOnce() {
+		Publisher publisher = mock(Publisher.class);
+		PublishingQueueProbeTask task = task(publisher);
+
+		task.doExecute();
+		task.doExecute();
+
+		verify(publisher, times(1)).resetProcessingPackages();
+	}
+
+	private static PublishingQueueProbeTask task(Publisher publisher) {
+		PublishDAO publishDAO = mock(PublishDAO.class);
+		when(publishDAO.getNextPublishPackages()).thenReturn(Map.of());
+		PublishingQueueProbeTask task = new PublishingQueueProbeTask(publishDAO, 1);
+		task.setPublisher(publisher);
+		return task;
 	}
 }

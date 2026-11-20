@@ -471,7 +471,7 @@ public class PublisherTest {
 	}
 
 	@Test
-	public void resetProcessingPackagesOnSchedulerStart() {
+	public void resetProcessingPackages() {
 		publisher.resetProcessingPackages();
 
 		verify(publishDAO).resetProcessingPackages(PublishPackage.PackageState.READY.value, PROCESSING.value);

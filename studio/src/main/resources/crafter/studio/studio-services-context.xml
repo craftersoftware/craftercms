@@ -540,8 +540,7 @@
 		   value-type="org.craftercms.studio.api.v2.job.SiteJob">
 	</util:list>
 
-	<bean id="publishingQueueProbeTask" class="org.craftercms.studio.impl.v2.publish.PublishingQueueProbeTask"
-		  init-method="onSchedulerStart">
+	<bean id="publishingQueueProbeTask" class="org.craftercms.studio.impl.v2.publish.PublishingQueueProbeTask">
 		<constructor-arg name="period" value="#{studioConfiguration.getProperty('studio.clockJob.task.publisher.period')}"/>
 		<property name="publisher" ref="publisher"/>
 	</bean>
