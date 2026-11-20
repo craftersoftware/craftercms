@@ -154,6 +154,38 @@ describe('InsertPositionPicker', () => {
 		assert.equal(checkedRadioValue(host), 'after');
 	});
 
+	it('from Insert last, choosing Alpha selects Insert after at splice index 1', async () => {
+		const { host, positions } = await renderPicker({ value: items.length });
+
+		await openSelect(host);
+		const alpha = [...document.querySelectorAll('[role="option"]')].find((option) =>
+			(option.textContent ?? '').includes('Alpha')
+		);
+		assert.ok(alpha instanceof HTMLElement);
+		await act(async () => {
+			alpha.click();
+		});
+
+		assert.deepEqual(positions, [1]);
+		assert.equal(checkedRadioValue(host), 'after');
+	});
+
+	it('from Insert first, choosing Alpha selects Insert after at splice index 1', async () => {
+		const { host, positions } = await renderPicker({ value: 0 });
+
+		await openSelect(host);
+		const alpha = [...document.querySelectorAll('[role="option"]')].find((option) =>
+			(option.textContent ?? '').includes('Alpha')
+		);
+		assert.ok(alpha instanceof HTMLElement);
+		await act(async () => {
+			alpha.click();
+		});
+
+		assert.deepEqual(positions, [1]);
+		assert.equal(checkedRadioValue(host), 'after');
+	});
+
 	it('disables Insert after and hides the combobox for a one-item list; Last reports length', async () => {
 		const oneItem = [{ id: 'only', label: 'Only' }];
 		const { host, positions } = await renderPicker({ items: oneItem, value: 0 });

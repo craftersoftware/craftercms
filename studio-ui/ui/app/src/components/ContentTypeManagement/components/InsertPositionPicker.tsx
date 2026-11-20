@@ -103,11 +103,6 @@ export function InsertPositionPicker(props: InsertPositionPickerProps) {
 		else onChange(afterIndex + 1);
 	};
 
-	const selectAfter = (event: SelectChangeEvent<string>) => {
-		const index = afterOptions.findIndex((item) => item.id === event.target.value);
-		if (index >= 0) onChange(index + 1);
-	};
-
 	return (
 		<FormControl disabled={disabled} sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
 			<FormLabel id={groupLabelId}>
@@ -141,7 +136,6 @@ export function InsertPositionPicker(props: InsertPositionPickerProps) {
 										size="small"
 										disabled={disabled}
 										value={selectedAfterId}
-										onChange={selectAfter}
 										labelId={afterSelectLabelId}
 										SelectDisplayProps={{
 											'aria-labelledby': `${afterRadioId} ${afterSelectLabelId}`
@@ -149,8 +143,8 @@ export function InsertPositionPicker(props: InsertPositionPickerProps) {
 										sx={{ maxWidth: '100%', '& .MuiSelect-select': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
 										renderValue={(id) => afterOptions.find((item) => item.id === id)?.label ?? ''}
 									>
-										{afterOptions.map((item) => (
-											<MenuItem key={item.id} value={item.id}>
+										{afterOptions.map((item, index) => (
+											<MenuItem key={item.id} value={item.id} onClick={() => onChange(index + 1)}>
 												<ListItemText
 													primary={item.label}
 													secondary={item.id}
