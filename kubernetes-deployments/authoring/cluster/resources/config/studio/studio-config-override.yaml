@@ -72,11 +72,13 @@ studio.preview.repoUrl: ${env:CRAFTER_DATA_DIR}/repos/sites/{siteName}/sandbox
 # Crafter DB schema name
 studio.db.schema: ${env:MARIADB_SCHEMA}
 # Crafter DB connection string
-studio.db.url: jdbc:mariadb://${env:MARIADB_HOST}:${env:MARIADB_PORT}/${env:MARIADB_SCHEMA}?user=${env:MARIADB_USER}&password=${env:MARIADB_PASSWD}&socketTimeout=${env:MARIADB_SOCKET_TIMEOUT}
+# sslMode=disable disables TLS for the embedded server. An external TLS server must set sslMode
+# itself (e.g. verify-full, verify-ca, or trust, plus serverSslCert or trustStore).
+studio.db.url: jdbc:mariadb://${env:MARIADB_HOST}:${env:MARIADB_PORT}/${env:MARIADB_SCHEMA}?user=${env:MARIADB_USER}&password=${env:MARIADB_PASSWD}&socketTimeout=${env:MARIADB_SOCKET_TIMEOUT}&sslMode=disable
 # Crafter DB connection string for the script runner
-studio.db.scriptRunnerUrl: jdbc:mariadb://${env:MARIADB_HOST}:${env:MARIADB_PORT}/${env:MARIADB_SCHEMA}?user=${env:MARIADB_USER}&password=${env:MARIADB_PASSWD}&socketTimeout=${env:MARIADB_SOCKET_TIMEOUT}&allowMultiQueries=true
+studio.db.scriptRunnerUrl: jdbc:mariadb://${env:MARIADB_HOST}:${env:MARIADB_PORT}/${env:MARIADB_SCHEMA}?user=${env:MARIADB_USER}&password=${env:MARIADB_PASSWD}&socketTimeout=${env:MARIADB_SOCKET_TIMEOUT}&allowMultiQueries=true&sslMode=disable
 # Connection string used to initialize database. This creates the `crafter` schema, the `crafter` user and/or upgrades the database
-studio.db.initializer.url: jdbc:mariadb://${env:MARIADB_HOST}:${env:MARIADB_PORT}?user=${env:MARIADB_ROOT_USER}&password=${env:MARIADB_ROOT_PASSWD}
+studio.db.initializer.url: jdbc:mariadb://${env:MARIADB_HOST}:${env:MARIADB_PORT}?user=${env:MARIADB_ROOT_USER}&password=${env:MARIADB_ROOT_PASSWD}&sslMode=disable
 # Connection string if using a database with an already created schema and user (like AWS RDS)
 # studio.db.initializer.url: ${studio.db.url}
 # Port number for the embedded database (note this must match what's in the connection URLs in this config file)
