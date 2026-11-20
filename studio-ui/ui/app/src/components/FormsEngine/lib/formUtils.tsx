@@ -17,8 +17,9 @@
 import type { ContentTypeField, ContentTypeSection, PublishPackage } from '../../../models';
 import LookupTable from '../../../models/LookupTable';
 import ContentType from '../../../models/ContentType';
-import validateFieldValue, { FieldValidityState } from './validators';
+import validateFieldValue, { FieldValidityState, type InvalidListItemField } from './validators';
 import { getPropertyValue } from './fieldPropertyUtils';
+import { repeatItemKeysFor, repeatOccurrenceKeys } from './repeatItemKeys';
 import { catchError, forkJoin, map, Observable, of, Subject, switchMap } from 'rxjs';
 import {
 	FieldUpdate,
@@ -69,7 +70,7 @@ import {
 	XmlKeys
 } from './formConsts';
 import { v4 as uuid } from 'uuid';
-import { atomWithStorage } from 'jotai/utils';
+import { atomWithStorage, selectAtom, unwrap } from 'jotai/utils';
 import { useDispatch } from 'react-redux';
 import type { FormsEngineProps } from '../FormsEngine';
 import usePreviousValue from '../../../hooks/usePreviousValue';
@@ -455,6 +456,53 @@ export function changedFieldAtom(
 	return fieldAtom;
 }
 
+const unwrappedValidationAtoms = new WeakMap<Atom<Promise<FieldValidityState>>, Atom<FieldValidityState | undefined>>();
+const listItemValidityAtomsByField = new WeakMap<
+	Atom<Promise<FieldValidityState>>,
+	Map<string, Atom<InvalidListItemField[]>>
+>();
+const emptyInvalidFields: InvalidListItemField[] = [];
+const neverInvalidListItem: Atom<InvalidListItemField[]> = atom(emptyInvalidFields);
+
+/** Stable when field ids and messages match. Function-valued message values are not compared by JSON. */
+function sameInvalidListItemFields(a: InvalidListItemField[], b: InvalidListItemField[]): boolean {
+	return a === b || JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * Failing fields for one list item: a sync array over the field's validation atom, cached per item key.
+ * Empty while loading or when the item is valid (`fields.length > 0` means invalid). {@link selectAtom} with
+ * {@link sameInvalidListItemFields} keeps the previous array when membership is unchanged, so a row re-renders
+ * only when its own detail changes. Pass a missing validation atom to get a constant empty array.
+ */
+export function listItemValidityAtom(
+	validationAtom: Atom<Promise<FieldValidityState>> | null | undefined,
+	itemKey: string
+): Atom<InvalidListItemField[]> {
+	if (!validationAtom) return neverInvalidListItem;
+	let unwrapped = unwrappedValidationAtoms.get(validationAtom);
+	if (!unwrapped) {
+		// `(prev) => prev` keeps the last settled verdict while a re-run is pending so rows do not flash.
+		unwrapped = unwrap(validationAtom, (prev) => prev);
+		unwrappedValidationAtoms.set(validationAtom, unwrapped);
+	}
+	let byKey = listItemValidityAtomsByField.get(validationAtom);
+	if (!byKey) {
+		byKey = new Map();
+		listItemValidityAtomsByField.set(validationAtom, byKey);
+	}
+	let itemAtom = byKey.get(itemKey);
+	if (!itemAtom) {
+		itemAtom = selectAtom(
+			unwrapped,
+			(state) => state?.invalidItems?.find((item) => item.key === itemKey)?.fields ?? emptyInvalidFields,
+			sameInvalidListItemFields
+		);
+		byKey.set(itemKey, itemAtom);
+	}
+	return itemAtom;
+}
+
 /**
  * The next changed-ids set after `fieldId` was found changed or not. This is how a writer updates the set: it never
  * mutates `ids`.
@@ -603,6 +651,11 @@ export function createFieldAtoms(
 		const relevanceVersion = formContextRef.current.atoms?.relevanceVersion;
 		if (relevanceVersion) get(relevanceVersion);
 		const value = get(valueAtom);
+		// Only getListItemKey for repeat fields reads occurenceKeys, so calculate only when needed.
+		const occurrenceKeys =
+			field.type === 'repeat' && Array.isArray(value)
+				? repeatOccurrenceKeys(value, repeatItemKeysFor(valueAtom))
+				: undefined;
 		return validateFieldValue(field, value, {
 			nested: validatorsData?.nested,
 			siteId: validatorsData?.siteId,
@@ -616,6 +669,8 @@ export function createFieldAtoms(
 			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.
 			irrelevantFieldPaths: formContextRef.current.formControllerState?.irrelevantFieldPaths,
 			resolveEmbeddedRelevance: validatorsData?.resolveEmbeddedRelevance,
+			// Same WeakMap owner the Repeat control uses, so row indicators follow the item across reorders.
+			getListItemKey: field.type === 'repeat' ? (item, index) => occurrenceKeys?.[index] ?? String(index) : undefined,
 			// Item-count fields compare min and max. Reading the partner subscribes this atom to it.
 			getValue: (fieldId: string) => {
 				const valueByFieldId = formContextRef.current.atoms?.valueByFieldId;
