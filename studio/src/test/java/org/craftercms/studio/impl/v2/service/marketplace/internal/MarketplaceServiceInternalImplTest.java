@@ -18,13 +18,22 @@ package org.craftercms.studio.impl.v2.service.marketplace.internal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections4.IterableUtils;
 import org.apache.commons.configuration2.HierarchicalConfiguration;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.craftercms.commons.plugin.model.Installation;
 import org.craftercms.commons.plugin.model.Plugin;
+import org.craftercms.studio.api.v1.constant.GitRepositories;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
+import org.craftercms.studio.api.v2.exception.marketplace.PluginInstallationException;
 import org.craftercms.studio.api.v2.service.config.ConfigurationService;
+import org.craftercms.studio.api.v2.service.marketplace.registry.ConfigRecord;
+import org.craftercms.studio.api.v2.utils.GitRepositoryHelper;
+import org.craftercms.studio.api.v2.utils.StudioConfiguration;
+import org.dom4j.Document;
 import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -38,17 +47,32 @@ import org.xmlunit.builder.DiffBuilder;
 import org.xmlunit.diff.Diff;
 
 import javax.xml.transform.TransformerException;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
+import static org.apache.commons.io.IOUtils.toInputStream;
+import static org.apache.commons.lang.text.StrSubstitutor.replace;
+import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_CONFIG_BASE_PATH_PATTERN;
 import static org.craftercms.studio.impl.v2.service.marketplace.internal.MarketplaceServiceInternalImpl.*;
+import static org.craftercms.studio.impl.v2.utils.XsltUtils.executeTemplate;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.expectThrows;
 
 /**
  * @author joseross
@@ -66,6 +90,12 @@ public class MarketplaceServiceInternalImplTest {
 
 	@Mock
 	private ConfigurationService configurationService;
+
+	@Mock
+	private GitRepositoryHelper gitRepositoryHelper;
+
+	@Mock
+	private StudioConfiguration studioConfiguration;
 
 	@InjectMocks
 	private MarketplaceServiceInternalImpl marketplaceService;
@@ -196,6 +226,140 @@ public class MarketplaceServiceInternalImplTest {
 					eq(SITE_ID), eq(MODULE), eq(configFile), eq(null), any());
 			}
 		}
+	}
+
+	/**
+	 * Runs control.xslt and datasource.xslt the same way {@code performConfigurationWiring} does:
+	 * parent-xpath substitution, then {@code executeTemplate} with {@code newXml} and {@code pluginId}.
+	 */
+	@DataProvider(name = "catalogXslt")
+	public Object[][] catalogXslt() {
+		return new Object[][]{
+			new Object[]{
+				"crafter/studio/marketplace/wiring/datasource.xslt",
+				new ClassPathResource("crafter/studio/marketplace/wiring-no-parent/config.xml"),
+				new ClassPathResource("crafter/studio/marketplace/wiring-no-parent/plugin.json"),
+				new ClassPathResource("crafter/studio/marketplace/wiring-no-parent/expected.xml"),
+				"//widget[@id='craftercms.components.ContentTypeManagement']/configuration/dataSources/myPlugin"
+			},
+			new Object[]{
+				"crafter/studio/marketplace/wiring/control.xslt",
+				new ClassPathResource("crafter/studio/marketplace/wiring-no-parent-control/config.xml"),
+				new ClassPathResource("crafter/studio/marketplace/wiring-no-parent-control/plugin.json"),
+				new ClassPathResource("crafter/studio/marketplace/wiring-no-parent-control/expected.xml"),
+				"//widget[@id='craftercms.components.ContentTypeManagement']/configuration/controls/control[@id='myPlugin']"
+			}
+		};
+	}
+
+	@Test(dataProvider = "catalogXslt")
+	public void catalogXsltAppendsEntryUnderContentTypeManagement(String templatePath, Resource config,
+								      Resource pluginJson, Resource expectedXml,
+								      String elementXpath)
+		throws IOException, TransformerException, DocumentException {
+		try (InputStream pluginContent = pluginJson.getInputStream();
+		     InputStream configContent = config.getInputStream();
+		     InputStream expectedContent = expectedXml.getInputStream();
+		     InputStream templateContent = new ClassPathResource(templatePath).getInputStream()) {
+			Plugin plugin = MAPPER.readValue(pluginContent, Plugin.class);
+			Installation installation = plugin.getInstallation().getFirst();
+			String template = IOUtils.toString(templateContent, UTF_8);
+			template = replace(template, Map.of(PARAM_PARENT_XPATH, installation.getParentXpath().replace("\"", "'")));
+
+			String newXml = marketplaceService.buildXml(installation.getElement()).asXML();
+			Map<String, Object> params = new HashMap<>();
+			params.put(PARAM_NEW_XML, newXml);
+			params.put(PARAM_PLUGIN_ID, plugin.getId());
+
+			ByteArrayOutputStream output = new ByteArrayOutputStream();
+			executeTemplate(toInputStream(template, UTF_8), params, null, configContent, output);
+
+			String result = output.toString(UTF_8);
+			Document document = DocumentHelper.parseText(result);
+			assertNotNull(document.selectSingleNode(elementXpath), result);
+
+			Diff diff = DiffBuilder
+				.compare(expectedContent)
+				.withTest(result)
+				.ignoreWhitespace()
+				.ignoreComments()
+				.checkForSimilar()
+				.build();
+			assertEquals(IterableUtils.size(diff.getDifferences()), 0, diff.toString());
+		}
+	}
+
+	@Test
+	public void wiringWritesControlWhenCatalogParentExists() throws Exception {
+		Path repo = repoWithConfig(new ClassPathResource("crafter/studio/marketplace/wiring-no-parent-control/config.xml"));
+		try {
+			Path uiXml = repo.resolve("config/studio/ui.xml");
+			Plugin plugin;
+			try (InputStream pluginContent =
+				     new ClassPathResource("crafter/studio/marketplace/wiring-no-parent-control/plugin.json").getInputStream()) {
+				plugin = MAPPER.readValue(pluginContent, Plugin.class);
+			}
+			List<String> changedFiles = new ArrayList<>();
+			List<ConfigRecord> wiring = new ArrayList<>();
+
+			marketplaceService.performConfigurationWiring(plugin, SITE_ID, changedFiles, wiring);
+
+			Document document = DocumentHelper.parseText(Files.readString(uiXml));
+			assertNotNull(document.selectSingleNode(
+				"//widget[@id='craftercms.components.ContentTypeManagement']/configuration/controls/control[@id='myPlugin']"));
+			assertEquals(changedFiles, List.of("config/studio/ui.xml"));
+			assertEquals(wiring.size(), 1);
+			assertEquals(wiring.getFirst().getType(), "form-control");
+			assertEquals(wiring.getFirst().getElementXpath(), "//control[@id='myPlugin']");
+		} finally {
+			FileUtils.deleteDirectory(repo.toFile());
+		}
+	}
+
+	@Test
+	public void wiringThrowsWhenCatalogParentIsMissing() throws Exception {
+		Resource config = new ClassPathResource("crafter/studio/marketplace/wiring-missing-catalog/config.xml");
+		Path repo = repoWithConfig(config);
+		try {
+			Path uiXml = repo.resolve("config/studio/ui.xml");
+			byte[] original = Files.readAllBytes(uiXml);
+			Plugin plugin;
+			try (InputStream pluginContent =
+				     new ClassPathResource("crafter/studio/marketplace/wiring-no-parent-control/plugin.json").getInputStream()) {
+				plugin = MAPPER.readValue(pluginContent, Plugin.class);
+			}
+			List<String> changedFiles = new ArrayList<>();
+			List<ConfigRecord> wiring = new ArrayList<>();
+
+			expectThrows(PluginInstallationException.class, () ->
+				marketplaceService.performConfigurationWiring(plugin, SITE_ID, changedFiles, wiring));
+
+			assertEquals(changedFiles.size(), 0);
+			assertEquals(wiring.size(), 0);
+			assertTrue(Arrays.equals(original, Files.readAllBytes(uiXml)));
+		} finally {
+			FileUtils.deleteDirectory(repo.toFile());
+		}
+	}
+
+	private Path repoWithConfig(Resource config) throws IOException {
+		Path repo = Files.createTempDirectory("plugin-wiring");
+		Path uiXml = repo.resolve("config/studio/ui.xml");
+		Files.createDirectories(uiXml.getParent());
+		try (InputStream in = config.getInputStream()) {
+			Files.copy(in, uiXml);
+		}
+
+		when(gitRepositoryHelper.buildRepoPath(GitRepositories.SANDBOX, SITE_ID)).thenReturn(repo);
+		when(studioConfiguration.getProperty(CONFIGURATION_SITE_CONFIG_BASE_PATH_PATTERN)).thenReturn("/config/{module}");
+
+		HierarchicalConfiguration mapping = mock(HierarchicalConfiguration.class);
+		when(mapping.getString(MODULE_CONFIG_KEY)).thenReturn(MODULE);
+		when(mapping.getString(PATH_CONFIG_KEY)).thenReturn("ui.xml");
+		when(mapping.getString(TEMPLATE_CONFIG_KEY))
+			.thenReturn("crafter/studio/marketplace/wiring/control.xslt");
+		when(widgetMapping.configurationAt("form-control")).thenReturn(mapping);
+		return repo;
 	}
 
 }

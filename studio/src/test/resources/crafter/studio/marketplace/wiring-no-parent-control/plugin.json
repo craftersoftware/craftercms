@@ -1,0 +1,29 @@
+{
+	"id": "org.craftercms.plugin.test",
+	"installation": [
+		{
+			"type": "form-control",
+			"elementXpath": "//control[@id='myPlugin']",
+			"element": {
+				"name": "control",
+				"attributes": [
+					{
+						"name": "id",
+						"value": "myPlugin"
+					}
+				],
+				"children": [
+					{
+						"name": "plugin",
+						"children": [
+							{
+								"name": "pluginId",
+								"value": "org.craftercms.plugin.test"
+							}
+						]
+					}
+				]
+			}
+		}
+	]
+}

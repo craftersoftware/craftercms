@@ -53,7 +53,8 @@ import { createParsedValueForField } from '../FormsEngine/lib/valueRetrievers';
 import { toBooleanString, toColor } from '../../utils/string';
 import { getXmlBuilder, valueSerializersLookup } from '../FormsEngine/lib/valueSerializers';
 import { nanoid } from 'nanoid';
-import { commonDataSourceDescriptors, dataSourceDescriptors } from './descriptors/dataSources';
+import { commonDataSourceDescriptors } from './descriptors/dataSources';
+import { resolveDataSourceDescriptor } from './catalogDescriptorLookup';
 import type { ControlProps } from '../FormsEngine/types';
 import { defineMessage, IntlShape } from 'react-intl';
 import TranslationOrText from '../../models/TranslationOrText';
@@ -949,7 +950,7 @@ function convertDataSourceStructToXmlStruct(
 	dataSource: DataSource,
 	configDataSourceDescriptors?: LookupTable<DescriptorContentType>
 ): Required<LegacyDataSource> {
-	const descriptor = configDataSourceDescriptors?.[dataSource.type] ?? dataSourceDescriptors[dataSource.type];
+	const descriptor = resolveDataSourceDescriptor(dataSource.type, configDataSourceDescriptors?.[dataSource.type]);
 	return {
 		id: dataSource.id,
 		interface: dataSource.interface,
