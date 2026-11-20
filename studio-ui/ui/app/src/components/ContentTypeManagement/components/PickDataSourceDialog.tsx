@@ -54,6 +54,7 @@ export function PickDataSourceDialog(props: PickDataSourceDialogProps) {
 			configLookup={configDataSources}
 			typesFullList={typesFullList}
 			typesCurrentList={props.type.dataSources}
+			insertAfterSelectLabel={<FormattedMessage defaultMessage="Data source to insert after" />}
 		/>
 	);
 }
