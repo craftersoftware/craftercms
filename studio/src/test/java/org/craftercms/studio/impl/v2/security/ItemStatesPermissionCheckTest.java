@@ -21,10 +21,15 @@ import org.craftercms.commons.security.permissions.PermissionEvaluator;
 import org.craftercms.commons.security.permissions.SubjectResolver;
 import org.craftercms.commons.security.permissions.annotations.HasPermissionAnnotationHandler;
 import org.craftercms.commons.security.permissions.impl.PermissionEvaluatorImpl;
+import org.craftercms.studio.api.v2.exception.InvalidParametersException;
+import org.craftercms.studio.api.v2.service.publish.PublishService;
 import org.craftercms.studio.api.v2.service.security.UserService;
 import org.craftercms.studio.api.v2.service.workflow.WorkflowService;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
+import org.craftercms.studio.controller.rest.v2.WorkflowController;
 import org.craftercms.studio.impl.v2.service.workflow.WorkflowServiceImpl;
+import org.craftercms.studio.model.rest.ApiResponse;
+import org.craftercms.studio.model.rest.PaginatedResultList;
 import org.craftercms.studio.permissions.PermissionResolverImpl;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,14 +40,16 @@ import java.util.Map;
 
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_READ;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Drives item-state reads through the real permission handler, resolver, and path rules.
+ * Item-state reads go through the controller before the real permission check.
  */
 public class ItemStatesPermissionCheckTest {
 
@@ -50,18 +57,17 @@ public class ItemStatesPermissionCheckTest {
 	private static final String USERNAME = "admin";
 	private static final String CONTENT_PATH = "/site/website/index.xml";
 
-	private WorkflowService workflowService;
+	private WorkflowController controller;
 	private WorkflowService workflowServiceInternal;
 	private UserService userService;
-	private RolePermissionMappingsImpl mappings;
 
 	@Before
 	public void setUp() throws Exception {
-		mappings = new RolePermissionMappingsImpl();
+		RolePermissionMappingsImpl mappings = new RolePermissionMappingsImpl();
 		mappings.addRuleContentItemPermissionsMapping("/.*", List.of(PERMISSION_CONTENT_READ));
 
 		userService = mock(UserService.class);
-		when(userService.getUserPermissions(eq(SITE_ID), any(), eq(USERNAME)))
+		when(userService.getUserPermissions(SITE_ID, CONTENT_PATH, USERNAME))
 			.thenAnswer(invocation -> mappings.getPermissionsForPath(invocation.getArgument(1)));
 
 		StudioConfiguration studioConfiguration = mock(StudioConfiguration.class);
@@ -72,35 +78,44 @@ public class ItemStatesPermissionCheckTest {
 			Map.of(DefaultPermission.class, evaluator), "");
 
 		workflowServiceInternal = mock(WorkflowService.class);
-		when(workflowServiceInternal.getItemStatesTotal(eq(SITE_ID), any(), any()))
-			.thenReturn(4);
 		AspectJProxyFactory proxyFactory = new AspectJProxyFactory(new WorkflowServiceImpl(workflowServiceInternal));
 		proxyFactory.setProxyTargetClass(true);
 		proxyFactory.addAspect(handler);
-		workflowService = proxyFactory.getProxy();
+		controller = new WorkflowController(proxyFactory.getProxy(), mock(PublishService.class));
 	}
 
 	@Test
-	public void nullPathIsCheckedAtTheSiteRootAndQueriedAsOmitted() throws Exception {
-		assertEquals(4, workflowService.getItemStatesTotal(SITE_ID, null, null));
+	public void missingPathIsRejectedBeforePermissionCheck() {
+		assertThrows(InvalidParametersException.class, () -> controller.getItemStates(SITE_ID, null, null, 0, 10));
 
-		verify(userService).getUserPermissions(SITE_ID, "/", USERNAME);
-		verify(workflowServiceInternal).getItemStatesTotal(SITE_ID, null, null);
+		verifyNoInteractions(userService, workflowServiceInternal);
 	}
 
 	@Test
-	public void blankPathIsCheckedAtTheSiteRootAndQueriedUnchanged() throws Exception {
-		assertEquals(4, workflowService.getItemStatesTotal(SITE_ID, "  ", null));
+	public void blankPathIsRejectedBeforePermissionCheck() {
+		assertThrows(InvalidParametersException.class, () -> controller.getItemStates(SITE_ID, "  ", null, 0, 10));
 
-		verify(userService).getUserPermissions(SITE_ID, "/", USERNAME);
-		verify(workflowServiceInternal).getItemStatesTotal(SITE_ID, "  ", null);
+		verifyNoInteractions(userService, workflowServiceInternal);
 	}
 
 	@Test
-	public void contentPathIsCheckedAndQueriedAsGiven() throws Exception {
-		workflowService.getItemsByStates(SITE_ID, CONTENT_PATH, null, 0, 10);
+	public void invalidRegexIsRejectedBeforePermissionCheck() {
+		assertThrows(InvalidParametersException.class, () -> controller.getItemStates(SITE_ID, "[", null, 0, 10));
 
-		verify(userService).getUserPermissions(SITE_ID, CONTENT_PATH, USERNAME);
+		verifyNoInteractions(userService, workflowServiceInternal);
+	}
+
+	@Test
+	public void validPathIsPermissionCheckedAndQueried() throws Exception {
+		when(workflowServiceInternal.getItemStatesTotal(SITE_ID, CONTENT_PATH, null)).thenReturn(4);
+		when(workflowServiceInternal.getItemsByStates(SITE_ID, CONTENT_PATH, null, 0, 10)).thenReturn(List.of());
+
+		PaginatedResultList<?> result = controller.getItemStates(SITE_ID, CONTENT_PATH, null, 0, 10);
+
+		assertSame(ApiResponse.OK, result.getResponse());
+		assertEquals(4L, result.getTotal());
+		verify(userService, times(2)).getUserPermissions(SITE_ID, CONTENT_PATH, USERNAME);
+		verify(workflowServiceInternal).getItemStatesTotal(SITE_ID, CONTENT_PATH, null);
 		verify(workflowServiceInternal).getItemsByStates(SITE_ID, CONTENT_PATH, null, 0, 10);
 	}
 

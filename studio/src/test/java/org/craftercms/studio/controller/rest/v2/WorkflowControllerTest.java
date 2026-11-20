@@ -33,14 +33,15 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class WorkflowControllerTest {
 
 	private static final String SITE_ID = "editorial";
+	private static final String PATH = "/site/website/.*";
 
 	@Mock
 	private WorkflowService workflowService;
@@ -55,38 +56,44 @@ public class WorkflowControllerTest {
 	}
 
 	@Test
-	public void nullPathReturnsItemStatesForTheWholeSite() throws Exception {
-		when(workflowService.getItemStatesTotal(SITE_ID, null, null)).thenReturn(2);
-		when(workflowService.getItemsByStates(SITE_ID, null, null, 0, 10)).thenReturn(List.of(new ContentItem()));
+	public void nullPathIsRejected() {
+		assertThrows(InvalidParametersException.class, () -> controller.getItemStates(SITE_ID, null, null, 0, 10));
 
-		PaginatedResultList<ContentItem> result = controller.getItemStates(SITE_ID, null, null, 0, 10);
+		verifyNoInteractions(workflowService);
+	}
+
+	@Test
+	public void emptyPathIsRejected() {
+		assertThrows(InvalidParametersException.class, () -> controller.getItemStates(SITE_ID, "", null, 0, 10));
+
+		verifyNoInteractions(workflowService);
+	}
+
+	@Test
+	public void blankPathIsRejected() {
+		assertThrows(InvalidParametersException.class, () -> controller.getItemStates(SITE_ID, "  ", null, 0, 10));
+
+		verifyNoInteractions(workflowService);
+	}
+
+	@Test
+	public void invalidPathRegexIsRejected() {
+		assertThrows(InvalidParametersException.class, () -> controller.getItemStates(SITE_ID, "[", null, 0, 10));
+
+		verifyNoInteractions(workflowService);
+	}
+
+	@Test
+	public void validPathIsQueried() throws Exception {
+		when(workflowService.getItemStatesTotal(SITE_ID, PATH, null)).thenReturn(2);
+		when(workflowService.getItemsByStates(SITE_ID, PATH, null, 0, 10)).thenReturn(List.of(new ContentItem()));
+
+		PaginatedResultList<ContentItem> result = controller.getItemStates(SITE_ID, PATH, null, 0, 10);
 
 		assertSame(ApiResponse.OK, result.getResponse());
 		assertEquals(2L, result.getTotal());
 		assertEquals(1, result.getLimit());
-		verify(workflowService).getItemStatesTotal(SITE_ID, null, null);
-		verify(workflowService).getItemsByStates(SITE_ID, null, null, 0, 10);
-	}
-
-	@Test
-	public void emptyPathReturnsItemStatesForTheWholeSite() throws Exception {
-		when(workflowService.getItemStatesTotal(SITE_ID, null, null)).thenReturn(1);
-		when(workflowService.getItemsByStates(SITE_ID, null, null, 0, 10)).thenReturn(List.of());
-
-		PaginatedResultList<ContentItem> result = controller.getItemStates(SITE_ID, "", null, 0, 10);
-
-		assertSame(ApiResponse.OK, result.getResponse());
-		assertEquals(1L, result.getTotal());
-		verify(workflowService).getItemStatesTotal(SITE_ID, null, null);
-		verify(workflowService).getItemsByStates(SITE_ID, null, null, 0, 10);
-	}
-
-	@Test
-	public void invalidPathRegexIsRejected() throws Exception {
-		assertThrows(InvalidParametersException.class,
-			() -> controller.getItemStates(SITE_ID, "[", null, 0, 10));
-
-		verify(workflowService, never()).getItemStatesTotal(SITE_ID, "[", null);
-		verify(workflowService, never()).getItemsByStates(SITE_ID, "[", null, 0, 10);
+		verify(workflowService).getItemStatesTotal(SITE_ID, PATH, null);
+		verify(workflowService).getItemsByStates(SITE_ID, PATH, null, 0, 10);
 	}
 }

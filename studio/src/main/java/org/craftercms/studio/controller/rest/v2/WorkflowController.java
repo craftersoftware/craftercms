@@ -72,24 +72,23 @@ public class WorkflowController {
 
 	@GetMapping(value = ITEM_STATES, produces = APPLICATION_JSON_VALUE)
 	public PaginatedResultList<ContentItem> getItemStates(@NotBlank @ValidSiteId @PathVariable String siteId,
-														  @RequestParam(name = REQUEST_PARAM_PATH, required = false) String path,
+														  @NotBlank @RequestParam(name = REQUEST_PARAM_PATH) String path,
 														  @RequestParam(name = REQUEST_PARAM_STATES, required = false) Long states,
 														  @PositiveOrZero @RequestParam(value = REQUEST_PARAM_OFFSET, required = false, defaultValue = "0")
 														  int offset,
 														  @PositiveOrZero @RequestParam(value = REQUEST_PARAM_LIMIT, required = false, defaultValue = "10")
 														  int limit) throws SiteNotFoundException, InvalidParametersException {
-		String pathRegex = null;
-		if (StringUtils.isNotEmpty(path)) {
-			if (!isPathRegexValid(path)) {
-				throw new InvalidParametersException("Parameter 'path' is not valid regular expression.");
-			}
-			pathRegex = path;
+		if (StringUtils.isBlank(path)) {
+			throw new InvalidParametersException("Parameter 'path' is required.");
 		}
-		int total = workflowService.getItemStatesTotal(siteId, pathRegex, states);
+		if (!isPathRegexValid(path)) {
+			throw new InvalidParametersException("Parameter 'path' is not valid regular expression.");
+		}
+		int total = workflowService.getItemStatesTotal(siteId, path, states);
 		List<ContentItem> items = emptyList();
 
 		if (total > offset) {
-			items = workflowService.getItemsByStates(siteId, pathRegex, states, offset, limit);
+			items = workflowService.getItemsByStates(siteId, path, states, offset, limit);
 		}
 
 		PaginatedResultList<ContentItem> result = new PaginatedResultList<>();

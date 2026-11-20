@@ -8036,7 +8036,7 @@ paths:
                 -   name: path
                     in: query
                     description: path regex
-                    required: false
+                    required: true
                     schema:
                         type: string
                 -   name: states
