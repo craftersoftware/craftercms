@@ -58,7 +58,8 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
-import { checkMinimumSaveRequirementsFulfilled, isInternalNameValid } from './validators';
+import { checkMinimumSaveRequirementsFulfilled } from './validators';
+import { embeddedMinimumSaveAlert, fullFormMinimumSaveAlert, isBlankCreateFileName } from './minimumSaveRequirements';
 import { cancelPackages, fetchAffectedPackages } from '../../../services/workflow';
 import { switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
@@ -388,19 +389,21 @@ export function useSaveForm(props: UseSaveFormProps) {
 				});
 
 				complementValuesWithSystemProps(id, values, contentObject, contentType, saveAsDraft);
+				const hasInternalNameField = Boolean(contentType.fields?.[XmlKeys.internalName]);
 				// Embedded handled here. If true, execution ends inside if statement.
 				if (isEmbedded) {
 					// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
 					// Same safety net as the full form below, for a stacked embedded form too.
-					if (!isInternalNameValid(values)) {
+					// Internal name is required only when this type defines the field.
+					const embeddedAlert = embeddedMinimumSaveAlert(
+						formatMessage,
+						contentType.fields,
+						values[XmlKeys.internalName],
+						hasInternalNameField
+					);
+					if (embeddedAlert) {
 						setIsSubmitting(false);
-						return showAlert({
-							dispatch,
-							message: formatMessage(
-								{ defaultMessage: '{internalName} is required to save content.' },
-								{ internalName: contentType.fields[XmlKeys.internalName].name }
-							)
-						});
+						return showAlert({ dispatch, message: embeddedAlert });
 					}
 
 					// Parents (e.g. NodeSelector) merge `values` into the in-memory component, not `xml`/`dom`.
@@ -496,6 +499,18 @@ export function useSaveForm(props: UseSaveFormProps) {
 					}
 					return 'saved';
 				}
+				// A type with no file-name field has no validity atom, so the check below treats the name as
+				// valid. A blank name would compose `<folder>/index.xml` or `<folder>/.xml`. Refuse it first.
+				if (isBlankCreateFileName({ isCreateMode, isEmbedded, fileName: currentFileName })) {
+					setIsSubmitting(false);
+					const msg = fullFormMinimumSaveAlert(formatMessage, contentType.fields, {
+						fileNameValid: false,
+						internalName: values[XmlKeys.internalName],
+						hasInternalNameField
+					});
+					if (msg) showAlert({ dispatch, message: msg });
+					return;
+				}
 				let path: string;
 				let renamePath: string;
 				const isRename = !isCreateMode && currentFileName !== initialFileName;
@@ -552,22 +567,24 @@ export function useSaveForm(props: UseSaveFormProps) {
 				// Validate minimum requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
 				// The Save card disables itself on the same rule (minimumSaveRequirements). This stays for a read that is
 				// a moment behind, and for a value `onBeforeSave` changed.
+				// A type with no file-name field has no validity atom. Do not read that missing atom.
+				const fileNameValidationAtom = stableFormContext.atoms.validationByFieldId[XmlKeys.fileName];
+				const fileNameValidation = fileNameValidationAtom ? jotai.get(fileNameValidationAtom) : undefined;
 				const minimumRequirementsFullfilled = await checkMinimumSaveRequirementsFulfilled(
-					jotai.get(stableFormContext.atoms.validationByFieldId[XmlKeys['fileName']]),
-					values
+					fileNameValidation,
+					values,
+					hasInternalNameField
 				);
 				if (!minimumRequirementsFullfilled) {
-					setIsSubmitting(false);
-					return showAlert({
-						dispatch,
-						message: formatMessage(
-							{ defaultMessage: 'You need a valid {fileName} and {internalName} at a minimum to save content.' },
-							{
-								fileName: contentType.fields[XmlKeys.fileName].name,
-								internalName: contentType.fields[XmlKeys.internalName].name
-							}
-						)
+					const fileNameValid = fileNameValidation ? (await fileNameValidation).isValid : true;
+					const msg = fullFormMinimumSaveAlert(formatMessage, contentType.fields, {
+						fileNameValid,
+						internalName: values[XmlKeys.internalName],
+						hasInternalNameField
 					});
+					setIsSubmitting(false);
+					if (msg) showAlert({ dispatch, message: msg });
+					return;
 				}
 
 				// TODO: write-content url on FE1 sends phase, path, fileName, contentType QSAs. Important?

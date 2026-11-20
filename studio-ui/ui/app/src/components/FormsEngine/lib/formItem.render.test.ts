@@ -385,6 +385,42 @@ describe('form item subscriptions', () => {
 			assert.deepEqual(fetched, []);
 		});
 	});
+
+	it('renders an embedded header when the type has no internal-name field', async () => {
+		const store = createItemsStore(baseItems());
+		const entry = createEntry(['file-name']);
+		const host = await mountTree(
+			store,
+			React.createElement(FormHost, { entry }, React.createElement(EditModeHeader, { isEmbedded: true }))
+		);
+		assert.equal(host.querySelector('[title]')?.getAttribute('title') ?? '', '');
+		assert.equal(host.textContent?.includes('About'), false);
+		assert.equal(host.textContent?.includes(formPath), true);
+	});
+
+	it('skips metadata when the form has no content item yet', async () => {
+		const store = createItemsStore({});
+		const entry = createEntry(['file-name']);
+		const host = await mountTree(
+			store,
+			React.createElement(FormHost, { entry, create: true, itemKey: null }, React.createElement(EditModeMetadata))
+		);
+		assert.equal(host.querySelector('[data-testid="not-ready"]'), null);
+		assert.equal(host.textContent?.trim() ?? '', '');
+		assert.equal(host.textContent?.includes('Created'), false);
+		assert.equal(host.textContent?.includes('Updated'), false);
+	});
+
+	it('renders an embedded header when the form has no content item yet', async () => {
+		const store = createItemsStore({});
+		const entry = createEntry(['file-name']);
+		const host = await mountTree(
+			store,
+			React.createElement(FormHost, { entry }, React.createElement(EditModeHeader, { isEmbedded: true }))
+		);
+		assert.equal(host.querySelector('[title]')?.getAttribute('title') ?? '', '');
+		assert.equal(host.textContent?.includes(formPath), false);
+	});
 });
 
 /** The item's lock, as the header's state text would show it, in a form a test can read. */
