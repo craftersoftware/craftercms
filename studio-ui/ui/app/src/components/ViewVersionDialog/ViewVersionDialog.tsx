@@ -39,7 +39,7 @@ import { MonacoDiffEditorOptions } from '../MonacoEditor';
 import { getDialogHeaderActions } from '../CompareVersionsDialog';
 
 export function ViewVersionDialog(props: ViewVersionDialogProps) {
-	const { rightActions, leftActions, contentTypesBranch, error, isFetching, version, onClose, ...rest } = props;
+	const { rightActions, leftActions, error, isFetching, version, onClose, ...rest } = props;
 	const [showXml, setShowXml] = useState(false);
 	const { formatMessage } = useIntl();
 	const largeHeightScreen = useMediaQuery('(min-height: 880px)');
@@ -125,13 +125,7 @@ export function ViewVersionDialog(props: ViewVersionDialogProps) {
 			{...rest}
 		>
 			<VersionsDialogContext.Provider value={context}>
-				<ViewVersionDialogContainer
-					version={version}
-					contentTypesBranch={contentTypesBranch}
-					error={error}
-					isFetching={isFetching}
-					showXml={showXml}
-				/>
+				<ViewVersionDialogContainer version={version} error={error} isFetching={isFetching} showXml={showXml} />
 
 				{/* Sub-view for inner viewVersionDialog */}
 				<Backdrop

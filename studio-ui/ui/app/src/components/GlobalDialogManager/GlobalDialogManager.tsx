@@ -222,7 +222,6 @@ function GlobalDialogManager() {
 						...action,
 						onClick: createCallback(action.onClick, dispatch)
 					}))}
-					contentTypesBranch={contentTypesBranch}
 					onClose={createCallback(state.viewVersion.onClose, dispatch)}
 					onClosed={createCallback(state.viewVersion.onClosed, dispatch)}
 				/>
