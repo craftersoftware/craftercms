@@ -105,46 +105,6 @@
 	color: #d0a70d;
 }
 
-.cstudio-admin-console-item .contenttypes::before {
-	content: '\f009';
-}
-
-.cstudio-admin-console-item .configuration::before {
-	content: '\f013';
-}
-
-.cstudio-admin-console-item .groups::before {
-	content: '\f0c0';
-}
-
-.cstudio-admin-console-item .audit::before {
-	content: '\f039';
-}
-
-.cstudio-admin-console-item .bulkoperations::before {
-	content: '\f0b2';
-}
-
-.cstudio-admin-console-item .workflowstates::before {
-	content: '\f013';
-}
-
-.cstudio-admin-console-item .logginglevels::before {
-	content: '\f149';
-}
-
-.cstudio-admin-console-item .logconsole::before {
-	content: '\f036';
-}
-
-.cstudio-admin-console-item .previewsync::before {
-	content: '\f021';
-}
-
-.cstudio-admin-console-item .syncfromrepository::before {
-	content: '\f021';
-}
-
 .icon-container > span {
 	font-size: 16px;
 }
