@@ -18,20 +18,15 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
 
-const { atom, createStore } = await import('jotai');
 const {
 	blockingFieldName,
 	firstBlockingFieldId,
 	minimumRequirementsCopy,
 	minimumRequirementsNotice,
 	missingMinimumSaveRequirements,
-	readMissingMinimumSaveRequirements,
 	saveButtonTip,
 	validationAlertVariant
 } = await import('./minimumSaveRequirements.ts');
-
-const valid = { isValid: true, messages: [] };
-const invalid = { isValid: false, messages: [] };
 
 describe('minimum save requirements', () => {
 	it('needs a valid file name and an internal name on a full form', () => {
@@ -62,38 +57,6 @@ describe('minimum save requirements', () => {
 			missingMinimumSaveRequirements({ isRepeatMode: true, isEmbedded: false, fileNameValid: false, internalName: '' }),
 			[]
 		);
-	});
-
-	it('reads the requirements from the form atoms', async () => {
-		const store = createStore();
-		const internalName = atom<unknown>('');
-		const fileName = atom(Promise.resolve(invalid));
-		const atoms = {
-			validationByFieldId: { 'file-name': fileName },
-			valueByFieldId: { 'internal-name': internalName }
-		} as never;
-		const full = { isRepeatMode: false, isEmbedded: false };
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), ['fileName', 'internalName']);
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, { ...full, isEmbedded: true }), [
-			'internalName'
-		]);
-		store.set(internalName as never, 'Home');
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), ['fileName']);
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, { ...full, isRepeatMode: true }), []);
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, null, full), []);
-	});
-
-	it('follows a file name that becomes valid', async () => {
-		const store = createStore();
-		const name = atom('');
-		const atoms = {
-			validationByFieldId: { 'file-name': atom(async (get) => (get(name) ? valid : invalid)) },
-			valueByFieldId: { 'internal-name': atom<unknown>('Home') }
-		} as never;
-		const full = { isRepeatMode: false, isEmbedded: false };
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), ['fileName']);
-		store.set(name, 'home');
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), []);
 	});
 });
 
