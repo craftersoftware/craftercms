@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { combineEpics, ofType } from 'redux-observable';
+import { combineEpics } from 'redux-observable';
 import auth from './auth';
 import sites from './sites';
 import contentTypes from './contentTypes';
@@ -27,8 +27,7 @@ import itemVersions from './itemVersions';
 import env from './env';
 import content from './content';
 import translation from './translation';
-import { switchMap } from 'rxjs/operators';
-import { batchActions } from '../actions/misc';
+import batchActionsEpic from './batchActions';
 import configuration from './configuration';
 import pathNavigator from './pathNavigator';
 import pathNavigatorTree from './pathNavigatorTree';
@@ -37,15 +36,9 @@ import system from './system';
 import users from './users';
 import mappedDialogs from './mappedDialogs';
 import { CrafterCMSEpic } from '../store';
-import { Observable } from 'rxjs';
-import StandardAction from '../../models/StandardAction';
 
 const epic: CrafterCMSEpic = combineEpics(
-	(action$: Observable<StandardAction<StandardAction[]>>) =>
-		action$.pipe(
-			ofType(batchActions.type),
-			switchMap(({ payload }) => payload)
-		),
+	batchActionsEpic,
 	...auth,
 	...sites,
 	...contentTypes,
