@@ -18,7 +18,6 @@ import '../../scripts/eslintTypescriptRedirect.cjs';
 import { fixupConfigRules } from '@eslint/compat';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
-import formatjs from 'eslint-plugin-formatjs';
 import globals from 'globals';
 import tsParser from '@typescript-eslint/parser';
 import path from 'node:path';
@@ -57,7 +56,7 @@ export default [
 	})),
 	{
 		files: ['**/*.ts', '**/*.tsx'],
-		plugins: { 'react-refresh': reactRefresh, 'jsx-a11y': jsxA11y, formatjs },
+		plugins: { 'react-refresh': reactRefresh, 'jsx-a11y': jsxA11y },
 		languageOptions: {
 			globals: { ...globals.browser },
 			parser: tsParser,

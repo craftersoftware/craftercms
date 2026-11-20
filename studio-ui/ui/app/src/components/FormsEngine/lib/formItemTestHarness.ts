@@ -20,12 +20,11 @@
  * test can replace. Import it after `test/stringListDomSetup.mjs` and `test/registerTsLoader.mjs`.
  */
 
+import React, { act } from 'react';
 import type { ComponentType } from 'react';
 import type { AnyValue, ControlProps } from '../types';
 import type { ContentTypeField } from '../../../models/ContentType';
 
-const React = await import('react');
-const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { RawIntlProvider, createIntl } = await import('react-intl');
 const { Provider } = await import('react-redux');
