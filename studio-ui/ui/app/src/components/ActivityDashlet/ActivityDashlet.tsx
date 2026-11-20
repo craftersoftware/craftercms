@@ -459,7 +459,7 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 						) : (
 							<FormattedMessage
 								id="activityDashlet.showSelectedActivities"
-								defaultMessage="Selected activities ({count})"
+								defaultMessage="Selected Activities ({count})"
 								values={{ count: activities.length }}
 							/>
 						)}
