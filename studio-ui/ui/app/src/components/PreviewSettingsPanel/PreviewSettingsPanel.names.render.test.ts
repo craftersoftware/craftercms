@@ -113,8 +113,8 @@ describe('settings edit mode switch', () => {
 			'input[aria-labelledby="settingsPanelKeyboardShortcutsLabel"]'
 		);
 		assert.ok(shortcuts, 'keyboard shortcuts switch input');
-		assert.equal(host.querySelector('#settingsPanelKeyboardShortcutsLabel')?.textContent, 'Keyboard shortcuts');
-		assert.equal(accessibleName(host, shortcuts), 'Keyboard shortcuts');
+		assert.equal(host.querySelector('#settingsPanelKeyboardShortcutsLabel')?.textContent, 'Keyboard Shortcuts');
+		assert.equal(accessibleName(host, shortcuts), 'Keyboard Shortcuts');
 		assert.equal(shortcuts.closest('.MuiSwitch-switchBase')?.getAttribute('aria-label'), null);
 		assert.equal(shortcuts.closest('.MuiSwitch-switchBase')?.getAttribute('aria-labelledby'), null);
 	});
@@ -154,7 +154,7 @@ describe('keyboard shortcuts switch', () => {
 			await new Promise((resolve) => setTimeout(resolve, 200));
 		});
 		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
-		assert.equal(accessibleName(host, input), 'Keyboard shortcuts');
+		assert.equal(accessibleName(host, input), 'Keyboard Shortcuts');
 		assert.equal(span.getAttribute('aria-label'), null);
 		assert.equal(span.getAttribute('aria-labelledby'), null);
 	});
