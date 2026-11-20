@@ -25,7 +25,9 @@ import org.craftercms.studio.api.v2.annotation.publish.PackageIds;
 import org.craftercms.studio.api.v2.annotation.resourceids.SiteId;
 import org.craftercms.studio.api.v2.dal.User;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
+import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import org.craftercms.studio.api.v2.exception.publish.PublishPackageNotFoundException;
+import org.craftercms.studio.api.v2.exception.security.PeerReviewCheckException;
 import org.craftercms.studio.impl.v2.utils.security.SecurityUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,6 +43,8 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -86,6 +90,30 @@ public class PeerReviewCapableAnnotationHandlerTest {
 	}
 
 	@Test
+	public void directPublishWithoutPackageIdIsRejected() throws Throwable {
+		stubMethod(PeerReviewTarget.class.getMethod("publish", String.class), new Object[]{SITE_ID});
+
+		assertThrows(PeerReviewCheckException.class, () -> withUser(() -> handler.checkPeerReview(pjp)));
+
+		verify(publishDao, never()).getByStringSiteId(anyString(), anyLong());
+		verify(pjp, never()).proceed();
+	}
+
+	@Test
+	public void reviewerOfASinglePackageProceeds() throws Throwable {
+		stubMethod(PeerReviewTarget.class.getMethod("review", String.class, long.class),
+			new Object[]{SITE_ID, PACKAGE_ID});
+		PublishPackage publishPackage = new PublishPackage();
+		publishPackage.setSubmitterId(99L);
+		when(publishDao.getByStringSiteId(SITE_ID, PACKAGE_ID)).thenReturn(publishPackage);
+		when(pjp.proceed()).thenReturn("published");
+
+		withUser(() -> {
+			assertEquals("published", handler.checkPeerReview(pjp));
+		});
+	}
+
+	@Test
 	public void missingSinglePackageIsNotFound() throws Throwable {
 		stubMethod(PeerReviewTarget.class.getMethod("review", String.class, long.class),
 			new Object[]{SITE_ID, PACKAGE_ID});
@@ -125,6 +153,9 @@ public class PeerReviewCapableAnnotationHandlerTest {
 		}
 
 		public void review(@SiteId String siteId, @PackageId long packageId) {
+		}
+
+		public void publish(@SiteId String siteId) {
 		}
 	}
 }

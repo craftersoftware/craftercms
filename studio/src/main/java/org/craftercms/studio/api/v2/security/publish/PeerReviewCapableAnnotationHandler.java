@@ -78,14 +78,16 @@ public class PeerReviewCapableAnnotationHandler {
 			return pjp.proceed();
 		}
 
-		long packageId = StudioAnnotationUtils.getAnnotationValue(pjp, method, PackageId.class, Long.class);
+		Long packageId = StudioAnnotationUtils.getAnnotationValue(pjp, method, PackageId.class, Long.class);
+		if (packageId == null) {
+			// package id not being provided means is a package creation, so we must reject it
+			logger.debug("Peer review is enabled for site '{}'. Users cannot publish directly. Method '{}.{}' is annotated with @PeerReviewCapable but does not have a @PackageId parameter. ",
+				siteId, method.getDeclaringClass().getName(), method.getName());
+			throw new PeerReviewCheckException("Peer review is enabled for site '%s''. Users cannot publish directly."
+				.formatted(siteId));
+		}
 		checkPeerReview(siteId, packageId, user);
-
-		// package id not being provided means is a package creation, so we must reject it
-		logger.debug("Peer review is enabled for site '{}'. Users cannot publish directly. Method '{}.{}' is annotated with @PeerReviewCapable but does not have a @PackageId parameter. ",
-			siteId, method.getDeclaringClass().getName(), method.getName());
-		throw new PeerReviewCheckException("Peer review is enabled for site '%s''. Users cannot publish directly."
-			.formatted(siteId));
+		return pjp.proceed();
 	}
 
 	/**
