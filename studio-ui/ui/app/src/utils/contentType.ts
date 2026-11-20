@@ -327,10 +327,10 @@ export const componentsDataSourceContentTypesPropertyNames = [
 	'allowedSharedExistingContentTypes'
 ];
 
-type ContentTypesForParseControls = LookupTable<{ metadata?: { additionalFields?: string[] | null } }>;
+type AdditionalFieldsControls = LookupTable<{ metadata?: { additionalFields?: string[] | null } }>;
 
 let cachedById: LookupTable<ContentType> | undefined;
-let cachedControls: ContentTypesForParseControls | undefined;
+let cachedControls: AdditionalFieldsControls | undefined;
 let cachedResult: LookupTable<ContentType> | undefined;
 
 /**
@@ -350,7 +350,7 @@ export function contentTypesForParse(
 	byId: LookupTable<ContentType>,
 	uiConfig: {
 		isFetching: boolean | null;
-		controls: ContentTypesForParseControls;
+		controls: AdditionalFieldsControls;
 	}
 ): LookupTable<ContentType> {
 	if (!byId) return byId;
@@ -365,9 +365,52 @@ export function contentTypesForParse(
 	return result;
 }
 
+/**
+ * Backfills one field's `additionalFields` from its control descriptor, then recurses into
+ * `field.fields` (e.g. repeat-group children) so nested depths match save-time merge in
+ * `convertFieldStructToXmlStruct`. Returns the same reference when nothing changes.
+ */
+function mergeFieldConfiguredAdditionalFields(
+	field: ContentTypeField,
+	controls: AdditionalFieldsControls
+): ContentTypeField {
+	const persistedAdditionalFields = field.additionalFields ?? [];
+	const additionalFields = mergeAdditionalFieldIds(
+		field.id,
+		persistedAdditionalFields,
+		controls[field.type]?.metadata?.additionalFields
+	);
+	const additionalFieldsChanged = additionalFields.length !== persistedAdditionalFields.length;
+
+	let nestedFields = field.fields;
+	let nestedChanged = false;
+	if (field.fields) {
+		const nextNested = Object.fromEntries(
+			Object.entries(field.fields).map(([childId, child]) => {
+				const nextChild = mergeFieldConfiguredAdditionalFields(child, controls);
+				if (nextChild !== child) nestedChanged = true;
+				return [childId, nextChild];
+			})
+		);
+		if (nestedChanged) nestedFields = nextNested;
+	}
+
+	if (!additionalFieldsChanged && !nestedChanged) return field;
+	return {
+		...field,
+		...(additionalFieldsChanged ? { additionalFields } : null),
+		...(nestedChanged ? { fields: nestedFields } : null)
+	};
+}
+
+/**
+ * Returns a content-type lookup with control-descriptor `additionalFields` merged onto every field
+ * (root and nested). Form-def ids stay authoritative via `mergeAdditionalFieldIds`. Unchanged types
+ * and fields keep their original references.
+ */
 export function addConfiguredAdditionalFields(
 	contentTypes: LookupTable<ContentType>,
-	controls: LookupTable<{ metadata?: { additionalFields?: string[] | null } }>
+	controls: AdditionalFieldsControls
 ): LookupTable<ContentType> {
 	if (!contentTypes || !controls) return contentTypes;
 
@@ -377,15 +420,9 @@ export function addConfiguredAdditionalFields(
 			let fieldsChanged = false;
 			const fields = Object.fromEntries(
 				Object.entries(contentType.fields).map(([fieldId, field]) => {
-					const persistedAdditionalFields = field.additionalFields ?? [];
-					const additionalFields = mergeAdditionalFieldIds(
-						field.id,
-						persistedAdditionalFields,
-						controls[field.type]?.metadata?.additionalFields
-					);
-					if (additionalFields.length === persistedAdditionalFields.length) return [fieldId, field];
-					fieldsChanged = true;
-					return [fieldId, { ...field, additionalFields }];
+					const nextField = mergeFieldConfiguredAdditionalFields(field, controls);
+					if (nextField !== field) fieldsChanged = true;
+					return [fieldId, nextField];
 				})
 			);
 			if (!fieldsChanged) return [contentTypeId, contentType];

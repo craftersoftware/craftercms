@@ -439,6 +439,59 @@ describe('addConfiguredAdditionalFields', () => {
 			'title_s_alt'
 		]);
 	});
+
+	it('recurses into repeat-group children so nested fields get the same descriptor backfill', () => {
+		const contentTypes = {
+			'/page/article': {
+				id: '/page/article',
+				fields: {
+					title_s: {
+						id: 'title_s',
+						name: 'Title',
+						type: 'backup-control',
+						validations: {},
+						properties: {},
+						defaultValue: ''
+					},
+					items_o: {
+						id: 'items_o',
+						name: 'Items',
+						type: 'repeat',
+						validations: {},
+						properties: {},
+						defaultValue: '',
+						fields: {
+							note_s: {
+								id: 'note_s',
+								name: 'Note',
+								type: 'backup-control',
+								validations: {},
+								properties: {},
+								defaultValue: ''
+							},
+							expires_dt: {
+								id: 'expires_dt',
+								name: 'Expires',
+								type: 'date-time',
+								validations: {},
+								properties: {},
+								defaultValue: ''
+							}
+						}
+					}
+				}
+			}
+		};
+		const merged = addConfiguredAdditionalFields(contentTypes as never, {
+			'backup-control': { metadata: { additionalFields: ['{id}_bk'] } },
+			'date-time': { metadata: { additionalFields: ['{id}_tz'] } }
+		});
+		assert.deepEqual(merged['/page/article'].fields.title_s.additionalFields, ['title_s_bk']);
+		assert.deepEqual(merged['/page/article'].fields.items_o.fields.note_s.additionalFields, ['note_s_bk']);
+		assert.deepEqual(merged['/page/article'].fields.items_o.fields.expires_dt.additionalFields, ['expires_dt_tz']);
+		// Repeat itself has no descriptor companions; only its children change.
+		assert.equal(merged['/page/article'].fields.items_o.additionalFields, undefined);
+	});
 });
 
 describe('contentTypesForParse lookup', () => {
