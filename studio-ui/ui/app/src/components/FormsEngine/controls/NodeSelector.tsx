@@ -19,10 +19,9 @@ import { useFormItem } from '../lib/formItem';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import AddRounded from '@mui/icons-material/AddRounded';
-import DeleteOutlined from '@mui/icons-material/DeleteOutlined';
-import EditOutlined from '@mui/icons-material/EditOutlined';
 import HelpOutline from '@mui/icons-material/HelpOutlined';
 import SearchRounded from '@mui/icons-material/SearchRounded';
+import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
 import type { ContentItem, MediaItem, Primitive } from '../../../models';
@@ -30,8 +29,8 @@ import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemButton from '@mui/material/ListItemButton';
 import { FormattedMessage, useIntl } from 'react-intl';
-import LinkOffRoundedIcon from '@mui/icons-material/LinkOffRounded';
 import Tooltip from '@mui/material/Tooltip';
+import Divider from '@mui/material/Divider';
 import useContentTypes from '../../../hooks/useContentTypes';
 import React, {
 	lazy,
@@ -107,7 +106,6 @@ import type { SingleFileUploadDialogProps } from '../../SingleFileUploadDialog';
 import { showCodeEditorDialog } from '../../../state/actions/dialogs';
 import { getEditorMode, isAudio, isEditableAsset, isPdfDocument, isVideo } from '../../../utils/content';
 import { createComponentId, showContentFormAction } from '../../../utils/system';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import {
 	getEditorMode as getItemEditorMode,
 	isEditableViaFormEditor,
@@ -231,6 +229,17 @@ function NodeSelector(props: NodeSelectorProps) {
 		[value, rowKeys, itemsByPath]
 	);
 	const user = useActiveUser();
+	const canEditItem = (item: NodeSelectorItem) => {
+		const isEmbedded = Boolean(item.component);
+		const isComponent = isItemComponent(item);
+		const stored = itemsByPath[item.include];
+		const userCanEditStored =
+			stored?.availableActionsMap.edit && (stored.lockOwner == null || user.username === stored.lockOwner?.username);
+		return (
+			(isComponent && (isEmbedded || userCanEditStored)) ||
+			(!isComponent && isEditableAsset(item.key) && userCanEditStored)
+		);
+	};
 	const stableForm = useStableFormContext();
 	const { id, pathInSite } = useItemMetaContext();
 	// Create forms have no store item (`getItem()` is null). See getFormContextPath.
@@ -248,6 +257,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	const [createPickerChoice, setCreatePickerChoice] = useState<CreateDataSourcePickerData>(null);
 	const dispatch = useDispatch();
 	const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLButtonElement | null>(null);
+	const [itemMenu, setItemMenu] = useState<{ anchor: HTMLElement; index: number } | null>(null);
 	const contentTypes = useContentTypes();
 	const siteId = useActiveSiteId();
 	const authoringBase = useSelection((state) => state.env.authoringBase);
@@ -261,8 +271,8 @@ function NodeSelector(props: NodeSelectorProps) {
 			(dataSources?.actions ?? []).filter((action) => action.kind === 'create' && !action.MenuItem && !action.Dialog),
 		[dataSources?.actions]
 	);
-	const handleRemoveItem = (event: ReactMouseEvent, index: number) => {
-		event.stopPropagation();
+	const closeItemMenu = () => setItemMenu(null);
+	const handleRemoveItem = (index: number) => {
 		const nextValue = value.concat();
 		nextValue.splice(index, 1);
 		if (nextValue.length > 0) {
@@ -375,8 +385,8 @@ function NodeSelector(props: NodeSelectorProps) {
 				if (!readonly) setValue(newList);
 			},
 			(itemIndex, edit) =>
-				// An item that can't be edited opens read-only, as the row click does. V always opens read-only.
-				// E edits only when the item and the field allow it.
+				// Row click, E, and the More menu Edit item all open writable when the item and field allow it.
+				// V always opens read-only. An item that can't be edited opens read-only for every path.
 				canBeEdited ? handleEditItem(e, itemIndex, edit && !readonly) : handleViewItem(e, itemIndex),
 			(nextIndex) => remember(nextIndex, 'row', itemLabel)
 		);
@@ -712,6 +722,10 @@ function NodeSelector(props: NodeSelectorProps) {
 		isAddDisabled && maxLimitReached
 			? formatMessage({ defaultMessage: 'Maximum amount of items reached for {fieldName}' }, { fieldName: field.name })
 			: formatMessage({ defaultMessage: 'Add items to {fieldName}' }, { fieldName: field.name });
+	const itemMenuEntry = itemMenu != null ? value[itemMenu.index] : null;
+	const itemMenuCanEdit = itemMenuEntry ? canEditItem(itemMenuEntry) : false;
+	const itemMenuOpensForEdit = itemMenuCanEdit && !readonly;
+	const itemMenuLabel = itemMenuEntry ? getItemLabel(itemMenuEntry) : '';
 	return (
 		<>
 			<Menu
@@ -724,6 +738,74 @@ function NodeSelector(props: NodeSelectorProps) {
 			>
 				{menuOptions}
 				{customActionItems}
+			</Menu>
+			<Menu
+				anchorEl={itemMenu?.anchor}
+				open={Boolean(itemMenuEntry)}
+				onClose={closeItemMenu}
+				slotProps={{
+					list: {
+						'aria-label': formatMessage({ defaultMessage: 'Options for {item}' }, { item: itemMenuLabel })
+					}
+				}}
+			>
+				{itemMenuOpensForEdit ? (
+					<MenuItem
+						onClick={(e) => {
+							const index = itemMenu!.index;
+							closeItemMenu();
+							handleEditItem(e, index, true);
+						}}
+					>
+						<ListItemText>
+							<FormattedMessage defaultMessage="Edit" />
+						</ListItemText>
+					</MenuItem>
+				) : (
+					<MenuItem
+						onClick={(e) => {
+							const index = itemMenu!.index;
+							closeItemMenu();
+							itemMenuCanEdit ? handleEditItem(e, index, false) : handleViewItem(e, index);
+						}}
+					>
+						<ListItemText>
+							<FormattedMessage defaultMessage="View" />
+						</ListItemText>
+					</MenuItem>
+				)}
+				{!readonly && (
+					<MenuItem
+						onClick={() => {
+							closeItemMenu();
+							// Destination dialog lands in a later step of #1461.
+						}}
+					>
+						<ListItemText>
+							<FormattedMessage defaultMessage="Move to field…" />
+						</ListItemText>
+					</MenuItem>
+				)}
+				{!readonly && [
+					<Divider key="remove-divider" />,
+					<MenuItem
+						key="remove-action"
+						onClick={() => {
+							const index = itemMenu!.index;
+							closeItemMenu();
+							handleRemoveItem(index);
+						}}
+						sx={{ color: 'error.main' }}
+					>
+						<ListItemText>
+							{itemMenuEntry?.component ? (
+								<FormattedMessage defaultMessage="Delete" />
+							) : (
+								<FormattedMessage defaultMessage="Unlink" />
+							)}
+						</ListItemText>
+					</MenuItem>
+				]}
 			</Menu>
 			<Dialog
 				open={pickerDialogOpen}
@@ -852,33 +934,9 @@ function NodeSelector(props: NodeSelectorProps) {
 						<List dense ref={rootRef}>
 							{value.map((item, index) => {
 								const isEmbedded = Boolean(item.component);
-								const Icon = isEmbedded ? DeleteOutlined : LinkOffRoundedIcon;
-								const isComponent = isItemComponent(item);
-								const canBeEdited =
-									// Is a component and is embedded or is shared, and user can edit it (has edit action and is not locked)
-									(isComponent &&
-										(isEmbedded ||
-											(itemsByPath[item.include]?.availableActionsMap.edit &&
-												(itemsByPath[item.include]?.lockOwner == null ||
-													user.username === itemsByPath[item.include]?.lockOwner?.username)))) ||
-									// is an editable asset, and the user can edit it (has edit action and is not locked)
-									(!isComponent &&
-										isEditableAsset(item.key) &&
-										itemsByPath[item.include]?.availableActionsMap.edit &&
-										(itemsByPath[item.include]?.lockOwner == null ||
-											user.username === itemsByPath[item.include]?.lockOwner?.username));
+								const canBeEdited = canEditItem(item);
 								const itemLabel = getItemLabel(item);
-								// A component row opens its form read-only and the pencil edits it, so those are different
-								// actions. An asset row follows the form's mode, like the pencil. The View button (read-only
-								// field, or an item that cannot be edited) is the same action as the row, so it stays out of
-								// the tab order.
-								const opensForEdit = canBeEdited && !readonly;
-								const openLabel = opensForEdit
-									? formatMessage({ defaultMessage: 'Edit {item}' }, { item: itemLabel })
-									: formatMessage({ defaultMessage: 'View {item}' }, { item: itemLabel });
-								const removeLabel = isEmbedded
-									? formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemLabel })
-									: formatMessage({ defaultMessage: 'Unlink {item}' }, { item: itemLabel });
+								const optionsLabel = formatMessage({ defaultMessage: 'Options for {item}' }, { item: itemLabel });
 								return (
 									<Box
 										component="li"
@@ -896,8 +954,9 @@ function NodeSelector(props: NodeSelectorProps) {
 											data-reorder-control="row"
 											sx={{ flex: 1, minWidth: 0 }}
 											onClick={(e) =>
-												// A component row opens its form read-only. An asset row follows the form's mode.
-												canBeEdited ? handleEditItem(e, index, !isComponent && !readonly) : handleViewItem(e, index)
+												// Row opens for edit when the item is editable and the field is not read-only;
+												// otherwise it opens read-only (View). Matches Repeat.
+												canBeEdited ? handleEditItem(e, index, !readonly) : handleViewItem(e, index)
 											}
 											onKeyDown={(e) => handleItemKeyDown(e, index, itemLabel, canBeEdited)}
 										>
@@ -959,33 +1018,18 @@ function NodeSelector(props: NodeSelectorProps) {
 													</ReorderMoveButton>
 												</>
 											)}
-											<Tooltip title={openLabel}>
-												<IconButton
-													size="small"
-													aria-label={openLabel}
-													tabIndex={opensForEdit ? undefined : -1}
-													onClick={(e) =>
-														opensForEdit
-															? handleEditItem(e, index, true)
-															: canBeEdited
-																? handleEditItem(e, index, false)
-																: handleViewItem(e, index)
-													}
-												>
-													{opensForEdit ? (
-														<EditOutlined fontSize="small" />
-													) : (
-														<VisibilityOutlinedIcon fontSize="small" />
-													)}
-												</IconButton>
-											</Tooltip>
-											{!readonly && (
-												<Tooltip title={removeLabel}>
-													<IconButton size="small" aria-label={removeLabel} onClick={(e) => handleRemoveItem(e, index)}>
-														<Icon fontSize="small" />
-													</IconButton>
-												</Tooltip>
-											)}
+											<IconButton
+												size="small"
+												aria-label={optionsLabel}
+												aria-haspopup="menu"
+												aria-expanded={itemMenu?.index === index}
+												onClick={(e) => {
+													e.stopPropagation();
+													setItemMenu({ anchor: e.currentTarget, index });
+												}}
+											>
+												<MoreVertRounded fontSize="small" />
+											</IconButton>
 										</Box>
 									</Box>
 								);

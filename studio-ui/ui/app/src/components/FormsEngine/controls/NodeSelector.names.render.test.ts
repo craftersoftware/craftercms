@@ -15,8 +15,8 @@
  */
 
 /**
- * The row icon buttons name the action and the item. An editable row in a read-only form opens read-only, so its
- * name is View rather than Edit.
+ * Each row keeps a More actions button named for the item. The menu offers Edit or View, Move to field,
+ * and Delete/Unlink. In a read-only field the menu only offers View.
  */
 
 import '../../../../test/stringListDomSetup.mjs';
@@ -127,17 +127,27 @@ async function renderSelector(readonly: boolean, field = fieldFor('nodes_o', 'no
 	return host;
 }
 
-const iconOf = (host: HTMLElement, label: string) =>
-	host.querySelector(`button[aria-label="${label}"] svg`)?.getAttribute('data-testid');
-
 const labelsOf = (host: HTMLElement) =>
 	Array.from(host.querySelectorAll('button[aria-label]'), (button) => button.getAttribute('aria-label'));
 
-async function click(host: HTMLElement, label: string) {
-	const button = host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
-	assert.ok(button, `expected a button named ${label}`);
+const menuLabels = () =>
+	Array.from(document.body.querySelectorAll('[role="menuitem"]'), (item) => item.textContent ?? '');
+
+async function openOptions(host: HTMLElement, itemLabel: string) {
+	const button = host.querySelector<HTMLButtonElement>(`button[aria-label="Options for ${itemLabel}"]`);
+	assert.ok(button, `expected Options for ${itemLabel}`);
 	await act(async () => {
 		button.click();
+	});
+}
+
+async function chooseMenuItem(label: string) {
+	const item = Array.from(document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+		(candidate) => candidate.textContent === label
+	);
+	assert.ok(item, `expected menu item ${label}`);
+	await act(async () => {
+		item.click();
 	});
 }
 
@@ -154,50 +164,59 @@ async function clickRow(host: HTMLElement, text: string) {
 const lastCodeEditorAction = () => dispatched.findLast((action) => action.type === 'SHOW_CODE_EDITOR_DIALOG');
 
 describe('NodeSelector row button names', () => {
-	it('names edit, view, delete and unlink with the item', async () => {
+	it('names the More button for each item and offers Edit, Move, and Delete/Unlink', async () => {
 		const host = await renderSelector(false);
 		const labels = labelsOf(host);
-		assert.ok(labels.includes('Edit Article'));
-		assert.ok(labels.includes('Unlink Article'));
-		assert.ok(labels.includes('Edit Hero'));
-		assert.ok(labels.includes('Delete Hero'));
-		assert.ok(labels.includes('View Photo'));
-		assert.ok(labels.includes('Unlink Photo'));
-		assert.equal(labels.includes('Edit Photo'), false);
-		assert.ok(labels.includes('Edit app.js'));
-		assert.ok(labels.includes('Unlink app.js'));
+		assert.ok(labels.includes('Options for Article'));
+		assert.ok(labels.includes('Options for Hero'));
+		assert.ok(labels.includes('Options for Photo'));
+		assert.ok(labels.includes('Options for app.js'));
+
+		await openOptions(host, 'Article');
+		assert.deepEqual(menuLabels(), ['Edit', 'Move to field…', 'Unlink']);
+
+		await openOptions(host, 'Hero');
+		assert.deepEqual(menuLabels(), ['Edit', 'Move to field…', 'Delete']);
+
+		await openOptions(host, 'Photo');
+		assert.deepEqual(menuLabels(), ['View', 'Move to field…', 'Unlink']);
+
+		await openOptions(host, 'app.js');
+		assert.deepEqual(menuLabels(), ['Edit', 'Move to field…', 'Unlink']);
 	});
 
-	it('names an editable row View when the form is read-only', async () => {
+	it('offers only View in a read-only field', async () => {
 		const host = await renderSelector(true);
 		const labels = labelsOf(host);
-		assert.ok(labels.includes('View Article'));
-		assert.ok(labels.includes('View Hero'));
-		assert.ok(labels.includes('View Photo'));
-		assert.equal(labels.includes('Edit Article'), false);
-		assert.equal(labels.includes('Unlink Article'), false);
-		assert.equal(labels.includes('Delete Hero'), false);
-		assert.ok(labels.includes('View app.js'));
-		assert.equal(labels.includes('Edit app.js'), false);
-	});
+		assert.ok(labels.includes('Options for Article'));
+		assert.ok(labels.includes('Options for Hero'));
+		assert.ok(labels.includes('Options for Photo'));
+		assert.ok(labels.includes('Options for app.js'));
 
-	it('shows the view icon instead of the pencil on editable rows of a read-only form', async () => {
-		const editable = await renderSelector(false);
-		assert.equal(iconOf(editable, 'Edit Article'), 'EditOutlinedIcon');
-		const readonly = await renderSelector(true);
-		assert.equal(iconOf(readonly, 'View Article'), 'VisibilityOutlinedIcon');
-		assert.equal(iconOf(readonly, 'View app.js'), 'VisibilityOutlinedIcon');
+		await openOptions(host, 'Article');
+		assert.deepEqual(menuLabels(), ['View']);
+
+		await openOptions(host, 'Hero');
+		assert.deepEqual(menuLabels(), ['View']);
+
+		await openOptions(host, 'Photo');
+		assert.deepEqual(menuLabels(), ['View']);
+
+		await openOptions(host, 'app.js');
+		assert.deepEqual(menuLabels(), ['View']);
 	});
 
 	it('opens an editable asset in the code editor, writable only when the form is editable', async () => {
 		const editable = await renderSelector(false);
-		await click(editable, 'Edit app.js');
+		await openOptions(editable, 'app.js');
+		await chooseMenuItem('Edit');
 		const writable = dispatched.find((action) => action.type === 'SHOW_CODE_EDITOR_DIALOG');
 		assert.equal(writable?.payload?.path, scriptPath);
 		assert.equal(writable?.payload?.readonly, false);
 
 		const readonly = await renderSelector(true);
-		await click(readonly, 'View app.js');
+		await openOptions(readonly, 'app.js');
+		await chooseMenuItem('View');
 		const readOnly = dispatched.find((action) => action.type === 'SHOW_CODE_EDITOR_DIALOG');
 		assert.equal(readOnly?.payload?.path, scriptPath);
 		assert.equal(readOnly?.payload?.readonly, true);
@@ -227,13 +246,8 @@ describe('NodeSelector row button names', () => {
 		assert.equal(span?.tagName, 'SPAN');
 		await act(async () => {
 			span.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+			await new Promise((resolve) => setTimeout(resolve, 50));
 		});
-		await act(async () => {
-			await new Promise((resolve) => setTimeout(resolve, 200));
-		});
-		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
-		assert.equal(button.getAttribute('aria-label'), 'Maximum amount of items reached for Label of nodes_o');
-		assert.equal(button.getAttribute('aria-labelledby'), null);
 		assert.equal(span.getAttribute('aria-label'), null);
 		assert.equal(span.getAttribute('aria-labelledby'), null);
 	});

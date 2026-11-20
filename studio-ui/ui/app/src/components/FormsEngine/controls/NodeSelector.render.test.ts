@@ -170,6 +170,17 @@ describe('NodeSelector keyboard reorder', () => {
 		assert.equal(document.activeElement, rowLabelled(host, 'Alpha'));
 	});
 
+	async function unlinkViaMenu(host: HTMLElement, itemLabel: string) {
+		const options = host.querySelector<HTMLButtonElement>(`button[aria-label="Options for ${itemLabel}"]`);
+		assert.ok(options, `expected Options for ${itemLabel}`);
+		await act(async () => options.click());
+		const unlink = Array.from(document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+			(item) => item.textContent === 'Unlink'
+		);
+		assert.ok(unlink, 'expected Unlink in the item menu');
+		await act(async () => unlink.click());
+	}
+
 	it('ignores a modifier arrow and focuses the next row after a remove', async () => {
 		const { host, items } = await mountSelector([
 			[alpha, 'Alpha'],
@@ -184,9 +195,7 @@ describe('NodeSelector keyboard reorder', () => {
 			['Alpha', 'Beta', 'Gamma']
 		);
 		assert.equal(liveMessage(host), '');
-		const unlink = host.querySelector<HTMLButtonElement>('button[aria-label="Unlink Alpha"]');
-		assert.ok(unlink);
-		await act(async () => unlink.click());
+		await unlinkViaMenu(host, 'Alpha');
 		assert.deepEqual(
 			items().map((item) => item.value),
 			['Beta', 'Gamma']
@@ -199,8 +208,7 @@ describe('NodeSelector keyboard reorder', () => {
 		const { host } = await mountSelector([[alpha, 'Alpha']]);
 		const add = host.querySelector('[data-testid="AddRoundedIcon"]')?.closest('button') as HTMLButtonElement;
 		assert.equal(add.disabled, true);
-		const unlink = host.querySelector<HTMLButtonElement>('button[aria-label="Unlink Alpha"]');
-		await act(async () => unlink.click());
+		await unlinkViaMenu(host, 'Alpha');
 		assert.equal(rowsOf(host).length, 0);
 		assert.notEqual(document.activeElement, add);
 		assert.equal(document.activeElement?.getAttribute('tabindex'), '-1');
@@ -253,14 +261,14 @@ describe('NodeSelector E and V shortcuts', () => {
 		assert.equal(formDialogs().length, 2);
 	});
 
-	it('agrees with the row click: a component row opens read-only, E edits and V views', async () => {
+	it('agrees with the row click: a component row edits when allowed, E edits and V views', async () => {
 		const { host } = await mountMixed();
 		await act(async () => rowLabelled(host, 'Alpha').click());
 		await act(async () => press(rowLabelled(host, 'Alpha'), 'e'));
 		await act(async () => press(rowLabelled(host, 'Alpha'), 'v'));
 		assert.deepEqual(
 			pushFormCalls.map((call) => call.readonly),
-			[true, false, true]
+			[false, false, true]
 		);
 	});
 
