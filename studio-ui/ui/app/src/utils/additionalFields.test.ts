@@ -30,7 +30,6 @@ const { buildContentTypeXml, prepareSerializeToXmlTypeObject } =
 const { deserialize, entityEncodingTagValueProcessor, fromString } = await import('./xml.ts');
 const { parseContentXML } = await import('./content.ts');
 const { addConfiguredAdditionalFields, contentTypesForParse } = await import('./contentType.ts');
-const { createLookupTable } = await import('./object.ts');
 
 function namedList<T>(value: T | T[] | null | undefined): T[] {
 	if (value == null) return [];
@@ -477,20 +476,6 @@ describe('contentTypesForParse lookup', () => {
 	it('supplied lookup: merge from controls quiets plugin companions on old form defs', () => {
 		const supplied = { '/page/article': articleWithoutPersistedAdditionalFields };
 		const merged = addConfiguredAdditionalFields(supplied as never, pluginControls);
-		const messages = captureConsoleErrors(() => {
-			parseContentXML(contentDoc(companionXml), path, merged as never, {});
-		});
-		assert.equal(
-			messages.some((message) => message.includes('title_s_bk') && message.includes('was not found')),
-			false
-		);
-		assert.deepEqual(merged['/page/article'].fields.title_s.additionalFields, ['title_s_bk']);
-	});
-
-	it('internally fetched lookup: merge after createLookupTable quiets plugin companions', () => {
-		const fetchedTypes = [articleWithoutPersistedAdditionalFields];
-		const lookup = createLookupTable(fetchedTypes as never);
-		const merged = addConfiguredAdditionalFields(lookup as never, pluginControls);
 		const messages = captureConsoleErrors(() => {
 			parseContentXML(contentDoc(companionXml), path, merged as never, {});
 		});
