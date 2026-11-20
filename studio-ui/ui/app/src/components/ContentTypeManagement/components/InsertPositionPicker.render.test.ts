@@ -186,6 +186,21 @@ describe('InsertPositionPicker', () => {
 		assert.equal(checkedRadioValue(host), 'after');
 	});
 
+	it('from Insert last, Enter on the focused Alpha option selects Insert after at splice index 1', async () => {
+		const { host, positions } = await renderPicker({ value: items.length });
+
+		await openSelect(host);
+		const focused = document.activeElement;
+		assert.ok(focused instanceof HTMLElement);
+		assert.match(focused.textContent ?? '', /Alpha/);
+		await act(async () => {
+			focused.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		});
+
+		assert.deepEqual(positions, [1]);
+		assert.equal(checkedRadioValue(host), 'after');
+	});
+
 	it('disables Insert after and hides the combobox for a one-item list; Last reports length', async () => {
 		const oneItem = [{ id: 'only', label: 'Only' }];
 		const { host, positions } = await renderPicker({ items: oneItem, value: 0 });
