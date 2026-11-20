@@ -455,11 +455,11 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 						menuProps={{ sx: { minWidth: 180 } }}
 					>
 						{selectedActivities.ALL ? (
-							<FormattedMessage id="activityDashlet.showActivityByEveryone" defaultMessage="All activities" />
+							<FormattedMessage id="activityDashlet.showActivityByEveryone" defaultMessage="All Activities" />
 						) : (
 							<FormattedMessage
 								id="activityDashlet.showSelectedActivities"
-								defaultMessage="Selected activities ({count})"
+								defaultMessage="Selected Activities ({count})"
 								values={{ count: activities.length }}
 							/>
 						)}

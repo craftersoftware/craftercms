@@ -84,7 +84,7 @@ export function UsersGridUI(props: UsersGridUIProps) {
 									}
 									label={
 										<Typography variant="subtitle2">
-											<FormattedMessage defaultMessage="Show disabled users" />
+											<FormattedMessage defaultMessage="Show Disabled Users" />
 										</Typography>
 									}
 									labelPlacement="start"
