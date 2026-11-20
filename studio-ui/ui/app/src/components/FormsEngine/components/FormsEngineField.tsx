@@ -445,7 +445,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 				</Box>
 				{hasHelpText && (
 					<Collapse in={showHelp}>
-						<Alert severity="info" variant="outlined" sx={{ border: 'none' }}>
+						<Alert role="note" severity="info" variant="outlined" sx={{ border: 'none' }}>
 							<Typography
 								variant="body2"
 								component="section"
@@ -459,6 +459,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 				)}
 				{sourcePath && (
 					<Alert
+						role="note"
 						variant="standard"
 						severity="info"
 						icon={

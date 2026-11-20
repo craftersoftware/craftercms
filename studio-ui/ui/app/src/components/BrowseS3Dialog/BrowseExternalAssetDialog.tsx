@@ -249,7 +249,7 @@ function BrowseExternalAssetDialogBody(props: BrowseExternalAssetDialogContainer
 										<Box sx={{ flexGrow: 1, display: 'flex' }}>
 											{multiSelect && (
 												<>
-													<Tooltip title={<FormattedMessage defaultMessage="Select All on this page" />}>
+													<Tooltip describeChild title={<FormattedMessage defaultMessage="Select All on this page" />}>
 														<Checkbox
 															checked={allItemsSelected}
 															indeterminate={someItemsSelected}

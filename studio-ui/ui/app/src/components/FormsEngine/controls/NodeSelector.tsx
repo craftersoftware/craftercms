@@ -115,7 +115,7 @@ import {
 	isMediaContent
 } from '../../PathNavigator/utils';
 import useSelection from '../../../hooks/useSelection';
-import { getValidationValue, isFieldReadOnly, showAlert } from '../lib/formUtils';
+import { getFormContextPath, getValidationValue, isFieldReadOnly, showAlert } from '../lib/formUtils';
 import TypeList from '../../ContentTypeManagement/components/TypeList';
 import { SearchBar } from '../../SearchBar';
 import useDebouncedInput from '../../../hooks/useDebouncedInput';
@@ -232,9 +232,14 @@ function NodeSelector(props: NodeSelectorProps) {
 	);
 	const user = useActiveUser();
 	const stableForm = useStableFormContext();
-	// The form's own item is only needed when an action runs, so read it then instead of subscribing.
-	const getContextItemPath = () => stableForm.getItem()?.path;
 	const { id, pathInSite } = useItemMetaContext();
+	// Create forms have no store item (`getItem()` is null). See getFormContextPath.
+	const getContextItemPath = () =>
+		getFormContextPath({
+			item: stableForm.getItem(),
+			updatePath: stableForm.props?.update?.path,
+			pathInSite
+		});
 	const api = useStableGlobalApiContext();
 	const hasContent = Boolean(value.length);
 	const [addMenuOpen, setAddMenuOpen] = useState(false);
@@ -429,7 +434,7 @@ function NodeSelector(props: NodeSelectorProps) {
 		choice: AllowedPathsData | CreateDataSourcePickerData
 	) => {
 		const processPath = (path: string) =>
-			processPathMacros({ path, objectId: id, fullParentPath: getContextItemPath() ?? pathInSite });
+			processPathMacros({ path, objectId: id, fullParentPath: getContextItemPath() });
 		switch (optionType) {
 			case 'browse': {
 				const pickerChoice = choice as AllowedPathsData;
@@ -794,6 +799,7 @@ function NodeSelector(props: NodeSelectorProps) {
 				length={value.length}
 				action={
 					<Tooltip
+						describeChild
 						title={
 							isAddDisabled ? (
 								maxLimitReached ? (
@@ -1606,13 +1612,25 @@ function showDuplicatesWarning(dispatch: ReduxDispatch, duplicateItems: NodeSele
 
 export default NodeSelector;
 
-/** An embedded component has no item of its own; it shows the form's item. Only these rows follow its updates. */
+/**
+ * An embedded component has no ContentItem of its own. When the parent form has one (edit of a saved
+ * item), workflow/publishing chrome can borrow it; create forms have no store item, so only the label
+ * and type icon are shown.
+ */
 function EmbeddedItemDisplay({ label, showWorkflowState }: { label: string; showWorkflowState: boolean }) {
 	const contextItem = useFormItem();
+	const showState = Boolean(showWorkflowState && contextItem?.stateMap);
 	return (
 		<ItemDisplay
-			item={{ ...contextItem, label, systemType: 'component' }}
-			showWorkflowState={showWorkflowState}
+			// Create forms have no store item; ItemDisplay returns null for a nullish `item`, so fall
+			// back to a minimal stub. State icons stay off via `showState` when there is no stateMap.
+			item={{
+				...(contextItem ?? { path: '', mimeType: 'application/xml' }),
+				label,
+				systemType: 'component'
+			}}
+			showWorkflowState={showState}
+			showPublishingTarget={showState}
 			showNavigableAsLinks={false}
 		/>
 	);

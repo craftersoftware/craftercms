@@ -77,4 +77,32 @@ describe('audit grid filter popover close button', () => {
 		const labels = Array.from(host.querySelectorAll('button'), (button) => button.getAttribute('aria-label'));
 		assert.ok(labels.includes('Close'), labels.join(' | '));
 	});
+
+	it('names the target filter clear button from its tooltip', async () => {
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		const root = createRoot(host);
+		mounted.push({ unmount: () => root.unmount(), host });
+		await act(async () => {
+			root.render(
+				React.createElement(
+					RawIntlProvider,
+					{ value: intl },
+					React.createElement(AuditGridFilterPopoverBody, {
+						open: true,
+						filterId: 'target',
+						value: 'home',
+						anchorPosition: { top: 0, left: 0 },
+						options: { sites: [], users: [], operations: [], origins: [], timezones: [] },
+						onClose() {},
+						onTimezoneSelected() {},
+						onResetFilter() {},
+						onFilterChange() {}
+					} as never)
+				)
+			);
+		});
+		const clear = host.querySelector<HTMLButtonElement>('button[aria-label="Clear"]');
+		assert.ok(clear, 'the clear button has no name');
+	});
 });

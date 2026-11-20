@@ -28,6 +28,7 @@ import RefreshRounded from '@mui/icons-material/RefreshRounded';
 import {
 	DashletEmptyMessage,
 	DashletItemOptions,
+	dashletSelectableRowSx,
 	getItemSkeleton,
 	ListItemIcon,
 	Pager,
@@ -61,7 +62,6 @@ import ActionsBar from '../ActionsBar';
 import useItemsByPath from '../../hooks/useItemsByPath';
 import useFetchContentItems from '../../hooks/useFetchContentItems';
 import { itemActionDispatcher } from '../../utils/itemActions';
-import ListItemButton from '@mui/material/ListItemButton';
 import { fetchContentItemComplete, fetchContentItems } from '../../state/actions/content';
 import LoadingIconButton from '../LoadingIconButton';
 import { fetchItemByPath } from '../../services/content';
@@ -317,23 +317,26 @@ export function MyRecentActivityDashlet(props: MyRecentActivityDashletProps) {
 				<List sx={{ pb: 0 }}>
 					{feed.map((activity) => {
 						const isItemActivity = activity.item && activity.item.systemType;
-						const ListItemComponent = isItemActivity ? ListItemButton : ListItem;
-						const listItemComponentProps = isItemActivity
-							? { onClick: (e) => handleSelect(e, activity.item.path) }
-							: {};
-
 						return (
-							// Property 'button' is missing in type showing when conditionally rendering ListItemButton or ListItem
-							// and not showing when using ListItemButton or ListItem directly.
-							// @ts-ignore
-							<ListItemComponent key={activity.id} sx={{ pt: 0, pb: 0 }} {...listItemComponentProps}>
+							<ListItem
+								key={activity.id}
+								sx={isItemActivity ? dashletSelectableRowSx : { pt: 0, pb: 0 }}
+								onClick={isItemActivity ? (e) => handleSelect(e, activity.item.path) : UNDEFINED}
+							>
 								<ListItemIcon>
 									{activity.item && activity.item.systemType ? (
 										<Checkbox
 											edge="start"
 											checked={selectedPaths.includes(activity.item.path)}
-											onClick={(e) => {
-												handleSelect(e, activity.item.path);
+											onClick={(e) => e.stopPropagation()}
+											onChange={(e) => handleSelect(e, activity.item.path)}
+											slotProps={{
+												input: {
+													'aria-label': formatMessage(
+														{ defaultMessage: 'Select {name}' },
+														{ name: activity.item.label }
+													)
+												}
 											}}
 										/>
 									) : (
@@ -364,7 +367,7 @@ export function MyRecentActivityDashlet(props: MyRecentActivityDashletProps) {
 										<MoreVertRoundedIcon />
 									</IconButton>
 								) : null}
-							</ListItemComponent>
+							</ListItem>
 						);
 					})}
 				</List>

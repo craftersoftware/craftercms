@@ -70,8 +70,14 @@ public class AccessTokenServiceImpl implements AccessTokenService {
 	}
 
 	@Override
-	public AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response) throws ServiceLayerException {
-		return accessTokenService.createTokens(auth, request, response);
+	public void resetSessionExtensions(Authentication auth) {
+		accessTokenService.resetSessionExtensions(auth);
+	}
+
+	@Override
+	public AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response,
+									boolean extendSession) throws ServiceLayerException {
+		return accessTokenService.createTokens(auth, request, response, extendSession);
 	}
 
 	@Override

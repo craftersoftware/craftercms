@@ -212,6 +212,7 @@ export function FieldVersionToolbar(props: FieldVersionToolbarProps) {
 									contextApiRef.current.setFieldViewState?.(field.id, { cleanText: true, compareXml: false })
 								}
 								color={cleanText && !compareXml ? 'primary' : 'default'}
+								aria-label={formatMessage({ defaultMessage: 'Show clean text' })}
 							>
 								<NotesRoundedIcon />
 							</IconButton>
@@ -226,6 +227,7 @@ export function FieldVersionToolbar(props: FieldVersionToolbarProps) {
 										contextApiRef.current.setFieldViewState?.(field.id, { cleanText: false, compareXml: false })
 									}
 									color={!cleanText && !compareXml ? 'primary' : 'default'}
+									aria-label={formatMessage({ defaultMessage: 'Compare' })}
 								>
 									<TextSnippetOutlinedIcon />
 								</IconButton>
@@ -235,6 +237,7 @@ export function FieldVersionToolbar(props: FieldVersionToolbarProps) {
 									size="small"
 									onClick={() => contextApiRef.current.setFieldViewState?.(field.id, { compareXml: true })}
 									color={compareXml ? 'primary' : 'default'}
+									aria-label={formatMessage({ defaultMessage: 'Compare XML' })}
 								>
 									<CodeOutlinedIcon />
 								</IconButton>

@@ -52,6 +52,7 @@ export function Dropdown(props: DropdownProps) {
 			<Select
 				value={value}
 				label=""
+				labelId={labelId}
 				onChange={handleChange}
 				disabled={readonly}
 				autoFocus={autoFocus}

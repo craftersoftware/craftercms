@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -81,18 +81,36 @@ const EditSwitch = styled(Switch)(({ theme }) => {
 export interface EditModeSwitchProps extends Partial<SwitchProps> {}
 
 export function EditModeSwitch(props: EditModeSwitchProps) {
-	const { disabled, ...rest } = props;
+	const { disabled, slotProps, ...rest } = props;
 	const { formatMessage } = useIntl();
 	const dispatch = useDispatch();
 	const editMode = useSelection((state) => state.preview.editMode);
+	// Reused message. The settings panel prefers its visible label via aria-labelledby; this names the input when
+	// nothing else does. A string tooltip title would otherwise land as aria-label on the switch's generic span.
+	const label = formatMessage({ id: 'previewToolbar.toggleEditMode', defaultMessage: 'Toggle edit mode' });
 
 	const onChange = (e) => {
 		dispatch(setPreviewEditMode({ editMode: e.target.checked }));
 	};
 
+	const callerInput = slotProps?.input;
+
 	return (
-		<Tooltip title={formatMessage({ id: 'previewToolbar.toggleEditMode', defaultMessage: 'Toggle edit mode' })}>
-			<EditSwitch color="default" checked={editMode} onChange={onChange} {...rest} disabled={disabled} />
+		<Tooltip describeChild title={label}>
+			<EditSwitch
+				color="default"
+				checked={editMode}
+				onChange={onChange}
+				{...rest}
+				disabled={disabled}
+				slotProps={{
+					...slotProps,
+					input: (ownerState) => ({
+						'aria-label': label,
+						...(typeof callerInput === 'function' ? callerInput(ownerState) : callerInput)
+					})
+				}}
+			/>
 		</Tooltip>
 	);
 }

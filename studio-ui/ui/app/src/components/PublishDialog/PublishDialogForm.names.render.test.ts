@@ -80,7 +80,7 @@ afterEach(async () => {
 	});
 });
 
-async function render() {
+async function render(extra: Record<string, unknown> = {}) {
 	const store = configureStore({
 		reducer: {
 			sites: (state = { active: 'editorial' }) => state,
@@ -112,7 +112,8 @@ async function render() {
 							scheduledDateTime: new Date(),
 							error: null,
 							fetchingItems: false
-						}
+						},
+						...extra
 					} as never)
 				)
 			)
@@ -149,5 +150,24 @@ describe('publish dialog radio groups', () => {
 		for (const group of host.querySelectorAll('[role="radiogroup"]')) {
 			assert.ok(group.getAttribute('aria-labelledby'));
 		}
+	});
+
+	it('leaves the staging target wrapper unnamed while the promote tooltip is open', async () => {
+		const host = await render({ isPromote: true });
+		const staging = Array.from(host.querySelectorAll('label')).find((label) => label.textContent?.includes('Staging'));
+		assert.ok(staging, 'the Staging target did not render');
+		const span = staging.parentElement;
+		assert.equal(span?.tagName, 'SPAN');
+		await act(async () => {
+			span.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
+		assert.ok(staging.textContent?.includes('Staging'));
+		assert.equal(staging.querySelector('input')?.getAttribute('aria-labelledby'), null);
+		assert.equal(span.getAttribute('aria-label'), null);
+		assert.equal(span.getAttribute('aria-labelledby'), null);
 	});
 });

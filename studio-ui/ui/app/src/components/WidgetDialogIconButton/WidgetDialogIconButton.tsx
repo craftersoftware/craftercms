@@ -67,7 +67,7 @@ export function WidgetDialogIconButton(props: WidgetDialogIconButtonProps) {
 
 	return (
 		<Tooltip title={title}>
-			<IconButton onClick={openEmbeddedApp}>
+			<IconButton onClick={openEmbeddedApp} aria-label={title}>
 				<SystemIcon icon={props.icon} fontIconProps={{ fontSize: 'small' }} />
 			</IconButton>
 		</Tooltip>

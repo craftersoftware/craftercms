@@ -210,10 +210,10 @@
 	<bean id="crafter.corsConfigSource" class="org.craftercms.commons.spring.cors.FixedCorsConfigurationSource">
 		<constructor-arg name="disableCORS" value="#{studioConfiguration.getProperty('studio.cors.disable')}"/>
 		<constructor-arg name="allowOrigins" value="#{studioConfiguration.getProperty('studio.cors.origins')}"/>
-		<constructor-arg name="allowMethods" value="#{studioConfiguration.getProperty('studio.cors.headers')}"/>
-		<constructor-arg name="allowHeaders" value="#{studioConfiguration.getProperty('studio.cors.methods')}"/>
-		<constructor-arg name="allowCredentials" value="#{studioConfiguration.getProperty('studio.cors.credentials')}"/>
+		<constructor-arg name="allowMethods" value="#{studioConfiguration.getProperty('studio.cors.methods')}"/>
 		<constructor-arg name="maxAge" value="#{studioConfiguration.getProperty('studio.cors.maxage')}"/>
+		<constructor-arg name="allowHeaders" value="#{studioConfiguration.getProperty('studio.cors.headers')}"/>
+		<constructor-arg name="allowCredentials" value="#{studioConfiguration.getProperty('studio.cors.credentials')}"/>
 	</bean>
 
 	<!-- Secure Headers -->

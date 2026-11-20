@@ -21,13 +21,13 @@ package org.craftercms.commons.rest;
 public final class ManagementToken {
 
     /**
-     * Header carrying the Crafter management token for target operations.
+     * Header carrying the Crafter management token. Preferred over {@link #QUERY_PARAMETER}.
      */
     public static final String HEADER_NAME = "X-Crafter-Management-Token";
 
     /**
-     * Query parameter still used by management APIs that have not moved to {@link #HEADER_NAME}.
-     * Deployer target operations do not accept this parameter.
+     * Query parameter accepted by Studio, Engine and Deployer management APIs other than Deployer target operations.
+     * When both this parameter and {@link #HEADER_NAME} are present, the header wins.
      */
     public static final String QUERY_PARAMETER = "token";
 

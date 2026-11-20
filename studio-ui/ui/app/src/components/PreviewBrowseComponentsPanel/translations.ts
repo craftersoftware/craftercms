@@ -45,6 +45,10 @@ export const translations = defineMessages({
 	filter: {
 		id: 'previewBrowseComponentsPanel.filter',
 		defaultMessage: 'Filter...'
+	},
+	contentType: {
+		id: 'searchFilter.contentType',
+		defaultMessage: 'Content Type'
 	}
 });
 
