@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import DialogBody from '../DialogBody/DialogBody';
 import DialogFooter from '../DialogFooter/DialogFooter';
 import SecondaryButton from '../SecondaryButton';
@@ -100,6 +100,8 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 	} = props;
 	// endregion
 	const { formatMessage } = useIntl();
+	const sortByLabelId = useId();
+	const sortOrderLabelId = useId();
 	const [sortMenuOpen, setSortMenuOpen] = useState(false);
 	const buttonRef = useRef(undefined);
 	const [treePanelWidth, setTreePanelWidth] = useState(TREE_PANEL_DEFAULT_WIDTH);
@@ -156,7 +158,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 							<Box sx={{ flexGrow: 1, display: 'flex' }}>
 								{multiSelect && (
 									<>
-										<Tooltip title={<FormattedMessage defaultMessage="Select All on this page" />}>
+										<Tooltip describeChild title={<FormattedMessage defaultMessage="Select All on this page" />}>
 											<Checkbox
 												checked={allSelected}
 												indeterminate={someSelected}
@@ -229,10 +231,11 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 								>
 									<MenuItem>
 										<FormControl fullWidth>
-											<InputLabel>
+											<InputLabel id={sortByLabelId}>
 												<FormattedMessage id="BrowseFilesDialog.sortBy" defaultMessage="Sort By" />
 											</InputLabel>
 											<Select
+												labelId={sortByLabelId}
 												fullWidth
 												value={searchParameters.sortBy}
 												onChange={({ target }) => {
@@ -267,10 +270,11 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 									{searchParameters.sortBy && SORT_AUTO !== searchParameters.sortBy && (
 										<MenuItem>
 											<FormControl fullWidth>
-												<InputLabel>
+												<InputLabel id={sortOrderLabelId}>
 													<FormattedMessage id="words.order" defaultMessage="Order" />
 												</InputLabel>
 												<Select
+													labelId={sortOrderLabelId}
 													fullWidth
 													value={searchParameters.sortOrder}
 													onChange={({ target }) => {

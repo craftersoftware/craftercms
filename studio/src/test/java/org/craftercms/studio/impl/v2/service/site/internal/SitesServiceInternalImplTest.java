@@ -18,6 +18,7 @@ package org.craftercms.studio.impl.v2.service.site.internal;
 
 
 import org.craftercms.commons.entitlements.validator.EntitlementValidator;
+import org.craftercms.commons.rest.ManagementToken;
 import org.craftercms.commons.git.utils.AuthenticationType;
 import org.craftercms.commons.plugin.model.BlueprintDescriptor;
 import org.craftercms.commons.plugin.model.Plugin;
@@ -56,14 +57,19 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
+import java.net.http.HttpRequest;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_GLOBAL_SYSTEM_SITE;
+import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN;
+import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_PREVIEW_DESTROY_CONTEXT_URL;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_STAGING_ID_SUFFIX;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_ENABLED;
 import static org.craftercms.studio.model.rest.sites.CreateSiteRequest.RemoteAuthentication.NONE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -152,6 +158,27 @@ public class SitesServiceInternalImplTest {
 		sourceSite.setPublishingEnabled(true);
 		sourceSite.setSandboxBranch(SOURCE_SANDBOX_BRANCH);
 		when(siteDAO.getSite(SOURCE_SITE_ID)).thenReturn(sourceSite);
+	}
+
+	@Test
+	public void destroyPreviewContextRequestSendsHeaderAndOmitsTokenQuery() throws Exception {
+		when(studioConfiguration.getProperty(CONFIGURATION_SITE_PREVIEW_DESTROY_CONTEXT_URL))
+			.thenReturn("http://localhost:8080/api/1/site/context/destroy.json?crafterSite={siteName}");
+		when(studioConfiguration.getProperty(CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN))
+			.thenReturn("preview-secret");
+
+		HttpRequest request = sitesServiceInternal.buildDestroyPreviewContextRequest(SITE_ID);
+
+		assertEquals("http://localhost:8080/api/1/site/context/destroy.json?crafterSite=" + SITE_ID,
+			request.uri().toString());
+		assertFalse(request.uri().toString().contains("token="));
+		assertEquals("preview-secret", request.headers().firstValue(ManagementToken.HEADER_NAME).orElseThrow());
+
+		String config = new String(getClass().getResourceAsStream("/crafter/studio/studio-config.yaml")
+			.readAllBytes(), StandardCharsets.UTF_8);
+		int start = config.indexOf("studio.configuration.site.preview.destroy.context.url:");
+		String line = config.substring(start, config.indexOf('\n', start));
+		assertFalse(line.contains("token="));
 	}
 
 	@Test

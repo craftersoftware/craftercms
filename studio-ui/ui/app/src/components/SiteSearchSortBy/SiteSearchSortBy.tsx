@@ -66,6 +66,7 @@ interface SortByProps {
 export function SiteSearchSortBy(props: SortByProps) {
 	const { formatMessage } = useIntl();
 	const { handleFilterChange, filterKeys, sortBy = SORT_AUTO } = props;
+	const sortByLabel = formatMessage({ id: 'searchFilter.sortBy', defaultMessage: 'Sort By' });
 
 	return (
 		<Select
@@ -77,6 +78,18 @@ export function SiteSearchSortBy(props: SortByProps) {
 				}
 			}}
 			onChange={(event) => handleFilterChange({ name: 'sortBy', value: event.target.value })}
+			SelectDisplayProps={{
+				'aria-label': sortByLabel,
+				'aria-labelledby': undefined
+			}}
+			MenuProps={{
+				slotProps: {
+					list: {
+						'aria-label': sortByLabel,
+						'aria-labelledby': undefined
+					}
+				}
+			}}
 		>
 			<MenuItem value={SORT_AUTO}>
 				<FormattedMessage defaultMessage="Auto" />

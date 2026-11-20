@@ -15,10 +15,9 @@
  */
 package org.craftercms.deployer.impl.rest;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Strings;
 import org.craftercms.commons.config.ConfigurationException;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
+import org.craftercms.commons.http.ManagementTokenUtils;
 import org.craftercms.commons.rest.RestServiceUtils;
 import org.craftercms.commons.rest.Result;
 import org.craftercms.commons.validation.annotations.param.*;
@@ -446,13 +445,7 @@ public class TargetController {
 		if (requestAttributes instanceof ServletRequestAttributes servletRequestAttributes) {
 			token = servletRequestAttributes.getRequest().getHeader(HEADER_NAME);
 		}
-		validateToken(token);
-	}
-
-	protected void validateToken(String token) throws InvalidManagementTokenException {
-		if (StringUtils.isEmpty(token) || !Strings.CS.equals(token, managementToken)) {
-			throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
-		}
+		ManagementTokenUtils.validateToken(token, managementToken);
 	}
 
 }

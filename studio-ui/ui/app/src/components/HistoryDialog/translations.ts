@@ -26,6 +26,10 @@ export const translations = {
 			id: 'pagination.nextPage',
 			defaultMessage: 'Next page'
 		},
+		itemsPerPage: {
+			id: 'pagination.itemsPerPage',
+			defaultMessage: 'Items per page'
+		},
 		view: {
 			id: 'words.view',
 			defaultMessage: 'View'

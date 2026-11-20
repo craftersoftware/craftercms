@@ -113,7 +113,11 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 							<ListItem key={index}>
 								<ListItemText>{item.url}</ListItemText>
 								<Tooltip title={formatMessage({ defaultMessage: 'View' })}>
-									<IconButton size="small" onClick={() => handleViewVideo(item.url)}>
+									<IconButton
+										size="small"
+										onClick={() => handleViewVideo(item.url)}
+										aria-label={formatMessage({ defaultMessage: 'View' })}
+									>
 										<VisibilityOutlinedIcon fontSize="small" />
 									</IconButton>
 								</Tooltip>
@@ -130,12 +134,19 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 									if (!actionsReady) return;
 									setAnchorEl(event.currentTarget);
 								}}
+								aria-label={formatMessage({ defaultMessage: 'Replace' })}
 							>
 								<EditOutlined />
 							</IconButton>
 						</Tooltip>
 						<Tooltip title={formatMessage({ defaultMessage: 'Delete' })}>
-							<IconButton size="small" disabled={readonly} autoFocus={autoFocus} onClick={handleRemoveVideos}>
+							<IconButton
+								size="small"
+								disabled={readonly}
+								autoFocus={autoFocus}
+								onClick={handleRemoveVideos}
+								aria-label={formatMessage({ defaultMessage: 'Delete' })}
+							>
 								<DeleteOutlined />
 							</IconButton>
 						</Tooltip>

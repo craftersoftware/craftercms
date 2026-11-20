@@ -29,8 +29,31 @@ export type ObjectTypeOption = 'all' | Extract<SystemType, 'page' | 'component'>
 export const ContentTypesFilter = forwardRef<HTMLDivElement, ContentTypesFilterProps>((props, ref) => {
 	const { formatMessage } = useIntl();
 	const archetypes = useArchetypesList();
+	const contentTypeLabel = formatMessage({ id: 'searchFilter.contentType', defaultMessage: 'Content Type' });
+	const { MenuProps, SelectDisplayProps, ...rest } = props;
+	const callerList = MenuProps?.slotProps?.list;
 	return (
-		<Select {...props} ref={ref}>
+		<Select
+			{...rest}
+			ref={ref}
+			SelectDisplayProps={{
+				...SelectDisplayProps,
+				'aria-label': contentTypeLabel,
+				'aria-labelledby': undefined
+			}}
+			MenuProps={{
+				...MenuProps,
+				slotProps: {
+					...MenuProps?.slotProps,
+					// MUI calls a function list slot with ownerState. Resolve it, then keep the name on top.
+					list: (ownerState) => ({
+						...(typeof callerList === 'function' ? callerList(ownerState) : callerList),
+						'aria-label': contentTypeLabel,
+						'aria-labelledby': undefined
+					})
+				}
+			}}
+		>
 			<MenuItem value="all">
 				<FormattedMessage defaultMessage="Show all types" />
 			</MenuItem>

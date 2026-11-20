@@ -15,7 +15,7 @@
  */
 
 import { expect, Page, test } from '@playwright/test';
-import { NotReadyError, panelDestination, settle } from '../readiness';
+import { NotReadyError, panelDestination, settle, siteToolsReady } from '../readiness';
 
 const origin = 'https://studio.test';
 
@@ -95,5 +95,83 @@ test.describe('panel destination readiness', () => {
 		expect(() =>
 			panelDestination(page, page.locator('#panel'), 'New Panel', 'edit mode tools panel > New Panel')
 		).toThrow(NotReadyError);
+	});
+});
+
+/**
+ * Project Tools the way SiteTools renders it after the list rewrite: a "Project Tools" navigation landmark with a list
+ * of ListItem buttons. The landmark, its list and a role="menu" lookalike are there from the start; the tool buttons
+ * only arrive with the response.
+ */
+const siteToolsShell = `<!doctype html><html><body>
+<nav aria-label="Project Tools"><ul id="tools"></ul></nav>
+<main><h1>Please choose a tool from the left.</h1></main>
+<script>
+	fetch('/api/tools').then((r) => r.json()).then((body) => {
+		if (body.error) document.body.insertAdjacentHTML('beforeend', '<section><h3>Error 500</h3></section>');
+		else document.querySelector('#tools').innerHTML = body.tools
+			.map((t) => '<li><button>' + t + '</button></li>').join('');
+	});
+</script>
+</body></html>`;
+
+async function openHeldSiteTools(page: Page) {
+	let release!: (body: object) => void;
+	const response = new Promise<object>((resolve) => (release = resolve));
+	await page.route(`${origin}/**`, async (route) => {
+		if (route.request().url().endsWith('/api/tools')) {
+			await route.fulfill({ json: await response });
+		} else {
+			await route.fulfill({ contentType: 'text/html', body: siteToolsShell });
+		}
+	});
+	await page.goto(`${origin}/`);
+	return { release, ready: siteToolsReady(page.locator('body')) };
+}
+
+test.describe('site tools readiness', () => {
+	test('does not resolve while only the navigation landmark and its empty list are on screen', async ({ page }) => {
+		const { release, ready } = await openHeldSiteTools(page);
+		await expect(page.getByRole('navigation', { name: 'Project Tools' })).toBeAttached();
+		let scanned = false;
+		const scan = settle(page, 'site tools', ready).then(() => (scanned = true));
+		await page.waitForTimeout(1_000);
+		expect(scanned).toBe(false);
+		release({ tools: ['Content Types', 'Audit'] });
+		await scan;
+		await expect(page.getByRole('navigation', { name: 'Project Tools' }).getByRole('listitem')).toHaveCount(2);
+	});
+
+	test('resolves on a list of ListItem buttons, with no role="menu" anywhere', async ({ page }) => {
+		const { release, ready } = await openHeldSiteTools(page);
+		const scan = settle(page, 'site tools', ready);
+		release({ tools: ['Content Types'] });
+		await expect(scan).resolves.toBeUndefined();
+		await expect(page.getByRole('menu')).toHaveCount(0);
+	});
+
+	test('a list that never fills fails with NotReadyError', async ({ page }) => {
+		const { ready } = await openHeldSiteTools(page);
+		await expect(settle(page, 'site tools', ready, 1_000)).rejects.toBeInstanceOf(NotReadyError);
+	});
+
+	test('a navigation with another name is not the project tools list', async ({ page }) => {
+		await page.route(`${origin}/**`, (route) =>
+			route.fulfill({
+				contentType: 'text/html',
+				body: '<nav aria-label="Other"><ul><li><button>Content Types</button></li></ul></nav>'
+			})
+		);
+		await page.goto(`${origin}/`);
+		await expect(settle(page, 'site tools', siteToolsReady(page.locator('body')), 1_000)).rejects.toBeInstanceOf(
+			NotReadyError
+		);
+	});
+
+	test('an error state fails with NotReadyError', async ({ page }) => {
+		const { release, ready } = await openHeldSiteTools(page);
+		const scan = settle(page, 'site tools', ready);
+		release({ error: true });
+		await expect(scan).rejects.toThrow(/error state \("Error 500"\)/);
 	});
 });

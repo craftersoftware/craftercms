@@ -23,6 +23,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
+import { SidebarFooterHtml } from '../ResizeableDrawer/SidebarFooterHtml';
 import { sidebarFirstRowInset, sidebarFooterPadding } from '../ResizeableDrawer/sidebarSpacing';
 import {
 	createHashRouter,
@@ -39,7 +40,6 @@ import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../Sk
 import EmptyState from '../EmptyState/EmptyState';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useGlobalAppState } from './GlobalAppContext';
-import Typography from '@mui/material/Typography';
 import CrafterCMSLogo from '../../icons/CrafterCMSLogo';
 import LoadingState from '../LoadingState/LoadingState';
 import LauncherOpenerButton from '../LauncherOpenerButton';
@@ -273,18 +273,7 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 					}}
 				>
 					<CrafterCMSLogo width={100} sxs={{ root: { margin: '0 auto 10px auto' } }} />
-					<Typography
-						component="p"
-						variant="caption"
-						sx={(theme) => ({
-							color: theme.palette.text.secondary,
-							'& > a': {
-								textDecoration: 'none',
-								color: theme.palette.primary.main
-							}
-						})}
-						dangerouslySetInnerHTML={{ __html: footerHtml }}
-					/>
+					<SidebarFooterHtml html={footerHtml} />
 				</Box>
 			</ResizeableDrawer>
 			<Box

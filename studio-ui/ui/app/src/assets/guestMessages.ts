@@ -176,5 +176,21 @@ export const guestMessages = {
 	noPolicyComply: defineMessage<{ readonly detail: MessageValue; readonly fileName: MessageValue }>({
 		id: 'desktopAssetUpload.noPolicyComply',
 		defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
-	})
+	}),
+	currentContentChangedByAnotherUser: defineMessage<{ name: MessageValue }>({
+		id: 'previewConcierge.currentContentChangedByAnotherUser',
+		defaultMessage: '{name} has changed the current page. Reload?'
+	}),
+	contentWasChangedByAnotherUser: defineMessage<{ name: MessageValue; label: MessageValue; contentType: MessageValue }>({
+		id: 'previewConcierge.contentWasChangedByAnotherUser',
+		defaultMessage: '{name} has changed {label} ({contentType}). Reload?'
+	}),
+	contentPathWasChangedByAnotherUser: defineMessage<{ name: MessageValue }>({
+		id: 'previewConcierge.contentPathWasChangedByAnotherUser',
+		defaultMessage: '{name} updated content used on this page. Reload?'
+	}),
+	contentWasLockedByAnotherUser: defineMessage<{ name: MessageValue }>({
+		id: 'previewConcierge.contentWasLockedByAnotherUser',
+		defaultMessage: 'The item was locked by {name}. Edit mode disabled until lock is released.'
+	}),
 };

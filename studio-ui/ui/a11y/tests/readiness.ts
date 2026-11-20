@@ -80,19 +80,35 @@ export async function settle(page: Page, screen: string, ready: ReadyState, time
 	}
 }
 
+/** The Unpublished Work dashlet, on the dashboard and in the tools panel Dashboard. */
+export const unpublishedDashlet = (scope: Locator) =>
+	scope.locator('.MuiCard-root').filter({ hasText: 'Unpublished Work' });
+
 /** The Unpublished Work dashlet with its rows, or its empty message. Used by the dashboard and the tools panel Dashboard. */
 export function dashboardReady(scope: Locator): ReadyState {
-	const dashlet = scope.locator('.MuiCard-root').filter({ hasText: 'Unpublished Work' });
+	const dashlet = unpublishedDashlet(scope);
 	return {
-		loaded: dashlet.locator('ul .MuiListItemButton-root'),
+		loaded: dashlet.locator('ul .MuiListItem-root:not(:has(.MuiSkeleton-root))'),
 		empty: dashlet.getByText('There are no unpublished items', { exact: true }),
 		error: errorState(dashlet)
 	};
 }
 
-/** The project tools list, as shown by Project Tools and the tools panel's Project Tools dialog. */
+/**
+ * The project tools list, as shown by Project Tools and the tools panel's Project Tools dialog: the "Project Tools"
+ * navigation landmark holding a list whose items are tool buttons. The landmark and its list render before the tools
+ * arrive, so the signal is the first tool button.
+ */
 export function siteToolsReady(scope: Locator): ReadyState {
-	return { loaded: scope.getByRole('menu'), error: errorState(scope) };
+	return {
+		loaded: scope
+			.getByRole('navigation', { name: 'Project Tools', exact: true })
+			.getByRole('list')
+			.getByRole('listitem')
+			.getByRole('button')
+			.first(),
+		error: errorState(scope)
+	};
 }
 
 type Destination = { kind: 'page' | 'dialog'; ready: (body: Locator) => ReadyState };
@@ -162,5 +178,5 @@ export function panelDestination(page: Page, panel: Locator, label: string, scre
 			: // ToolPanel renders `<header>` (Back, title) then a divider and the page `<section>`.
 				panel.locator('header').filter({ has: title }).locator('xpath=following-sibling::section[1]');
 	const ready = destination.ready(root);
-	return { kind: destination.kind, ready: { ...ready, error: ready.error ?? errorState(root) } };
+	return { kind: destination.kind, root, ready: { ...ready, error: ready.error ?? errorState(root) } };
 }

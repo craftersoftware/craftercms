@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -71,6 +71,7 @@ const translations = {
 
 export function EditUserDialogUI(props: EditUserDialogUIProps) {
 	const { formatMessage } = useIntl();
+	const enabledLabelId = React.useId();
 	const managedInStudio = !props.user.externallyManaged;
 	const {
 		titleId,
@@ -173,7 +174,7 @@ export function EditUserDialogUI(props: EditUserDialogUIProps) {
 								}}
 							>
 								<div className="row">
-									<Typography color="textSecondary" className="section-label">
+									<Typography color="textSecondary" className="section-label" id={enabledLabelId}>
 										<FormattedMessage id="words.enabled" defaultMessage="Enabled" />
 									</Typography>
 									<Box sx={{ width: '100%', marginLeft: '-12px' }}>
@@ -185,7 +186,7 @@ export function EditUserDialogUI(props: EditUserDialogUIProps) {
 											name="enabled"
 											slotProps={{
 												input: {
-													'aria-label': 'enabled checkbox'
+													'aria-labelledby': enabledLabelId
 												}
 											}}
 										/>

@@ -138,6 +138,47 @@ async function render() {
 const selectAllInput = (host: HTMLElement) =>
 	host.querySelector<HTMLInputElement>('input[type="checkbox"][aria-label="Select all on this page"]');
 
+describe('search rows-per-page name', () => {
+	it('names the rows-per-page combobox "Items per page" without rendering a visible label', async () => {
+		const host = (await mount({ searchParameters: { limit: 9, offset: 0 } })).host;
+		const combobox = host.querySelector<HTMLElement>('.MuiTablePagination-select[role="combobox"]');
+		assert.ok(combobox, 'the rows-per-page combobox is missing');
+		const ids = combobox.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) ?? [];
+		const name =
+			combobox.getAttribute('aria-label') ??
+			ids
+				.map((id) => host.querySelector<HTMLElement>(`[id="${id}"]`)?.textContent ?? '')
+				.join(' ')
+				.replace(/\s+/g, ' ')
+				.trim();
+		assert.match(name, /^Items per page$/);
+		const pagination = host.querySelector<HTMLElement>('.MuiTablePagination-root');
+		assert.ok(pagination, 'the pagination toolbar is missing');
+		assert.doesNotMatch(pagination.textContent ?? '', /Items per page/);
+		assert.equal(
+			pagination.querySelector('.MuiTablePagination-selectLabel')?.textContent ?? '',
+			'',
+			'a visible rows-per-page label is rendered'
+		);
+		assert.equal(combobox.hasAttribute('aria-labelledby'), false, 'the combobox points at a label that is not shown');
+	});
+});
+
+describe('search rows-per-page listbox name', () => {
+	it('names the open listbox "Items per page" with no dangling aria-labelledby', async () => {
+		const host = (await mount({ searchParameters: { limit: 9, offset: 0 } })).host;
+		const combobox = host.querySelector<HTMLElement>('.MuiTablePagination-select[role="combobox"]');
+		assert.ok(combobox, 'the rows-per-page combobox is missing');
+		await act(async () => {
+			combobox.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+		});
+		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
+		assert.ok(listbox, 'the rows-per-page listbox did not open');
+		assert.equal(listbox.getAttribute('aria-label'), 'Items per page');
+		assert.equal(listbox.hasAttribute('aria-labelledby'), false, 'the listbox points at a label that is not shown');
+	});
+});
+
 describe('search select-all name', () => {
 	it('names the select-all input, not just the wrapper the tooltip clones', async () => {
 		const host = await render();
@@ -158,6 +199,9 @@ describe('search select-all name', () => {
 		});
 		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
 		assert.equal(input.getAttribute('aria-label'), 'Select all on this page');
+		const span = input.closest<HTMLElement>('.MuiCheckbox-root');
+		assert.equal(span?.getAttribute('aria-label'), null);
+		assert.equal(span?.getAttribute('aria-labelledby'), null);
 	});
 });
 
