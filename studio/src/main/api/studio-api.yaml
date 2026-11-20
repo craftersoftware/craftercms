@@ -8035,8 +8035,11 @@ paths:
                         type: string
                 -   name: path
                     in: query
-                    description: path regex
-                    required: true
+                    description: |
+                        Optional regular expression used to filter items by path.
+                        When omitted, no path filter is applied and item states for the whole site are returned.
+                        A blank value or a regular expression that does not compile returns 400.
+                    required: false
                     schema:
                         type: string
                 -   name: states

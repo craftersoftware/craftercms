@@ -42,6 +42,9 @@ import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMI
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -67,7 +70,7 @@ public class ItemStatesPermissionCheckTest {
 		mappings.addRuleContentItemPermissionsMapping("/.*", List.of(PERMISSION_CONTENT_READ));
 
 		userService = mock(UserService.class);
-		when(userService.getUserPermissions(SITE_ID, CONTENT_PATH, USERNAME))
+		when(userService.getUserPermissions(eq(SITE_ID), nullable(String.class), eq(USERNAME)))
 			.thenAnswer(invocation -> mappings.getPermissionsForPath(invocation.getArgument(1)));
 
 		StudioConfiguration studioConfiguration = mock(StudioConfiguration.class);
@@ -85,10 +88,18 @@ public class ItemStatesPermissionCheckTest {
 	}
 
 	@Test
-	public void missingPathIsRejectedBeforePermissionCheck() {
-		assertThrows(InvalidParametersException.class, () -> controller.getItemStates(SITE_ID, null, null, 0, 10));
+	public void missingPathIsCheckedForTheSiteAndQueriedWithoutAPath() throws Exception {
+		when(workflowServiceInternal.getItemStatesTotal(SITE_ID, null, null)).thenReturn(4);
+		when(workflowServiceInternal.getItemsByStates(SITE_ID, null, null, 0, 10)).thenReturn(List.of());
 
-		verifyNoInteractions(userService, workflowServiceInternal);
+		PaginatedResultList<?> result = controller.getItemStates(SITE_ID, null, null, 0, 10);
+
+		assertSame(ApiResponse.OK, result.getResponse());
+		assertEquals(4L, result.getTotal());
+		verify(userService, times(2)).getUserPermissions(SITE_ID, "/", USERNAME);
+		verify(workflowServiceInternal).getItemStatesTotal(SITE_ID, null, null);
+		verify(workflowServiceInternal).getItemsByStates(SITE_ID, null, null, 0, 10);
+		verify(workflowServiceInternal, times(0)).getItemStatesTotal(eq(SITE_ID), any(String.class), any());
 	}
 
 	@Test

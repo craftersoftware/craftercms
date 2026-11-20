@@ -58,10 +58,24 @@ public class WorkflowServiceImpl implements WorkflowService {
 	@Override
 	@RequireSiteExists
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
+	public int getItemStatesTotal(@SiteId String siteId, Long states) throws SiteNotFoundException {
+		return workflowServiceInternal.getItemStatesTotal(siteId, null, states);
+	}
+
+	@Override
+	@RequireSiteExists
+	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public List<ContentItem> getItemsByStates(@SiteId String siteId,
 											  @ProtectedResourceId(PATH_RESOURCE_ID) String path, Long states,
 											  int offset, int limit) throws SiteNotFoundException {
 		return workflowServiceInternal.getItemsByStates(siteId, path, states, offset, limit);
+	}
+
+	@Override
+	@RequireSiteExists
+	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
+	public List<ContentItem> getItemsByStates(@SiteId String siteId, Long states, int offset, int limit) throws SiteNotFoundException {
+		return workflowServiceInternal.getItemsByStates(siteId, null, states, offset, limit);
 	}
 
 	@Override

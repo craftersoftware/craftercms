@@ -56,10 +56,17 @@ public class WorkflowControllerTest {
 	}
 
 	@Test
-	public void nullPathIsRejected() {
-		assertThrows(InvalidParametersException.class, () -> controller.getItemStates(SITE_ID, null, null, 0, 10));
+	public void nullPathReturnsAllItemStates() throws Exception {
+		when(workflowService.getItemStatesTotal(SITE_ID, (Long) null)).thenReturn(2);
+		when(workflowService.getItemsByStates(SITE_ID, (Long) null, 0, 10)).thenReturn(List.of(new ContentItem()));
 
-		verifyNoInteractions(workflowService);
+		PaginatedResultList<ContentItem> result = controller.getItemStates(SITE_ID, null, null, 0, 10);
+
+		assertSame(ApiResponse.OK, result.getResponse());
+		assertEquals(2L, result.getTotal());
+		assertEquals(1, result.getLimit());
+		verify(workflowService).getItemStatesTotal(SITE_ID, (Long) null);
+		verify(workflowService).getItemsByStates(SITE_ID, (Long) null, 0, 10);
 	}
 
 	@Test
