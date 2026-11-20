@@ -19,7 +19,7 @@ import ContentType from '../models/ContentType';
 import { useDispatch } from 'react-redux';
 import { useActiveSiteId } from './useActiveSiteId';
 import { useSelection } from './useSelection';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { fetchContentTypes } from '../state/actions/preview';
 import { contentTypesForParse } from '../utils/contentType';
 
@@ -27,18 +27,14 @@ export function useContentTypes(): LookupTable<ContentType> {
 	const dispatch = useDispatch();
 	const site = useActiveSiteId();
 	const { byId, isFetching } = useSelection((state) => state.contentTypes);
-	const uiConfigFetching = useSelection((state) => state.uiConfig?.isFetching);
-	const controls = useSelection((state) => state.uiConfig?.controls);
+	const contentTypes = useSelection((state) => contentTypesForParse(state.contentTypes.byId, state.uiConfig));
 	useEffect(() => {
 		if (!byId && site && isFetching === null) {
 			dispatch(fetchContentTypes());
 		}
 	}, [dispatch, site, byId, isFetching]);
 
-	return useMemo(
-		() => contentTypesForParse(byId, { isFetching: uiConfigFetching, controls }),
-		[byId, uiConfigFetching, controls]
-	);
+	return contentTypes;
 }
 
 export default useContentTypes;

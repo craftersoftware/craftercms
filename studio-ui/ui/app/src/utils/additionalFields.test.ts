@@ -454,6 +454,26 @@ describe('contentTypesForParse lookup', () => {
 		assert.deepEqual(merged['/page/article'].fields.title_s.additionalFields, ['title_s_bk']);
 	});
 
+	it('returns the same reference for identical byId and controls, and a new one when controls change', () => {
+		const byId = { '/page/article': articleWithoutPersistedAdditionalFields } as never;
+		const controls = { 'backup-control': { metadata: { additionalFields: ['{id}_bk'] } } };
+		const first = contentTypesForParse(byId, { isFetching: false, controls });
+		const second = contentTypesForParse(byId, { isFetching: false, controls });
+		assert.equal(first, second);
+		const changedControls = { 'backup-control': { metadata: { additionalFields: ['{id}_bk', '{id}_alt'] } } };
+		const third = contentTypesForParse(byId, { isFetching: false, controls: changedControls });
+		assert.notEqual(first, third);
+		assert.deepEqual(third['/page/article'].fields.title_s.additionalFields, ['title_s_bk', 'title_s_alt']);
+	});
+
+	it('keeps the last merged result while UI config is refetching', () => {
+		const byId = { '/page/article': articleWithoutPersistedAdditionalFields } as never;
+		const controls = { 'backup-control': { metadata: { additionalFields: ['{id}_bk'] } } };
+		const merged = contentTypesForParse(byId, { isFetching: false, controls });
+		assert.equal(contentTypesForParse(byId, { isFetching: true, controls }), merged);
+		assert.equal(contentTypesForParse(byId, { isFetching: null, controls }), merged);
+	});
+
 	it('supplied lookup: merge from controls quiets plugin companions on old form defs', () => {
 		const supplied = { '/page/article': articleWithoutPersistedAdditionalFields };
 		const merged = addConfiguredAdditionalFields(supplied as never, pluginControls);

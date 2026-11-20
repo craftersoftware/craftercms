@@ -327,26 +327,42 @@ export const componentsDataSourceContentTypesPropertyNames = [
 	'allowedSharedExistingContentTypes'
 ];
 
+type ContentTypesForParseControls = LookupTable<{ metadata?: { additionalFields?: string[] | null } }>;
+
+let cachedById: LookupTable<ContentType> | undefined;
+let cachedControls: ContentTypesForParseControls | undefined;
+let cachedResult: LookupTable<ContentType> | undefined;
+
 /**
  * Form-definition XML is the authoritative source for a field's `additionalFields`.
  * Control descriptors in the site UI config backfill ids that were never persisted.
  * A persisted id that differs from the descriptor is kept.
  *
- * Runtime callers should use `contentTypesForParse` (via `useContentTypes` in React) and
- * pass that lookup into `parseContentXML`. This returns the store lookup until UI config
- * has loaded, so guest load is not held for the backfill. A guest that checks in before
- * UI config loads still logs missing companion fields once for form definitions that
- * don't persist `additionalFields` yet.
+ * Runtime callers should use `contentTypesForParse` (via `useContentTypes` in React) and pass that
+ * lookup into `parseContentXML`. Returns the store lookup until UI config has loaded once, so guest
+ * load is not held for the backfill. After a successful merge, the last result is cached by
+ * `(byId, controls)` reference and reused (including while a UI-config refetch is in flight) so all
+ * callers share one lookup and dependent effects do not re-run on identity alone. A guest that checks
+ * in before UI config loads still logs missing companion fields once for form definitions that don't
+ * persist `additionalFields` yet.
  */
 export function contentTypesForParse(
 	byId: LookupTable<ContentType>,
 	uiConfig: {
 		isFetching: boolean | null;
-		controls: LookupTable<{ metadata?: { additionalFields?: string[] | null } }>;
+		controls: ContentTypesForParseControls;
 	}
 ): LookupTable<ContentType> {
-	if (!byId || uiConfig?.isFetching !== false) return byId;
-	return addConfiguredAdditionalFields(byId, uiConfig.controls);
+	if (!byId) return byId;
+	if (byId === cachedById && uiConfig?.controls === cachedControls && cachedResult !== undefined) {
+		return cachedResult;
+	}
+	if (uiConfig?.isFetching !== false) return byId;
+	const result = addConfiguredAdditionalFields(byId, uiConfig.controls);
+	cachedById = byId;
+	cachedControls = uiConfig.controls;
+	cachedResult = result;
+	return result;
 }
 
 export function addConfiguredAdditionalFields(
