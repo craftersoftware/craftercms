@@ -334,7 +334,9 @@ export const componentsDataSourceContentTypesPropertyNames = [
  *
  * Runtime callers should use `contentTypesForParse` (via `useContentTypes` in React) and
  * pass that lookup into `parseContentXML`. This returns the store lookup until UI config
- * has loaded, so guest load is not held for the backfill.
+ * has loaded, so guest load is not held for the backfill. A guest that checks in before
+ * UI config loads still logs missing companion fields once for form definitions that
+ * don't persist `additionalFields` yet.
  */
 export function contentTypesForParse(
 	byId: LookupTable<ContentType>,
