@@ -903,26 +903,56 @@ async function recordInvalidField(
 	}
 }
 
+type InvalidFieldIdsWatcher = {
+	count: number;
+	ready: Promise<void>;
+	unsubscribeAll: () => void;
+};
+
+/** One watcher per atoms object so the local form and a stacked parent share the seed and the subscriptions. */
+const invalidFieldIdsWatchers = new WeakMap<FormsEngineAtoms, InvalidFieldIdsWatcher>();
+
 /**
  * Subscribes each validation atom and updates only that field's membership in {@link FormsEngineAtoms.invalidFieldIds}.
- * `ready` settles after the first pass. The caller unsubscribes. Each field awaits its own validation;
- * a slow or hanging validator does not hold the others back. `ready` is `Promise.all` over those seeds, so it
- * waits for every field — including one that never settles — not merely the slowest among those that finish.
+ * The first caller starts the watcher; later callers share `ready`; the last `unsubscribe` stops it.
+ * Each field awaits its own validation, so a slow or hanging validator does not hold the others back.
+ * `ready` is `Promise.all` over those seeds, so it waits for every field — including one that never settles.
  */
 export function watchInvalidFieldIds(
 	store: InvalidFieldIdsStore,
 	atoms: FormsEngineAtoms
 ): { unsubscribe: () => void; ready: Promise<void> } {
-	const unsubs: Array<() => void> = [];
-	const seeds: Array<Promise<void>> = [];
-	for (const [fieldId, validityAtom] of Object.entries(atoms.validationByFieldId)) {
-		const apply = () => recordInvalidField(store, atoms, fieldId, validityAtom);
-		seeds.push(apply());
-		unsubs.push(store.sub(validityAtom, () => void apply()));
+	let watcher = invalidFieldIdsWatchers.get(atoms);
+	if (!watcher) {
+		const unsubs: Array<() => void> = [];
+		const seeds: Array<Promise<void>> = [];
+		for (const [fieldId, validityAtom] of Object.entries(atoms.validationByFieldId)) {
+			const apply = () => recordInvalidField(store, atoms, fieldId, validityAtom);
+			seeds.push(apply());
+			unsubs.push(store.sub(validityAtom, () => void apply()));
+		}
+		watcher = {
+			count: 0,
+			ready: Promise.all(seeds).then(() => undefined),
+			unsubscribeAll: () => unsubs.forEach((unsub) => unsub())
+		};
+		invalidFieldIdsWatchers.set(atoms, watcher);
 	}
+	watcher.count += 1;
+	let released = false;
 	return {
-		ready: Promise.all(seeds).then(() => undefined),
-		unsubscribe: () => unsubs.forEach((unsub) => unsub())
+		ready: watcher.ready,
+		unsubscribe: () => {
+			if (released) return;
+			released = true;
+			const current = invalidFieldIdsWatchers.get(atoms);
+			if (!current) return;
+			current.count -= 1;
+			if (current.count <= 0) {
+				invalidFieldIdsWatchers.delete(atoms);
+				current.unsubscribeAll();
+			}
+		}
 	};
 }
 

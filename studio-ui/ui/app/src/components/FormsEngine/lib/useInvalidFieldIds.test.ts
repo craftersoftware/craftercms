@@ -242,4 +242,58 @@ describe('invalidFieldIdsAtom', () => {
 			unsubscribe();
 		}
 	});
+
+	// #9340: local + parent readers of the same atoms share one watcher.
+	it('shares one watcher across multiple callers for the same atoms', async () => {
+		const fieldCount = 12;
+		const runs: Record<string, number> = {};
+		const values: Record<string, ReturnType<typeof atom<string>>> = {};
+		const validationByFieldId: Record<string, ReturnType<typeof atom>> = {};
+		for (let i = 0; i < fieldCount; i++) {
+			const id = `f${i}_s`;
+			runs[id] = 0;
+			values[id] = atom(i === 0 ? 'bad' : 'ok');
+			validationByFieldId[id] = atom(async (get) => {
+				runs[id]++;
+				return { isValid: get(values[id]) !== 'bad' };
+			});
+		}
+		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
+		entry.atoms = {
+			relevanceVersion: atom(0),
+			invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
+			validationByFieldId
+		} as never;
+		const store = createStore();
+		const originalSub = store.sub.bind(store);
+		let subCalls = 0;
+		store.sub = ((...args: Parameters<typeof store.sub>) => {
+			subCalls += 1;
+			return originalSub(...args);
+		}) as typeof store.sub;
+
+		const first = watchInvalidFieldIds(store, entry.atoms);
+		const second = watchInvalidFieldIds(store, entry.atoms);
+		await Promise.all([first.ready, second.ready]);
+		assert.equal(subCalls, fieldCount, 'store.sub runs once per field, not once per reader');
+		assert.equal(
+			Object.values(runs).reduce((sum, n) => sum + n, 0),
+			fieldCount,
+			'seed validations run once even with two readers'
+		);
+		assert.equal(first.ready, second.ready);
+
+		const idsAtom = invalidFieldIdsAtom(entry);
+		assert.deepEqual(store.get(idsAtom), ['f0_s']);
+
+		first.unsubscribe();
+		first.unsubscribe();
+		store.set(values.f0_s, 'ok');
+		await until(() => store.get(idsAtom).length === 0);
+		assert.equal(runs.f0_s, 2, 'the remaining reader still receives validity updates');
+
+		second.unsubscribe();
+		store.set(values.f0_s, 'bad');
+		assert.deepEqual(store.get(idsAtom), [], 'with no watcher left, membership is not refreshed');
+	});
 });
