@@ -216,6 +216,9 @@
 				AND s.site_id = #{siteId})
 	</select>
 
+	<!-- Replace the bitmap with READY. Success bits cannot be kept: the queue matches package_state = READY exactly.
+	     The retry republishes every target. Republishing a target that already succeeded is safe because publish
+	     rebuilds that target from the package's sandbox commit. -->
 	<update id="resetProcessingPackages">
 		UPDATE publish_package
 		SET package_state = #{readyState}

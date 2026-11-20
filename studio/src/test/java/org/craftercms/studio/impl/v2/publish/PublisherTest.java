@@ -477,6 +477,40 @@ public class PublisherTest {
 		verify(publishDAO).resetProcessingPackages(PublishPackage.PackageState.READY.value, PROCESSING.value);
 	}
 
+	@Test
+	public void resetDropsLiveSuccessAndRetryRepublishesThatTarget() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(false);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+		long readyState = PublishPackage.PackageState.READY.value;
+		long[] packageState = {PROCESSING.value | LIVE_SUCCESS.value};
+		when(publishPackage.getPackageState()).thenAnswer(invocation -> packageState[0]);
+		doAnswer(invocation -> {
+			long onBits = invocation.getArgument(0);
+			long offBits = invocation.getArgument(1);
+			packageState[0] = (packageState[0] | onBits) & ~offBits;
+			return null;
+		}).when(publishPackage).updatePackageState(anyLong(), anyLong());
+		doAnswer(invocation -> {
+			long ready = invocation.getArgument(0);
+			long processing = invocation.getArgument(1);
+			if ((packageState[0] & processing) > 0) {
+				packageState[0] = ready;
+			}
+			return null;
+		}).when(publishDAO).resetProcessingPackages(anyLong(), anyLong());
+
+		publisher.resetProcessingPackages();
+
+		assertEquals(readyState, packageState[0]);
+		assertFalse(LIVE_SUCCESS.matches(packageState[0]));
+		assertFalse(PROCESSING.matches(packageState[0]));
+
+		publisher.doPublish(publishPackage);
+
+		verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+	}
+
 	private void prepareFailedBaselineCopy(String target) throws Exception {
 		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, target);
 		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
