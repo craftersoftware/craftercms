@@ -45,6 +45,15 @@ export const PublishingStatusAvatar = React.forwardRef<HTMLDivElement, Publishin
 	const { status, enabled, variant = 'icon', sx, sxs } = props;
 	const stylingTarget = targets[variant] ?? 'backgroundColor';
 	const theme = useTheme();
+	// colorDefault paints text.primary on every avatar without an image. The background variant
+	// puts the status colour behind the icon and would otherwise inherit that: white on the dark-mode
+	// success fill (#30DB5B) is 1.84:1. The icon takes the contrast colour of the fill instead.
+	const statusAppearance = (code: 'ready' | 'publishing' | 'stopped') => {
+		const fill = getPublishingStatusCodeColor(code, theme);
+		return variant === 'background' && fill
+			? { backgroundColor: fill, color: theme.palette.getContrastText(fill) }
+			: { [stylingTarget]: fill };
+	};
 	return (
 		<Avatar
 			ref={ref}
@@ -58,15 +67,9 @@ export const PublishingStatusAvatar = React.forwardRef<HTMLDivElement, Publishin
 					color: theme.palette.text.secondary
 				},
 				{
-					'&.ready': {
-						[stylingTarget]: getPublishingStatusCodeColor('ready', theme)
-					},
-					'&.publishing': {
-						[stylingTarget]: getPublishingStatusCodeColor('publishing', theme)
-					},
-					'&.stopped': {
-						[stylingTarget]: getPublishingStatusCodeColor('stopped', theme)
-					}
+					'&.ready': statusAppearance('ready'),
+					'&.publishing': statusAppearance('publishing'),
+					'&.stopped': statusAppearance('stopped')
 				},
 				sx,
 				sxs?.root

@@ -14,7 +14,7 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 	<meta charset="utf-8">
 	<title>CrafterCMS: No Site Set</title>

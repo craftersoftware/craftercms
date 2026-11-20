@@ -15,7 +15,7 @@
  */
 
 import DashletCard, { DashletCardProps } from '../DashletCard/DashletCard';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import React, { useEffect, useMemo, useState } from 'react';
 import useSpreadState from '../../hooks/useSpreadState';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
@@ -102,6 +102,8 @@ export function DevContentOpsDashlet(props: DevContentOpsDashletProps) {
 		loading: false
 	});
 	const [days, setDays] = useState(30);
+	const { formatMessage } = useIntl();
+	const dateRangeLabel = formatMessage({ id: 'devContentOpsDashlet.dateRange', defaultMessage: 'Date range' });
 	const onRefresh = useMemo(
 		() => (backgroundRefresh?: boolean) => {
 			if (!backgroundRefresh) {
@@ -162,7 +164,19 @@ export function DevContentOpsDashlet(props: DevContentOpsDashletProps) {
 						disableUnderline
 						value={days}
 						onChange={(e) => setDays(e.target.value as number)}
-						SelectDisplayProps={{ style: { paddingLeft: '8px' } }}
+						SelectDisplayProps={{
+							style: { paddingLeft: '8px' },
+							'aria-label': dateRangeLabel,
+							'aria-labelledby': undefined
+						}}
+						MenuProps={{
+							slotProps: {
+								list: {
+									'aria-label': dateRangeLabel,
+									'aria-labelledby': undefined
+								}
+							}
+						}}
 					>
 						<MenuItem value={3}>
 							<FormattedMessage defaultMessage="{days} days" values={{ days: 3 }} />

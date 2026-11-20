@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import React, { useState } from 'react';
 import DialogBody from '../DialogBody/DialogBody';
 import SingleItemSelector from '../SingleItemSelector';
@@ -58,6 +58,13 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 		error
 	} = props;
 	const [openSelector, setOpenSelector] = useState(false);
+	const { formatMessage } = useIntl();
+	// No visible label: the closed value is one of the options, so the name is the control's purpose.
+	const referencesLabel = formatMessage({ id: 'dependenciesDialog.references', defaultMessage: 'References' });
+	const referenceTypeLabel = formatMessage({
+		id: 'dependenciesDialog.referenceType',
+		defaultMessage: 'Reference type'
+	});
 	const filteredDependencies = dependencies?.filter((dependency) => assetsTypes[showTypes].filter(dependency));
 
 	return (
@@ -89,6 +96,18 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 										fontSize: '16px',
 										border: 'none',
 										background: 'none'
+									}
+								}
+							}}
+							SelectDisplayProps={{
+								'aria-label': referencesLabel,
+								'aria-labelledby': undefined
+							}}
+							MenuProps={{
+								slotProps: {
+									list: {
+										'aria-label': referencesLabel,
+										'aria-labelledby': undefined
 									}
 								}
 							}}
@@ -216,6 +235,10 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 								}
 							}
 						}}
+						SelectDisplayProps={{
+							'aria-label': referenceTypeLabel,
+							'aria-labelledby': undefined
+						}}
 						MenuProps={{
 							sx: {
 								'& .MuiListItem-root': {
@@ -233,12 +256,26 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 							transformOrigin: {
 								vertical: 'bottom',
 								horizontal: 'left'
+							},
+							slotProps: {
+								list: {
+									'aria-label': referenceTypeLabel,
+									'aria-labelledby': undefined
+								}
 							}
 						}}
 					>
 						{Object.keys(assetsTypes).map((typeId) => (
 							<MenuItem value={typeId} key={typeId}>
-								<Radio checked={showTypes === typeId} color="primary" />
+								{/* The option's text is its name and aria-selected is its state. The radio only paints the mark. */}
+								<Radio
+									checked={showTypes === typeId}
+									color="primary"
+									tabIndex={-1}
+									disableRipple
+									aria-hidden
+									slotProps={{ input: { tabIndex: -1, 'aria-hidden': true } }}
+								/>
 								{assetsTypes[typeId].label}
 							</MenuItem>
 						))}

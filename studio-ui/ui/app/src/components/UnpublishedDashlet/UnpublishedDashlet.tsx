@@ -37,6 +37,7 @@ import {
 	DashletEmptyMessage,
 	DashletItemOptions,
 	getItemSkeleton,
+	dashletSelectableRowSx,
 	List,
 	ListItemIcon,
 	Pager
@@ -51,7 +52,7 @@ import ActionsBar from '../ActionsBar';
 import { UNDEFINED } from '../../utils/constants';
 import { itemActionDispatcher } from '../../utils/itemActions';
 import { useDispatch } from 'react-redux';
-import ListItemButton from '@mui/material/ListItemButton';
+import ListItem from '@mui/material/ListItem';
 import {
 	contentEvent,
 	deleteContentEvent,
@@ -304,9 +305,17 @@ export function UnpublishedDashlet(props: UnpublishedDashletProps) {
 			{items && (
 				<List sx={{ pb: 0 }}>
 					{items.map((item, index) => (
-						<ListItemButton key={index} onClick={(e) => onSelectItem(e, item)} sx={{ pt: 0, pb: 0 }}>
+						<ListItem key={index} onClick={(e) => onSelectItem(e, item)} sx={dashletSelectableRowSx}>
 							<ListItemIcon>
-								<Checkbox edge="start" checked={isSelected(item)} onChange={(e) => onSelectItem(e, item)} />
+								<Checkbox
+									edge="start"
+									checked={isSelected(item)}
+									onClick={(e) => e.stopPropagation()}
+									onChange={(e) => onSelectItem(e, item)}
+									slotProps={{
+										input: { 'aria-label': formatMessage({ defaultMessage: 'Select {name}' }, { name: item.label }) }
+									}}
+								/>
 							</ListItemIcon>
 							<ListItemText
 								primary={
@@ -339,7 +348,7 @@ export function UnpublishedDashlet(props: UnpublishedDashletProps) {
 								}
 							/>
 							<DashletItemOptions path={item.path} />
-						</ListItemButton>
+						</ListItem>
 					))}
 				</List>
 			)}

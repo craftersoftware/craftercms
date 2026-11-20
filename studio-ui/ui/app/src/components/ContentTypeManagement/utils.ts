@@ -55,7 +55,7 @@ import { getXmlBuilder, valueSerializersLookup } from '../FormsEngine/lib/valueS
 import { nanoid } from 'nanoid';
 import { commonDataSourceDescriptors, dataSourceDescriptors } from './descriptors/dataSources';
 import type { ControlProps } from '../FormsEngine/types';
-import { IntlShape } from 'react-intl';
+import { defineMessage, IntlShape } from 'react-intl';
 import TranslationOrText from '../../models/TranslationOrText';
 import { getFileNameFromPath } from '../../utils/path';
 import type { Dispatch } from 'redux';
@@ -467,7 +467,7 @@ export function createVirtualTypeForField(
 				{
 					id: commonPropertiesSectionId,
 					color: null,
-					title: 'Basic Properties',
+					title: defineMessage({ defaultMessage: 'Basic Properties' }),
 					description: '',
 					fields: Object.keys(commonControlFieldsDescriptors),
 					expandByDefault: true
@@ -510,7 +510,7 @@ export function createVirtualTypeForDataSource(
 				{
 					id: commonPropertiesSectionId,
 					color: null,
-					title: 'Basic Properties',
+					title: defineMessage({ defaultMessage: 'Basic Properties' }),
 					description: '',
 					fields: Object.keys(commonDataSourceDescriptors),
 					expandByDefault: true

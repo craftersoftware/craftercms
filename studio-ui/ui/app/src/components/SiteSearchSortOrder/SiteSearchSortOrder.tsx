@@ -36,6 +36,10 @@ const messages = defineMessages({
 	lessRelevantFirst: {
 		id: 'searchFilter.byRelevanceAscMessage',
 		defaultMessage: 'Less relevant first'
+	},
+	sortOrder: {
+		id: 'searchFilter.sortOrder',
+		defaultMessage: 'Sort order'
 	}
 });
 
@@ -48,6 +52,7 @@ interface SortOrderProps {
 export function SiteSearchSortOrder(props: SortOrderProps) {
 	const { formatMessage } = useIntl();
 	const { handleFilterChange, sortBy, sortOrder = 'desc' } = props;
+	const sortOrderLabel = formatMessage(messages.sortOrder);
 	// sortBy === undefined: this means the current filter is the default === _score
 	const isRelevance = sortBy === '_score' || sortBy === undefined;
 	const options = isRelevance
@@ -79,6 +84,18 @@ export function SiteSearchSortOrder(props: SortOrderProps) {
 				marginTop: '10px'
 			}}
 			onChange={(event) => handleFilterChange({ name: 'sortOrder', value: event.target.value })}
+			SelectDisplayProps={{
+				'aria-label': sortOrderLabel,
+				'aria-labelledby': undefined
+			}}
+			MenuProps={{
+				slotProps: {
+					list: {
+						'aria-label': sortOrderLabel,
+						'aria-labelledby': undefined
+					}
+				}
+			}}
 		>
 			<MenuItem value={options[0].value}>{options[0].name}</MenuItem>
 			<MenuItem value={options[1].value}>{options[1].name}</MenuItem>

@@ -29,7 +29,7 @@
 	<bean id="crafter.cacheRestController" class="org.craftercms.core.controller.rest.CacheRestController">
 		<constructor-arg name="cacheTemplate" ref="crafter.cacheTemplate"/>
 		<constructor-arg name="storeService" ref="crafter.contentStoreService"/>
-		<constructor-arg name="authorizationToken" value="${crafter.core.rest.management.token}"/>
+		<constructor-arg name="authorizationToken" value="${crafter.core.rest.management.authorizationToken}"/>
 	</bean>
 
 	<bean id="crafter.contentStoreRestController" class="org.craftercms.core.controller.rest.ContentStoreRestController">

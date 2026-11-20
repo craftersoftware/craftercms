@@ -111,7 +111,11 @@ export function FileName(props: ControlProps<string>) {
 				endAdornment={
 					!isNewForm && (
 						<Tooltip title={formatMessage({ defaultMessage: 'Edit' })}>
-							<IconButton onClick={handleEdit} disabled={readonly}>
+							<IconButton
+								onClick={handleEdit}
+								disabled={readonly}
+								aria-label={formatMessage({ defaultMessage: 'Edit' })}
+							>
 								<EditOutlinedIcon />
 							</IconButton>
 						</Tooltip>

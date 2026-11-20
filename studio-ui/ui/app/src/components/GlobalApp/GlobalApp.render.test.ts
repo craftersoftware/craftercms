@@ -55,7 +55,7 @@ afterEach(async () => {
 });
 
 // Without a GlobalAppContextProvider the context default is an open sidebar.
-async function renderGlobalApp() {
+async function renderGlobalApp(footerHtml = '') {
 	const host = document.createElement('div');
 	document.body.appendChild(host);
 	const root = createRoot(host);
@@ -81,7 +81,7 @@ async function renderGlobalApp() {
 									{
 										path: '/',
 										element: React.createElement(GlobalAppInternal, {
-											footerHtml: '',
+											footerHtml,
 											passwordRequirementsMinComplexity: 0
 										})
 									},
@@ -147,5 +147,17 @@ describe('GlobalApp sidebar spacing', () => {
 		// Project Tools: 16px header top inset + 10px header margin = 26px.
 		assert.equal(getComputedStyle(list).paddingTop, '26px');
 		assert.equal(parseFloat(getComputedStyle(nav).paddingTop), 0, 'the drawer body itself has no top padding');
+	});
+});
+
+describe('GlobalApp footer links', () => {
+	it('underlines a link inside the footer sentence', async () => {
+		const host = await renderGlobalApp(
+			'Powered by CrafterCMS. Check it out <a href="https://craftercms.org" target="_blank">here</a>.'
+		);
+		const link = host.querySelector('footer a');
+		assert.ok(link);
+		// jsdom reports the shorthand and leaves textDecorationLine at its initial value.
+		assert.match(getComputedStyle(link).textDecoration, /underline/);
 	});
 });
