@@ -78,6 +78,7 @@ import useActiveUser from '../../../hooks/useActiveUser';
 import { areAllPairsEqual, asArray } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
 import { buildContentXml } from './valueSerializers';
+import { isInternalNameFilled } from './minimumSaveRequirements';
 import {
 	createFormVisibilityAtoms,
 	fieldVisibility,
@@ -1114,13 +1115,17 @@ export type SystemPropsObject = Pick<
 /** System props written by {@link createObjectWithSystemProps} (excludes optional nav/disabled fields). */
 export type CreatedSystemPropsObject = Omit<
 	SystemPropsObject,
-	XmlKeys.disabled | XmlKeys.placeInNav | XmlKeys.navLabel
->;
+	XmlKeys.disabled | XmlKeys.placeInNav | XmlKeys.navLabel | XmlKeys.internalName
+> &
+	Partial<Pick<SystemPropsObject, XmlKeys.internalName>>;
 
 /**
  * Creates an object with all the base content item system props (objectId, content-type, etc.)
  * Assigns the supplied values if provided.
  * Does not include `disabled`, `placeInNav`, or `navLabel`.
+ * `internal-name` is written when the type defines that field (empty when no value was supplied).
+ * A type without the field gets the element only when a non-blank value was supplied. An empty
+ * name is never invented for that type, and no label is derived from the file name or the type title.
  **/
 export function createObjectWithSystemProps(
 	contentType: ContentType,
@@ -1131,7 +1136,6 @@ export function createObjectWithSystemProps(
 	const contentObject: CreatedSystemPropsObject = {
 		[XmlKeys.modelId]: objectId,
 		[XmlKeys.groupId]: mixin?.[XmlKeys.groupId] ?? createObjectGroupId(objectId),
-		[XmlKeys.internalName]: mixin?.[XmlKeys.internalName] ?? '',
 		[XmlKeys.contentTypeId]: contentType.id,
 		[XmlKeys.displayTemplate]: contentType.displayTemplate ?? '',
 		[XmlKeys.templateNotRequired]: contentType.displayTemplate ? 'false' : 'true',
@@ -1142,6 +1146,12 @@ export function createObjectWithSystemProps(
 		[XmlKeys.dateModifiedDt]: mixin?.[XmlKeys.dateModifiedDt] ?? dateIsoString,
 		[XmlKeys.savedAsDraft]: mixin?.[XmlKeys.savedAsDraft] ?? 'false'
 	};
+	const suppliedName = mixin?.[XmlKeys.internalName];
+	if (contentType.fields?.[XmlKeys.internalName]) {
+		contentObject[XmlKeys.internalName] = suppliedName ?? '';
+	} else if (isInternalNameFilled(suppliedName)) {
+		contentObject[XmlKeys.internalName] = suppliedName as string;
+	}
 	return contentObject;
 }
 
@@ -1153,13 +1163,19 @@ export function complementValuesWithSystemProps(
 	contentType: ContentType,
 	saveAsDraft: boolean
 ): void {
-	const systemProps = createObjectWithSystemProps(contentType, {
+	const definesInternalName = Boolean(contentType.fields?.[XmlKeys.internalName]);
+	const mixin: Partial<SystemPropsObject> = {
 		[XmlKeys.modelId]: id,
-		[XmlKeys.internalName]: values[XmlKeys.internalName] as string,
 		[XmlKeys.dateCreated]: getParsedField(contentObject, XmlKeys.dateCreated) as string,
 		[XmlKeys.dateCreatedDt]: getParsedField(contentObject, XmlKeys.dateCreatedDt) as string,
 		[XmlKeys.savedAsDraft]: saveAsDraft
-	});
+	};
+	// A type that defines the field keeps today's empty default. A type that does not only carries
+	// a name that is already on the values object. Nothing here invents one.
+	if (definesInternalName || isInternalNameFilled(values[XmlKeys.internalName])) {
+		mixin[XmlKeys.internalName] = values[XmlKeys.internalName] as string;
+	}
+	const systemProps = createObjectWithSystemProps(contentType, mixin);
 
 	// Do not overwrite any existing value.
 	preservedElements.forEach((key) => {
@@ -1167,6 +1183,16 @@ export function complementValuesWithSystemProps(
 			values[key] = contentObject[key];
 		}
 	});
+	// The form has no atom for a field the type does not define, so the original element would
+	// otherwise be dropped. Copy it, including an empty element. An absent element stays absent.
+	if (
+		!definesInternalName &&
+		!(XmlKeys.internalName in values) &&
+		contentObject != null &&
+		XmlKeys.internalName in contentObject
+	) {
+		values[XmlKeys.internalName] = contentObject[XmlKeys.internalName];
+	}
 	for (const key in systemProps) {
 		if (!(key in values)) {
 			values[key] = systemProps[key];

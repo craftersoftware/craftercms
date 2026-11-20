@@ -365,6 +365,67 @@ describe('no-edit save of typed values', () => {
 	});
 });
 
+describe('level descriptor without an internal-name field', () => {
+	const levelType = parseType(
+		`<form><title>Section Defaults</title><content-type>/component/level-descriptor</content-type><objectType>component</objectType>
+		<properties></properties><sections><section><title>S</title><fields>
+		${field('file-name', 'file-name')}
+		</fields></section></sections></form>`
+	);
+	const types = { [levelType.id]: levelType };
+	const itemPath = '/site/website/crafter-level-descriptor.level.xml';
+	const shell = (body: string) =>
+		`<component><content-type>/component/level-descriptor</content-type><objectId>0a68e8ad-77d8-0a58-e7bf-09a71fb3077b</objectId><file-name>crafter-level-descriptor.level.xml</file-name>${body}</component>`;
+
+	it('does not add internal-name when the document has none', () => {
+		const saved = saveWithoutChanges(shell(''), types, itemPath);
+		assert.equal(saved.querySelector('internal-name'), null);
+	});
+
+	it('keeps an internal-name the document already has', () => {
+		const saved = saveWithoutChanges(shell('<internal-name>Kept label</internal-name>'), types, itemPath);
+		assert.equal(saved.documentElement.querySelector(':scope > internal-name')?.textContent, 'Kept label');
+	});
+
+	it('keeps an empty internal-name element instead of dropping it', () => {
+		const saved = saveWithoutChanges(shell('<internal-name></internal-name>'), types, itemPath);
+		const element = saved.querySelector('internal-name');
+		assert.ok(element);
+		assert.equal(element.textContent, '');
+	});
+
+	it('does not invent an internal-name for a new item', () => {
+		const created = createObjectWithSystemProps(levelType);
+		assert.equal(XmlKeys.internalName in created, false);
+		const values: Record<string, unknown> = {};
+		complementValuesWithSystemProps(created[XmlKeys.modelId] as string, values, created, levelType, false);
+		assert.equal(XmlKeys.internalName in values, false);
+		assert.equal(fromString(buildContentXml(values, types)).querySelector('internal-name'), null);
+	});
+
+	it('still writes an empty internal-name when the type defines the field and no value was supplied', () => {
+		const created = createObjectWithSystemProps(typedType);
+		assert.equal(created[XmlKeys.internalName], '');
+	});
+
+	it('saves the Website Editorial level descriptors without adding internal-name', () => {
+		const formPath = path.join(
+			blueprintsDir,
+			'1000_website_editorial/config/studio/content-types/component/level-descriptor/form-definition.xml'
+		);
+		const type = parseType(readFileSync(formPath, 'utf8'));
+		const contentTypes = { [type.id]: type };
+		for (const rel of [
+			'1000_website_editorial/site/website/crafter-level-descriptor.level.xml',
+			'1000_website_editorial/site/website/articles/crafter-level-descriptor.level.xml'
+		]) {
+			const xml = readFileSync(path.join(blueprintsDir, rel), 'utf8');
+			const saved = saveWithoutChanges(xml, contentTypes, `/${rel.slice('1000_website_editorial/'.length)}`);
+			assert.equal(saved.querySelector('internal-name'), null, rel);
+		}
+	});
+});
+
 describe('objectGroupId', () => {
 	it('is created from the objectId', () => {
 		const props = createObjectWithSystemProps(typedType);
