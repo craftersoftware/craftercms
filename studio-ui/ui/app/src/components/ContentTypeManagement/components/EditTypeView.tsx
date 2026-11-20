@@ -78,7 +78,7 @@ import EditTypeViewLayout, { EditAppLayoutProps } from './EditTypeViewLayout';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { JotaiStore } from '../../FormsEngine/types';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import { createLookupTable, nnou, pluckProps, reversePluckProps } from '../../../utils/object';
 import Box, { BoxProps } from '@mui/material/Box';
 import useEnhancedDialogContext from '../../EnhancedDialog/useEnhancedDialogContext';
@@ -190,20 +190,20 @@ interface EditAppContextProps {
 	validationSeq: number;
 }
 
-const messages = defineMessages({
-	noFieldControlDescriptor: {
+const messages = {
+	noFieldControlDescriptor: defineMessage<{ readonly name: MessageValue; readonly type: MessageValue }>({
 		defaultMessage: 'No control descriptor found for field "{name}" of type "{type}"'
-	},
-	noDataSourceControlDescriptor: {
+	}),
+	noDataSourceControlDescriptor: defineMessage<{ readonly title: MessageValue; readonly type: MessageValue }>({
 		defaultMessage: 'No control descriptor found for data source "{title}" of type "{type}"'
-	},
-	noFieldTypeDescriptor: {
+	}),
+	noFieldTypeDescriptor: defineMessage<{ readonly fieldType: MessageValue }>({
 		defaultMessage: 'No control descriptor found for field type "{fieldType}"'
-	},
-	noDataSourceDescriptor: {
+	}),
+	noDataSourceDescriptor: defineMessage<{ readonly dataSourceType: MessageValue }>({
 		defaultMessage: 'No data source descriptor found for type "{dataSourceType}"'
-	}
-});
+	})
+};
 
 export interface ContentTypeManagementConfig {
 	controls: LookupTable<{ descriptor?: DescriptorContentType; icon: { id: string }; id: string }>;
