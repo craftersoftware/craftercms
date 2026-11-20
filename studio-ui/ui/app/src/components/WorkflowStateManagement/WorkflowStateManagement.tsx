@@ -130,7 +130,12 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
 		let stateBitmap = getStateBitmap(filtersLookup as ItemStateMap);
 
 		setFetching(true);
-		fetchItemStates(siteId, debouncePathRegex, stateBitmap ? stateBitmap : null, { limit, offset }).subscribe({
+		fetchItemStates(
+			siteId,
+			debouncePathRegex.trim() ? debouncePathRegex : undefined,
+			stateBitmap ? stateBitmap : null,
+			{ limit, offset }
+		).subscribe({
 			next(states) {
 				setItems(states);
 				setFetching(false);
@@ -291,7 +296,12 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
 			});
 		} else if (isSelectedItemsOnAllPages) {
 			let stateBitmap = getStateBitmap(filtersLookup as ItemStateMap);
-			setItemStatesByQuery(siteId, stateBitmap ? stateBitmap : null, update, debouncePathRegex).subscribe({
+			setItemStatesByQuery(
+				siteId,
+				stateBitmap ? stateBitmap : null,
+				update,
+				debouncePathRegex.trim() ? debouncePathRegex : undefined
+			).subscribe({
 				next: () => {
 					fetchStates();
 					showStatesUpdatedNotification();
