@@ -479,6 +479,7 @@ public class MarketplaceServiceInternalImpl implements MarketplaceService, Initi
 		createFromRemoteRequest.setDescription(request.getDescription());
 		createFromRemoteRequest.setSiteParams(request.getSiteParams());
 		createFromRemoteRequest.setSandboxBranch(request.getSandboxBranch());
+		createFromRemoteRequest.setEnableStaging(request.isEnableStaging());
 		createFromRemoteRequest.setRemoteUrl(plugin.getUrl());
 		createFromRemoteRequest.setRemoteName(request.getRemoteName());
 		createFromRemoteRequest.setRemoteBranch(plugin.getRef());

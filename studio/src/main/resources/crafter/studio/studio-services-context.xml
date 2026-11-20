@@ -96,6 +96,7 @@
 		<property name="studioConfiguration" ref="studioConfiguration"/>
 		<property name="configurationService" ref="configurationServiceInternal"/>
 		<property name="configurationCache" ref="configurationCache"/>
+		<property name="siteDao" ref="siteDao"/>
 	</bean>
 
 	<bean id="cstudioGeneralLockService" class="org.craftercms.studio.impl.v1.service.GeneralLockServiceImpl"/>
@@ -541,6 +542,7 @@
 
 	<bean id="publishingQueueProbeTask" class="org.craftercms.studio.impl.v2.publish.PublishingQueueProbeTask">
 		<constructor-arg name="period" value="#{studioConfiguration.getProperty('studio.clockJob.task.publisher.period')}"/>
+		<property name="publisher" ref="publisher"/>
 	</bean>
 
 	<bean id="publisher" class="org.craftercms.studio.impl.v2.publish.Publisher">

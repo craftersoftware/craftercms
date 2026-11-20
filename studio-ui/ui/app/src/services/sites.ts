@@ -67,7 +67,8 @@ export function fetchAll(paginationOptions?: PaginationOptions): Observable<Page
 					uuid: site.uuid,
 					name: site.name ?? site.siteId,
 					description: site.desc,
-					state: site.state
+					state: site.state,
+					stagingEnabled: site.stagingEnabled
 				})),
 				{
 					limit: response.limit,
@@ -101,6 +102,10 @@ export function duplicate(site: DuplicateSiteMeta): Observable<Site> {
 			imageUrl: `/.crafter/screenshots/default.png?crafterSite=${site.siteId}`
 		}))
 	);
+}
+
+export function enableStaging(siteId: string): Observable<boolean> {
+	return postJSON(`/studio/api/2/sites/${siteId}/enable_staging`, {}).pipe(map(() => true));
 }
 
 export function trash(id: string): Observable<boolean> {

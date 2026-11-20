@@ -30,6 +30,9 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import DialogBody from '../DialogBody';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormHelperText from '@mui/material/FormHelperText';
+import Switch from '@mui/material/Switch';
 import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
 import CardActions from '@mui/material/CardActions';
@@ -249,6 +252,17 @@ export function EditSiteDialogContainer(props: EditSiteDialogContainerProps) {
 										}}
 									/>
 								</Grid>
+								{site.stagingEnabled && (
+									<Grid size={12} sx={{ mt: 1 }}>
+										<FormControlLabel
+											control={<Switch name="staging" checked disabled color="primary" />}
+											label={<FormattedMessage defaultMessage="Staging enabled" />}
+										/>
+										<FormHelperText>
+											<FormattedMessage defaultMessage="Staging cannot be turned off. Removing it means recreating the project." />
+										</FormHelperText>
+									</Grid>
+								)}
 							</Grid>
 						</Grid>
 					</Grid>

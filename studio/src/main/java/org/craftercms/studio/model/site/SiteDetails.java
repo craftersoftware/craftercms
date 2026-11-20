@@ -37,6 +37,7 @@ public class SiteDetails {
 	private final String publishingStatus;
 	private final String sandboxBranch;
 	private final boolean publishedRepoCreated;
+	private final boolean stagingEnabled;
 	private final String state;
 	private final List<StudioBlobStore> blobStores;
 
@@ -53,6 +54,7 @@ public class SiteDetails {
 		this.publishingStatus = site.getPublishingStatus();
 		this.sandboxBranch = site.getSandboxBranch();
 		this.publishedRepoCreated = site.getPublishedRepoCreated();
+		this.stagingEnabled = site.isStagingEnabled();
 		this.state = site.getState();
 	}
 
@@ -82,6 +84,10 @@ public class SiteDetails {
 
 	public boolean isPublishedRepoCreated() {
 		return publishedRepoCreated;
+	}
+
+	public boolean isStagingEnabled() {
+		return stagingEnabled;
 	}
 
 	public boolean isPublishingEnabled() {

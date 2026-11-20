@@ -38,7 +38,8 @@ const siteInitialState: DuplicateSiteState = {
 	submitted: false,
 	selectedView: 0,
 	readOnlyBlobStores: true,
-	singleBranch: true
+	singleBranch: true,
+	enableStaging: false
 };
 
 interface DuplicateSiteDialogProps extends EnhancedDialogProps {

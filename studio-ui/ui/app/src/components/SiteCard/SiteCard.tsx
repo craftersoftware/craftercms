@@ -19,15 +19,18 @@ import Card from '@mui/material/Card';
 import CardHeader, { cardHeaderClasses } from '@mui/material/CardHeader';
 import IconButton from '@mui/material/IconButton';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
-import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
-import ContentCopyIcon from '@mui/icons-material/ContentCopyRounded';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import { Site } from '../../models/Site';
 import CardMedia from '@mui/material/CardMedia';
 import CardActions from '@mui/material/CardActions';
 import Tooltip from '@mui/material/Tooltip';
-import { defineMessage, useIntl } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import CardActionArea from '@mui/material/CardActionArea';
+import Box from '@mui/material/Box';
 import { alpha, Typography } from '@mui/material';
+import { visuallyHidden } from '@mui/utils';
 import { PublishingStatus } from '../../models/Publishing';
 import { PublishingStatusButtonUI } from '../PublishingStatusButton';
 import SiteStatusIndicator from '../SiteStatusIndicator/SiteStatusIndicator';
@@ -38,6 +41,8 @@ import { of, Subscription } from 'rxjs';
 import { fetchStatus } from '../../services/publishing';
 import { catchError, delay, switchMap } from 'rxjs/operators';
 import cardTitleStyles, { cardSubtitleStyles } from '../../styles/card';
+import ItemPublishingTargetIcon from '../ItemPublishingTargetIcon';
+import { ItemStateMap } from '../../models';
 
 interface SiteCardProps {
 	site: Site;
@@ -45,6 +50,7 @@ interface SiteCardProps {
 	onDeleteSiteClick(site: Site): void;
 	onEditSiteClick(site: Site): void;
 	onDuplicateSiteClick(siteId: string): void;
+	onConfigurationClick?(site: Site): void;
 	onPublishButtonClick(
 		event: React.MouseEvent<HTMLButtonElement, MouseEvent>,
 		site: Site,
@@ -62,6 +68,7 @@ export function SiteCard(props: SiteCardProps) {
 		onDeleteSiteClick,
 		onEditSiteClick,
 		onDuplicateSiteClick,
+		onConfigurationClick,
 		fallbackImageSrc,
 		compact = false,
 		disabled,
@@ -69,10 +76,20 @@ export function SiteCard(props: SiteCardProps) {
 	} = props;
 	const [publishingStatus, setPublishingStatus] = useState<PublishingStatus>();
 	const [isFetching, setIsFetching] = useState<boolean>(false);
+	const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState<null | HTMLElement>(null);
 	const isSiteReady = site.state === 'READY';
 	const [dataUrl, fetch] = useProjectPreviewImage(site.id, fallbackImageSrc);
 	const color = useMemo(() => toColor(site.name), [site.name]);
 	const { formatMessage } = useIntl();
+	const stagingEnabledLabel = formatMessage({ defaultMessage: 'Staging is enabled for this project' });
+	const hasActionsMenu =
+		isSiteReady &&
+		(Boolean(onDuplicateSiteClick) ||
+			Boolean(onDeleteSiteClick) ||
+			Boolean(onConfigurationClick) ||
+			(compact && Boolean(onEditSiteClick)));
+
+	const handleActionsMenuClose = () => setActionsMenuAnchorEl(null);
 
 	useEffect(() => {
 		if (isSiteReady) {
@@ -121,7 +138,27 @@ export function SiteCard(props: SiteCardProps) {
 		<Card sx={{ width: '340px', position: 'relative', display: compact ? 'flex' : 'block' }}>
 			<CardActionArea onClick={() => onSiteClick(site)} component="div" disabled={disabled || !isSiteReady}>
 				<CardHeader
-					title={site.name}
+					title={
+						<Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+							<Box component="span" className="cardTitle">
+								{site.name}
+							</Box>
+							{site.stagingEnabled && (
+								<Tooltip title={stagingEnabledLabel}>
+									<Box component="span" sx={{ display: 'inline-flex', flexShrink: 0, ml: 0.5 }}>
+										<ItemPublishingTargetIcon
+											item={{ stateMap: { staged: true } as ItemStateMap }}
+											displayTooltip={false}
+											fontSize="small"
+										/>
+										<Box component="span" sx={visuallyHidden}>
+											{stagingEnabledLabel}
+										</Box>
+									</Box>
+								</Tooltip>
+							)}
+						</Box>
+					}
 					sx={{
 						height: '77px',
 						width: '100%',
@@ -155,8 +192,7 @@ export function SiteCard(props: SiteCardProps) {
 					slotProps={{
 						title: {
 							variant: 'subtitle2',
-							component: 'h2',
-							className: 'cardTitle'
+							component: 'h2'
 						}
 					}}
 				/>
@@ -199,11 +235,11 @@ export function SiteCard(props: SiteCardProps) {
 						disabled={disabled}
 					/>
 				)}
-				{isSiteReady && onEditSiteClick && (
+				{!compact && isSiteReady && onEditSiteClick && (
 					<Tooltip title={formatMessage({ id: 'words.edit', defaultMessage: 'Edit' })}>
 						<IconButton
 							onClick={() => onEditSiteClick(site)}
-							size={compact ? 'small' : 'medium'}
+							size="medium"
 							disabled={disabled}
 							aria-label={formatMessage({ id: 'words.edit', defaultMessage: 'Edit' })}
 						>
@@ -211,29 +247,59 @@ export function SiteCard(props: SiteCardProps) {
 						</IconButton>
 					</Tooltip>
 				)}
-				{isSiteReady && onDuplicateSiteClick && (
-					<Tooltip title={formatMessage({ defaultMessage: 'Duplicate' })}>
+				{hasActionsMenu && (
+					<>
 						<IconButton
-							onClick={() => onDuplicateSiteClick(site.id)}
+							onClick={(e) => setActionsMenuAnchorEl(e.currentTarget)}
 							size={compact ? 'small' : 'medium'}
 							disabled={disabled}
-							aria-label={formatMessage({ defaultMessage: 'Duplicate' })}
+							aria-label={formatMessage({ defaultMessage: 'Options' })}
 						>
-							<ContentCopyIcon />
+							<MoreVertIcon />
 						</IconButton>
-					</Tooltip>
-				)}
-				{isSiteReady && onDeleteSiteClick && (
-					<Tooltip title={formatMessage({ defaultMessage: 'Delete' })}>
-						<IconButton
-							onClick={() => onDeleteSiteClick(site)}
-							size={compact ? 'small' : 'medium'}
-							disabled={disabled}
-							aria-label={formatMessage({ defaultMessage: 'Delete' })}
-						>
-							<DeleteRoundedIcon />
-						</IconButton>
-					</Tooltip>
+						<Menu anchorEl={actionsMenuAnchorEl} open={Boolean(actionsMenuAnchorEl)} onClose={handleActionsMenuClose}>
+							{compact && onEditSiteClick && (
+								<MenuItem
+									onClick={() => {
+										handleActionsMenuClose();
+										onEditSiteClick(site);
+									}}
+								>
+									<FormattedMessage id="words.edit" defaultMessage="Edit" />
+								</MenuItem>
+							)}
+							{onDuplicateSiteClick && (
+								<MenuItem
+									onClick={() => {
+										handleActionsMenuClose();
+										onDuplicateSiteClick(site.id);
+									}}
+								>
+									<FormattedMessage defaultMessage="Duplicate" />
+								</MenuItem>
+							)}
+							{onConfigurationClick && (
+								<MenuItem
+									onClick={() => {
+										handleActionsMenuClose();
+										onConfigurationClick(site);
+									}}
+								>
+									<FormattedMessage defaultMessage="Configuration" />
+								</MenuItem>
+							)}
+							{onDeleteSiteClick && (
+								<MenuItem
+									onClick={() => {
+										handleActionsMenuClose();
+										onDeleteSiteClick(site);
+									}}
+								>
+									<FormattedMessage defaultMessage="Delete" />
+								</MenuItem>
+							)}
+						</Menu>
+					</>
 				)}
 			</CardActions>
 			{!isSiteReady && (

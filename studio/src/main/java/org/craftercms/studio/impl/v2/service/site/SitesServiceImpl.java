@@ -177,12 +177,20 @@ public class SitesServiceImpl implements SitesService {
 	@RequireSiteBootstrapComplete
 	@HasAllPermissions(type = DefaultPermission.class, actions = {PERMISSION_DUPLICATE_SITE, PERMISSION_CONTENT_READ,
 			PERMISSION_READ_CONFIGURATION, PERMISSION_CONTENT_SEARCH})
-	public void duplicate(@SiteId String sourceSiteId, String siteId, String siteName, String description, String sandboxBranch, boolean readOnlyBlobStores)
+	public void duplicate(@SiteId String sourceSiteId, String siteId, String siteName, String description, String sandboxBranch, boolean readOnlyBlobStores, boolean enableStaging)
 			throws ServiceLayerException {
 		if (exists(siteId)) {
 			throw new SiteAlreadyExistsException(siteId);
 		}
-		sitesServiceInternal.duplicate(sourceSiteId, siteId, siteName, description, sandboxBranch, readOnlyBlobStores);
+		sitesServiceInternal.duplicate(sourceSiteId, siteId, siteName, description, sandboxBranch, readOnlyBlobStores, enableStaging);
+	}
+
+	@Override
+	@RequireSiteReady
+	@RequireSiteBootstrapComplete
+	@HasPermission(type = DefaultPermission.class, action = PERMISSION_EDIT_SITE)
+	public void enableStaging(@SiteId String siteId) throws ServiceLayerException {
+		sitesServiceInternal.enableStaging(siteId);
 	}
 
 	@Override

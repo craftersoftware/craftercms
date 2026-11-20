@@ -23,15 +23,19 @@ import org.craftercms.commons.git.utils.AuthenticationType;
 import org.craftercms.commons.plugin.model.BlueprintDescriptor;
 import org.craftercms.commons.plugin.model.Plugin;
 import org.craftercms.commons.plugin.model.PluginDescriptor;
+import org.craftercms.commons.rest.RestServiceException;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteAlreadyExistsException;
-import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
+import org.craftercms.studio.api.v1.service.GeneralLockService;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
+import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepositoryCredentialsException;
 import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepositoryException;
 import org.craftercms.studio.api.v1.exception.repository.RemoteRepositoryNotFoundException;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.SiteDAO;
+import org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO;
+import org.craftercms.studio.api.v2.exception.StagingAlreadyEnabledException;
 import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.exception.CompositeException;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
@@ -48,12 +52,14 @@ import org.craftercms.studio.model.rest.sites.CreateSiteRequest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
@@ -61,16 +67,22 @@ import java.net.http.HttpRequest;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_GLOBAL_SYSTEM_SITE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_PREVIEW_DESTROY_CONTEXT_URL;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_STAGING_ID_SUFFIX;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLockKey;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_ENABLED;
 import static org.craftercms.studio.model.rest.sites.CreateSiteRequest.RemoteAuthentication.NONE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -117,20 +129,30 @@ public class SitesServiceInternalImplTest {
 	protected AuditService auditService;
 	@Mock
 	protected ServicesConfig servicesConfig;
+	@Mock
+	protected ItemTargetDAO itemTargetDao;
+	@Mock
+	protected GeneralLockService generalLockService;
+
+	private Site site;
 
 	@Before
 	public void setUp() throws IOException, ServiceLayerException {
 		sitesServiceInternal.setApplicationContext(applicationContext);
 		sitesServiceInternal.setServicesConfig(servicesConfig);
 		sitesServiceInternal.setBlobAwareRepository(contentRepository);
+		sitesServiceInternal.setServicesConfig(servicesConfig);
+		sitesServiceInternal.setItemTargetDao(itemTargetDao);
+		sitesServiceInternal.setGeneralLockService(generalLockService);
 		sitesServiceInternal.setConfigurationService(configurationService);
 		sitesServiceInternal.setUpgradeManager(upgradeManager);
 		sitesServiceInternal.setContentService(contentService);
-		Site site = new Site();
+		site = new Site();
 		site.setSiteId(SITE_ID);
 		site.setName("Site 1");
 		site.setSiteUuid(UUID.randomUUID().toString());
 		site.setState(Site.State.READY);
+		site.setStagingBlobsCopied(true);
 		when(siteDAO.getSite(SITE_ID)).thenReturn(site);
 
 		Site rootSite = new Site();
@@ -257,27 +279,27 @@ public class SitesServiceInternalImplTest {
 	@Test
 	public void duplicateAlreadyTakenNameTest() {
 		assertThrows(SiteAlreadyExistsException.class, () ->
-				sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, USED_SITE_NAME, "The new site", "main_branch", false));
+				sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, USED_SITE_NAME, "The new site", "main_branch", false, false));
 	}
 
 	@Test
 	public void readOnlyOnBlobStoresTest() throws ServiceLayerException {
 		when(studioConfiguration.getProperty(SERVERLESS_DELIVERY_ENABLED, Boolean.class, false)).thenReturn(false);
-		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", true);
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", true, false);
 
 		verify(configurationService).makeBlobStoresReadOnly(NEW_SITE_ID);
 	}
 
 	@Test
 	public void readOnlyOffBlobStoresTest() throws ServiceLayerException {
-		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false);
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false, false);
 
 		verify(configurationService, never()).makeBlobStoresReadOnly(NEW_SITE_ID);
 	}
 
 	@Test
 	public void duplicateSiteTest() throws ServiceLayerException, IOException {
-		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false);
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, false);
 
 		verify(contentRepository).duplicateSite(SOURCE_SITE_ID, NEW_SITE_ID, SOURCE_SANDBOX_BRANCH, DUPLICATE_SANDBOX_BRANCH);
 		verify(sitesServiceInternal).addSiteUuidFile(eq(NEW_SITE_ID), any());
@@ -295,7 +317,7 @@ public class SitesServiceInternalImplTest {
 		doThrow(new RestClientException("test")).when(deployer).duplicateTargets(SOURCE_SITE_ID, NEW_SITE_ID);
 
 		assertThrows(ServiceLayerException.class, () ->
-				sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false));
+				sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false, false));
 		verify(sitesServiceInternal).deleteSite(NEW_SITE_ID);
 	}
 
@@ -345,6 +367,471 @@ public class SitesServiceInternalImplTest {
 					nullable(String.class), eq(true), eq(AuthenticationType.none), nullable(String.class), nullable(String.class),
 					nullable(String.class), nullable(String.class), argThat(m -> m == null || m.isEmpty()), eq(false), eq("user123"));
 		}
+	}
+
+	@Test
+	public void enableStagingAlreadyEnabledTest() {
+		Site site = new Site();
+		site.setSiteId(SITE_ID);
+		site.setStagingEnabled(true);
+		when(siteDAO.getSite(SITE_ID)).thenReturn(site);
+
+		assertThrows(StagingAlreadyEnabledException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+
+		verify(deployer, never()).createStagingTarget(SITE_ID);
+		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingUnpublishedSiteTest() throws Exception {
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(false);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		verify(deployer).createStagingTarget(SITE_ID);
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verify(contentRepository, never()).createStagingBranchFromLive(anyString(), anyString(), anyString());
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString());
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString(), anyString());
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingPublishedSiteTest() throws Exception {
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		InOrder inOrder = inOrder(siteDAO, itemTargetDao, contentRepository);
+		inOrder.verify(siteDAO).setStagingBlobsCopied(SITE_ID, false);
+		inOrder.verify(itemTargetDao).initStaging(0L, "staging", "live");
+		inOrder.verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+		inOrder.verify(siteDAO).setStagingBlobsCopied(SITE_ID, true);
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString());
+		verify(deployer).createStagingTarget(SITE_ID);
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingExistingBranchSkipsBlobCopy() throws Exception {
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(true);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString());
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString(), anyString());
+		verify(siteDAO, never()).setStagingBlobsCopied(SITE_ID, false);
+		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
+		verify(itemTargetDao, never()).initStaging(anyLong(), anyString(), anyString());
+		verify(deployer).createStagingTarget(SITE_ID);
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingRetryCopiesBlobsWhenTheFlagIsPending() throws Exception {
+		site.setStagingBlobsCopied(false);
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false, true);
+		when(contentRepository.deletePublishedBranch(SITE_ID, "staging")).thenReturn(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		verify(itemTargetDao).deleteForTarget(0L, "staging");
+		verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
+		verify(contentRepository, times(2)).createStagingBranchFromLive(SITE_ID, "live", "staging");
+		verify(itemTargetDao).initStaging(0L, "staging", "live");
+		verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+		verify(siteDAO).setStagingBlobsCopied(SITE_ID, false);
+		verify(siteDAO).setStagingBlobsCopied(SITE_ID, true);
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingBlobCopyFailureDeletesCreatedBranch() throws Exception {
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
+		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+
+		assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+
+		verify(siteDAO).setStagingBlobsCopied(SITE_ID, false);
+		verify(siteDAO, never()).setStagingBlobsCopied(SITE_ID, true);
+		verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
+		verify(itemTargetDao).deleteForTarget(0L, "staging");
+		verify(deployer, never()).createStagingTarget(SITE_ID);
+		verify(deployer, never()).deleteStagingTarget(SITE_ID);
+		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingRetryAfterFailedCleanupRebuildsFromOneLiveCommit() throws Exception {
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+		when(deployer.createStagingTarget(SITE_ID)).thenReturn(true);
+
+		AtomicReference<String> liveCommit = new AtomicReference<>("commit-a");
+		AtomicReference<String> stagingCommit = new AtomicReference<>();
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenAnswer(invocation -> {
+			if (stagingCommit.get() != null) {
+				return false;
+			}
+			stagingCommit.set(liveCommit.get());
+			return true;
+		});
+		AtomicInteger deletes = new AtomicInteger();
+		when(contentRepository.deletePublishedBranch(SITE_ID, "staging")).thenAnswer(invocation -> {
+			if (deletes.incrementAndGet() == 1) {
+				throw new IOException("branch cleanup failed");
+			}
+			stagingCommit.set(null);
+			return true;
+		});
+		doAnswer(invocation -> {
+			if (!liveCommit.get().equals(stagingCommit.get())) {
+				throw new AssertionError("Item targets were initialized from live " + liveCommit.get()
+					+ " while the staging branch is " + stagingCommit.get());
+			}
+			return null;
+		}).when(itemTargetDao).initStaging(0L, "staging", "live");
+		AtomicInteger blobCopies = new AtomicInteger();
+		doAnswer(invocation -> {
+			if (!liveCommit.get().equals(stagingCommit.get())) {
+				throw new AssertionError("Blob copy used live " + liveCommit.get() + " and staging " + stagingCommit.get());
+			}
+			if (blobCopies.incrementAndGet() == 1) {
+				throw new ServiceLayerException("blob copy failed");
+			}
+			return null;
+		}).when(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+
+		assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+		assertEquals("commit-a", stagingCommit.get());
+
+		liveCommit.set("commit-b");
+		site.setStagingBlobsCopied(false);
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		assertEquals("commit-b", stagingCommit.get());
+		verify(contentRepository, times(3)).createStagingBranchFromLive(SITE_ID, "live", "staging");
+		verify(contentRepository, times(2)).deletePublishedBranch(SITE_ID, "staging");
+		verify(itemTargetDao, times(2)).initStaging(0L, "staging", "live");
+		verify(contentRepository, times(2)).copyBlobs(SITE_ID, "live", "staging", "staging");
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString());
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingFreshBranchDeletesLeftoverItemTargets() throws Exception {
+		site.setStagingBlobsCopied(false);
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(true);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+		AtomicBoolean targetsExist = new AtomicBoolean(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenAnswer(invocation -> targetsExist.get());
+		doAnswer(invocation -> {
+			targetsExist.set(false);
+			return null;
+		}).when(itemTargetDao).deleteForTarget(0L, "staging");
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		assertFalse(targetsExist.get());
+		InOrder inOrder = inOrder(itemTargetDao, contentRepository);
+		inOrder.verify(itemTargetDao).deleteForTarget(0L, "staging");
+		inOrder.verify(contentRepository).createStagingBranchFromLive(SITE_ID, "live", "staging");
+		inOrder.verify(itemTargetDao).initStaging(0L, "staging", "live");
+		inOrder.verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingRetryDeletesLeftoverTargetsAndRebuildsAfterLivePublish() throws Exception {
+		site.setStagingBlobsCopied(false);
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+		AtomicReference<String> liveCommit = new AtomicReference<>("commit-b");
+		AtomicReference<String> stagingCommit = new AtomicReference<>("commit-a");
+		AtomicBoolean targetsExist = new AtomicBoolean(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenAnswer(invocation -> {
+			if (stagingCommit.get() != null) {
+				return false;
+			}
+			stagingCommit.set(liveCommit.get());
+			return true;
+		});
+		when(contentRepository.deletePublishedBranch(SITE_ID, "staging")).thenAnswer(invocation -> {
+			stagingCommit.set(null);
+			return true;
+		});
+		when(itemTargetDao.targetExists(0L, "staging")).thenAnswer(invocation -> targetsExist.get());
+		doAnswer(invocation -> {
+			targetsExist.set(false);
+			return null;
+		}).when(itemTargetDao).deleteForTarget(0L, "staging");
+		doAnswer(invocation -> {
+			if (!liveCommit.get().equals(stagingCommit.get())) {
+				throw new AssertionError("Item targets were rebuilt from live " + liveCommit.get()
+					+ " while the staging branch is " + stagingCommit.get());
+			}
+			return null;
+		}).when(itemTargetDao).initStaging(0L, "staging", "live");
+		doAnswer(invocation -> {
+			if (!liveCommit.get().equals(stagingCommit.get())) {
+				throw new AssertionError("Blob copy used live " + liveCommit.get() + " and staging " + stagingCommit.get());
+			}
+			return null;
+		}).when(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		assertEquals("commit-b", stagingCommit.get());
+		assertFalse(targetsExist.get());
+		InOrder inOrder = inOrder(itemTargetDao, contentRepository);
+		inOrder.verify(itemTargetDao).deleteForTarget(0L, "staging");
+		inOrder.verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
+		inOrder.verify(contentRepository).createStagingBranchFromLive(SITE_ID, "live", "staging");
+		inOrder.verify(itemTargetDao).initStaging(0L, "staging", "live");
+		inOrder.verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingSkipsRebuildWhenBlobsAreAlreadyCopied() throws Exception {
+		site.setStagingBlobsCopied(true);
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(true);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		verify(contentRepository, times(1)).createStagingBranchFromLive(SITE_ID, "live", "staging");
+		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString(), anyString());
+		verify(itemTargetDao, never()).initStaging(anyLong(), anyString(), anyString());
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingRebuildFailsWhenTheOldBranchCannotBeDeleted() throws Exception {
+		site.setStagingBlobsCopied(false);
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false);
+		when(contentRepository.deletePublishedBranch(SITE_ID, "staging")).thenReturn(false);
+
+		ServiceLayerException error = assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+
+		assertTrue(error.getMessage().contains("Failed to delete staging branch 'staging' for site 'site1' before rebuilding it from 'live'"));
+		verify(contentRepository, times(1)).createStagingBranchFromLive(SITE_ID, "live", "staging");
+		verify(itemTargetDao, never()).initStaging(anyLong(), anyString(), anyString());
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString(), anyString());
+		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingRebuildFailsWhenTheBranchCannotBeCreated() throws Exception {
+		site.setStagingBlobsCopied(false);
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false);
+		when(contentRepository.deletePublishedBranch(SITE_ID, "staging")).thenReturn(true);
+
+		ServiceLayerException error = assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+
+		assertTrue(error.getMessage().contains("Failed to rebuild staging branch 'staging' for site 'site1' from 'live'"));
+		verify(contentRepository, times(2)).createStagingBranchFromLive(SITE_ID, "live", "staging");
+		verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
+		verify(itemTargetDao, never()).initStaging(anyLong(), anyString(), anyString());
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString(), anyString());
+		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingFailureRollsBackTest() throws Exception {
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
+		doThrow(new RestClientException("deployer down")).when(deployer).createStagingTarget(SITE_ID);
+
+		assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+
+		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+		verify(itemTargetDao).deleteForTarget(0L, "staging");
+		verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
+		verify(deployer, never()).deleteStagingTarget(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingExistingTargetIsNotRemovedWhenInitializationFails() throws Exception {
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(false);
+		when(deployer.createStagingTarget(SITE_ID)).thenReturn(false);
+		doThrow(new RuntimeException("db down")).when(siteDAO).setStagingBlobsCopied(SITE_ID, true);
+
+		assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+
+		verify(deployer).createStagingTarget(SITE_ID);
+		verify(deployer, never()).deleteStagingTarget(anyString());
+		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingRemovesDeployerTargetCreatedByThisCall() throws Exception {
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(false);
+		when(deployer.createStagingTarget(SITE_ID)).thenReturn(true);
+		doThrow(new RuntimeException("db down")).when(siteDAO).setStagingBlobsCopied(SITE_ID, true);
+
+		assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+
+		verify(deployer).deleteStagingTarget(SITE_ID);
+		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	private void verifyEnableStagingLockReleased() {
+		String enableLockKey = getEnableStagingLockKey(SITE_ID);
+		InOrder inOrder = inOrder(generalLockService);
+		inOrder.verify(generalLockService).lock(enableLockKey);
+		inOrder.verify(generalLockService).unlock(enableLockKey);
+		verify(generalLockService, never()).lock(getPublishedRepoLockKey(SITE_ID));
+	}
+
+	@Test
+	public void duplicateEnableStagingFromLiveTest() throws Exception {
+		when(servicesConfig.getLiveEnvironment(NEW_SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(NEW_SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(NEW_SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(NEW_SITE_ID, "live")).thenReturn(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
+
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, true);
+
+		verify(siteDAO).setStagingEnabled(NEW_SITE_ID);
+		verify(siteDAO).setStagingBlobsCopied(NEW_SITE_ID, true);
+		verify(contentRepository).createStagingBranchFromLive(NEW_SITE_ID, "live", "staging");
+		verify(itemTargetDao).initStaging(0L, "staging", "live");
+		verify(deployer).createStagingTarget(NEW_SITE_ID);
+		verify(deployer, never()).duplicateStagingTarget(anyString(), anyString());
+		verify(contentRepository).copyBlobs(NEW_SITE_ID, "live", "staging");
+	}
+
+	@Test
+	public void duplicateDisableStagingFromSourceTest() throws Exception {
+		Site sourceSite = new Site();
+		sourceSite.setPublishingEnabled(true);
+		sourceSite.setSandboxBranch(SOURCE_SANDBOX_BRANCH);
+		sourceSite.setStagingEnabled(true);
+		when(siteDAO.getSite(SOURCE_SITE_ID)).thenReturn(sourceSite);
+		when(servicesConfig.getStagingEnvironment(NEW_SITE_ID)).thenReturn("staging");
+
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, false);
+
+		verify(contentRepository).deletePublishedBranch(NEW_SITE_ID, "staging");
+		verify(itemTargetDao).deleteForTarget(0L, "staging");
+		verify(siteDAO, never()).setStagingEnabled(NEW_SITE_ID);
+		verify(siteDAO, never()).setStagingBlobsCopied(anyString(), anyBoolean());
+		verify(deployer, never()).createStagingTarget(anyString());
+		verify(deployer, never()).duplicateStagingTarget(anyString(), anyString());
+	}
+
+	@Test
+	public void duplicateKeepSourceStagingTest() throws Exception {
+		Site sourceSite = new Site();
+		sourceSite.setPublishingEnabled(true);
+		sourceSite.setSandboxBranch(SOURCE_SANDBOX_BRANCH);
+		sourceSite.setStagingEnabled(true);
+		sourceSite.setStagingBlobsCopied(true);
+		when(siteDAO.getSite(SOURCE_SITE_ID)).thenReturn(sourceSite);
+		when(servicesConfig.getStagingEnvironment(NEW_SITE_ID)).thenReturn("staging");
+
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, true);
+
+		verify(siteDAO).setStagingEnabled(NEW_SITE_ID);
+		verify(siteDAO).setStagingBlobsCopied(NEW_SITE_ID, true);
+		verify(contentRepository, never()).createStagingBranchFromLive(anyString(), anyString(), anyString());
+		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
+		verify(deployer).duplicateStagingTarget(SOURCE_SITE_ID, NEW_SITE_ID);
+		verify(deployer, never()).createStagingTarget(anyString());
+	}
+
+	@Test
+	public void duplicateMissingSourceStagingTargetCreatesOne() throws Exception {
+		Site sourceSite = new Site();
+		sourceSite.setPublishingEnabled(true);
+		sourceSite.setSandboxBranch(SOURCE_SANDBOX_BRANCH);
+		sourceSite.setStagingEnabled(true);
+		when(siteDAO.getSite(SOURCE_SITE_ID)).thenReturn(sourceSite);
+		when(servicesConfig.getStagingEnvironment(NEW_SITE_ID)).thenReturn("staging");
+		doThrow(new RestServiceException(HttpStatus.NOT_FOUND, "Target not found"))
+			.when(deployer).duplicateStagingTarget(SOURCE_SITE_ID, NEW_SITE_ID);
+
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, true);
+
+		verify(deployer).duplicateStagingTarget(SOURCE_SITE_ID, NEW_SITE_ID);
+		verify(deployer).createStagingTarget(NEW_SITE_ID);
+		verify(siteDAO).setStagingBlobsCopied(NEW_SITE_ID, false);
 	}
 
 	@Test

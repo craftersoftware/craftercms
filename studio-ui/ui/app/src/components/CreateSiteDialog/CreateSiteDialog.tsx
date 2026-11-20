@@ -52,7 +52,8 @@ const siteInitialState: SiteState = {
 	},
 	showIncompatible: true,
 	gitBranch: '',
-	singleBranch: true
+	singleBranch: true,
+	enableStaging: false
 };
 
 const searchInitialState = {

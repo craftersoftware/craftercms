@@ -21,6 +21,8 @@ import org.craftercms.studio.api.v2.dal.publish.PublishPackageId;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
 import org.craftercms.studio.api.v2.job.ThrottledJob;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 
@@ -31,9 +33,14 @@ import java.util.List;
  * Task to probe the publishing queue and trigger events for each site.
  */
 public class PublishingQueueProbeTask extends ThrottledJob implements ApplicationEventPublisherAware {
+
+	private static final Logger logger = LoggerFactory.getLogger(PublishingQueueProbeTask.class);
+
 	private final PublishDAO publishDAO;
+	private Publisher publisher;
 	private ApplicationEventPublisher eventPublisher;
 	private final int period;
+	private boolean processingPackagesResetComplete = false;
 
 	@ConstructorProperties({"publishDAO", "period"})
 	public PublishingQueueProbeTask(final PublishDAO publishDAO, final int period) {
@@ -41,11 +48,33 @@ public class PublishingQueueProbeTask extends ThrottledJob implements Applicatio
 		this.period = period;
 	}
 
+	public void setPublisher(Publisher publisher) {
+		this.publisher = publisher;
+	}
+
+	/**
+	 * Reset packages left PROCESSING by an interrupted publish so the scheduler can
+	 * pick them up again.
+	 * This method only tries to reset the packages once.
+	 */
+	private void resetProcessingPackagesIfNeeded() {
+		try {
+			if (!processingPackagesResetComplete) {
+				publisher.resetProcessingPackages();
+			}
+		} catch (Exception e) {
+			logger.error("Error resetting processing packages", e);
+		} finally {
+			processingPackagesResetComplete = true;
+		}
+	}
+
 	@Override
 	public void doExecute() {
+		resetProcessingPackagesIfNeeded();
 		publishDAO.getNextPublishPackages().forEach((siteId, packages) -> {
 			List<Long> packageIds = packages.stream()
-				.map(PublishPackageId::packageId).toList();
+					.map(PublishPackageId::packageId).toList();
 			eventPublisher.publishEvent(new RequestPublishEvent(siteId, packageIds));
 		});
 	}

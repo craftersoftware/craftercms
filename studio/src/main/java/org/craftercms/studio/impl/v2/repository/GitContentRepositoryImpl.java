@@ -824,6 +824,47 @@ public class GitContentRepositoryImpl implements GitContentRepository, GitPublis
 	}
 
 	@Override
+	public boolean createStagingBranchFromLive(String siteId, String liveBranch, String stagingBranch) throws RepositoryException, IOException {
+		String publishedRepoLockKey = helper.getPublishedRepoLockKey(siteId);
+		generalLockService.lock(publishedRepoLockKey);
+		try {
+			if (!publishedRepositoryExists(siteId)) {
+				return false;
+			}
+			Repository repo = helper.getRepository(siteId, PUBLISHED);
+			if (repo == null || !branchExists(repo, liveBranch) || branchExists(repo, stagingBranch)) {
+				return false;
+			}
+			helper.createBranch(repo, siteId, liveBranch, stagingBranch);
+			logger.info("Created staging branch '{}' from '{}' for site '{}'", stagingBranch, liveBranch, siteId);
+			return true;
+		} finally {
+			generalLockService.unlock(publishedRepoLockKey);
+		}
+	}
+
+	@Override
+	public boolean deletePublishedBranch(String siteId, String branch) throws RepositoryException, IOException {
+		String publishedRepoLockKey = helper.getPublishedRepoLockKey(siteId);
+		generalLockService.lock(publishedRepoLockKey);
+		try {
+			Repository repo = helper.getRepository(siteId, PUBLISHED);
+			if (repo == null || !branchExists(repo, branch)) {
+				return false;
+			}
+			try (Git git = new Git(repo)) {
+				deleteBranches(git, branch);
+			} catch (GitAPIException e) {
+				throw new RepositoryException(format("Failed to delete published branch '%s' for site '%s'", branch, siteId), e);
+			}
+			logger.info("Deleted published branch '{}' for site '{}'", branch, siteId);
+			return true;
+		} finally {
+			generalLockService.unlock(publishedRepoLockKey);
+		}
+	}
+
+	@Override
 	public String deleteContent(String site, Collection<String> paths,
 								Collection<? extends ContentWriteItem> additionalItems,
 								Set<String> newFolders)

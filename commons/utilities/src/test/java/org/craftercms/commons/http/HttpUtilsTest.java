@@ -16,9 +16,16 @@
 
 package org.craftercms.commons.http;
 
+import org.craftercms.commons.rest.RestServiceException;
 import org.junit.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class HttpUtilsTest {
 	public static final String INPUT_URI_WITH_MACRO = "s3://sample-uri/with/{siteName}";
@@ -29,5 +36,27 @@ public class HttpUtilsTest {
 		String output = HttpUtils.encodeUrlMacro(INPUT_URI_WITH_MACRO);
 		assertEquals(output, EXPECT_OUTPUT_URI_ENCODED_MACRO);
 		assertEquals(HttpUtils.encodeUrlMacro(""), "");
+	}
+
+	@Test
+	public void testHasStatusReadsRestServiceException() {
+		RestServiceException notFound = new RestServiceException(HttpStatus.NOT_FOUND, "missing");
+
+		assertTrue(HttpUtils.isNotFound(notFound));
+		assertFalse(HttpUtils.isConflict(notFound));
+	}
+
+	@Test
+	public void testHasStatusReadsHttpStatusCodeException() {
+		HttpClientErrorException conflict = HttpClientErrorException.create(HttpStatus.CONFLICT, "exists",
+			HttpHeaders.EMPTY, new byte[0], null);
+
+		assertTrue(HttpUtils.isConflict(conflict));
+		assertFalse(HttpUtils.isNotFound(conflict));
+	}
+
+	@Test
+	public void testHasStatusIgnoresExceptionsWithoutStatus() {
+		assertFalse(HttpUtils.hasStatus(new RestClientException("down"), HttpStatus.NOT_FOUND));
 	}
 }
