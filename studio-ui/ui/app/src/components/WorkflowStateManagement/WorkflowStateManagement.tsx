@@ -296,7 +296,12 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
 			});
 		} else if (isSelectedItemsOnAllPages) {
 			let stateBitmap = getStateBitmap(filtersLookup as ItemStateMap);
-			setItemStatesByQuery(siteId, stateBitmap ? stateBitmap : null, update, debouncePathRegex).subscribe({
+			setItemStatesByQuery(
+				siteId,
+				stateBitmap ? stateBitmap : null,
+				update,
+				debouncePathRegex.trim() ? debouncePathRegex : undefined
+			).subscribe({
 				next: () => {
 					fetchStates();
 					showStatesUpdatedNotification();
