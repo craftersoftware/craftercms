@@ -44,6 +44,15 @@ const messages = defineMessages({
 	}
 });
 
+// The action row is a real list. The item itself adds no marker, padding or width, so the buttons stay in a row.
+const actionItemStyle: React.CSSProperties = {
+	display: 'flex',
+	margin: 0,
+	padding: 0,
+	listStyle: 'none',
+	width: 'auto'
+};
+
 function ItemActionsSnackbar(props: ItemActionsSnackbarProps) {
 	const { open, options, onActionClicked, append, prepend } = props;
 	const { formatMessage } = useIntl();
@@ -80,15 +89,11 @@ function ItemActionsSnackbar(props: ItemActionsSnackbarProps) {
 						{options ? (
 							options.length ? (
 								options.map((option) => (
-									<Button
-										size="small"
-										variant="text"
-										color="primary"
-										key={option.id}
-										onClick={(e) => onActionClicked(option.id, e)}
-									>
-										<ListItemText primary={option.label} />
-									</Button>
+									<li key={option.id} style={actionItemStyle}>
+										<Button size="small" variant="text" color="primary" onClick={(e) => onActionClicked(option.id, e)}>
+											<ListItemText primary={option.label} />
+										</Button>
+									</li>
 								))
 							) : (
 								<ListItem>
@@ -118,7 +123,9 @@ function ItemActionsSnackbar(props: ItemActionsSnackbarProps) {
 								</ListItem>
 							))
 						)}
-						{append}
+						{append != null && append !== '' && typeof append !== 'boolean' && (
+							<li style={actionItemStyle}>{append}</li>
+						)}
 					</List>
 				</>
 			}

@@ -17,6 +17,8 @@
   * [ToolsPanelListItemButton] New optional `secondaryActionLabel`. When `onSecondaryActionClick` is set, the trailing button's default accessible name is `Open {title}`.
   * [ToolsPanelListItemButton] The row renders as a `div` instead of an `li`, since tools panel widgets are not placed in a list. New optional `listItemComponent` prop sets the row's root element; pass `listItemComponent="li"` when placing the row inside a `List`. (`component` still applies to the inner button.)
   * [PaddingModeSwitchListItem] New optional `component` prop. It renders as a `div` by default instead of an `li`; pass `component="li"` when placing it inside a `List`.
+  * [PaddingModeSwitchListItem] Helper text renders inside the row. A sibling paragraph under a `List` is not a list item.
+  * [PreviewSettingsPanel] Each setting's helper text is inside its list item, and the section rules are the list item divider. The settings `ul` only contains `li` elements.
   * Removed `pages/QuickCreateMenu` component.
   * Removed `SuspenseWithEmptyState` and `WithEmptyState` components.
   * Removed `resource` prop from StoreProvider
