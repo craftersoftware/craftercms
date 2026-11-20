@@ -54,6 +54,7 @@ function settledFileNameValidityAtom(fileNameAtom: Atom<Promise<FieldValiditySta
 	if (!settled) {
 		const unwrapped = unwrap(fileNameAtom, keepPreviousFileName);
 		let last = UNKNOWN_FILE_NAME;
+		let lastError: unknown;
 		settled = atom((get) => {
 			try {
 				const value = get(unwrapped);
@@ -61,8 +62,12 @@ function settledFileNameValidityAtom(fileNameAtom: Atom<Promise<FieldValiditySta
 				if (last.known && last.isValid === value.isValid) return last;
 				last = { known: true, isValid: value.isValid };
 				return last;
-			} catch {
-				// A plugin validator can reject. Keep the last verdict; there is nothing new to publish.
+			} catch (error) {
+				// A plugin validator can reject. Keep the last verdict; log each failed run once.
+				if (error !== lastError) {
+					lastError = error;
+					console.error(error);
+				}
 				if (!last.known) last = { known: true, isValid: true };
 				return last;
 			}
