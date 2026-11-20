@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License version 3 as published by
+  ~ the Free Software Foundation.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<!-- Cleaned version-10 external blueprint site-config. The unused blocks are already gone. -->
+<site-config>
+  <version>10</version>
+  <display-name>{siteName}</display-name>
+
+  <!-- Site URLs. Default to http://localhost:8080 if blank -->
+  <site-urls>
+    <authoring-url></authoring-url>
+    <live-url></live-url>
+  </site-urls>
+
+  <locale>
+    <localeCode/>
+    <dateTimeFormatOptions>
+      <day>numeric</day>
+      <month>numeric</month>
+      <year>numeric</year>
+      <hour>numeric</hour>
+      <minute>numeric</minute>
+      <hour12>true</hour12>
+    </dateTimeFormatOptions>
+  </locale>
+
+  <cdata-escaped-field-patterns>
+    <pattern>(_html|_t|_s|_smv|_mvs)$</pattern>
+    <pattern>internal-name</pattern>
+  </cdata-escaped-field-patterns>
+
+  <published-repository>
+    <enable-staging-environment>false</enable-staging-environment>
+  </published-repository>
+
+  <publishing>
+    <comments>
+      <required>false</required>
+    </comments>
+  </publishing>
+
+  <form-engine>
+    <field-name-postfix>true</field-name-postfix>
+    <ignore-postfix-fields>
+      <field>internal-name</field>
+      <field>file-name</field>
+    </ignore-postfix-fields>
+  </form-engine>
+
+  <plugin-folder-pattern>/config/studio/plugins/${type}/${name}</plugin-folder-pattern>
+
+  <protected-folders-patterns>
+    <pattern>^/([^ !$`&amp;*()/+]|(\\[ !$`&amp;*()+]))+$</pattern>
+  </protected-folders-patterns>
+
+  <repository>
+    <level-descriptor>crafter-level-descriptor.level.xml</level-descriptor>
+
+    <patterns>
+      <pattern-group name="page">
+        <pattern>/site/website/([^&lt;]+)\.xml</pattern>
+      </pattern-group>
+
+      <pattern-group name="component">
+        <pattern>/site/components/([^&lt;]+)\.xml</pattern>
+        <pattern>/site/system/page-components/([^&lt;]+)\.xml</pattern>
+        <pattern>/site/component-bindings/([^&lt;]+)\.xml</pattern>
+        <pattern>/site/indexes/([^&lt;]+)\.xml</pattern>
+        <pattern>/site/resources/([^&lt;]+)\.xml</pattern>
+      </pattern-group>
+
+      <pattern-group name="asset">
+        <pattern>/static-assets/([^&lt;"'\)]+)</pattern>
+      </pattern-group>
+
+      <pattern-group name="rendering-template">
+        <pattern>/templates/([^&lt;"]+)\.ftl</pattern>
+      </pattern-group>
+
+      <pattern-group name="scripts">
+        <pattern>/scripts/([^&lt;"]+)\.groovy</pattern>
+      </pattern-group>
+    </patterns>
+  </repository>
+  <contentMonitoring>
+    <monitor>
+      <name>Content Expiring Tomorrow</name>
+      <query>expired_dt:[now+1d/d TO now+2d/d]</query>
+      <paths>
+        <path>
+          <name>All Site</name>
+          <pattern>/site/.*</pattern>
+          <emailTemplate>contentExpiringSoon</emailTemplate>
+          <emails>admin@example.com</emails>
+          <locale>en</locale>
+        </path>
+      </paths>
+    </monitor>
+  </contentMonitoring>
+  <remoteGitBranch>production</remoteGitBranch>
+</site-config>

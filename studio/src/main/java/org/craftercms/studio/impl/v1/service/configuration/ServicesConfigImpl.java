@@ -99,9 +99,6 @@ public class ServicesConfigImpl implements ServicesConfig {
 	 * xml attribute names
 	 **/
 	protected static final String ATTR_NAME = "@name";
-	protected static final String ATTR_PATH = "@path";
-	protected static final String ATTR_READ_DIRECT_CHILDREN = "@read-direct-children";
-	protected static final String ATTR_ATTACH_ROOT_PREFIX = "@attach-root-prefix";
 
 	protected StudioConfiguration studioConfiguration;
 	protected ConfigurationService configurationService;
