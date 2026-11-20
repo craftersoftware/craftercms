@@ -78,6 +78,7 @@ function Body({ item, onClose }: FolderMoveAlertDialogProps) {
 					<FormattedMessage defaultMessage="Cancel" />
 				</SecondaryButton>
 				<Tooltip
+					describeChild
 					title={
 						moveAck ? (
 							''

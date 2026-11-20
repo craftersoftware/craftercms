@@ -162,7 +162,7 @@ export const typeBasicDetailsDescriptor: DescriptorContentType = {
 			title: defineMessage({ defaultMessage: 'Rendering' }),
 			fields: ['hasJsController', 'hasGroovyController', 'displayTemplate', 'isHeadless']
 		}),
-		// This section and paths field won't be available until 'config.xml' is removed from the content type.
+		// Available: paths / deps / previewable live on form-definition.xml after the 5.0.0.2 config merge (#8769).
 		createVirtualSection({
 			id: 'allowedDestinations',
 			title: defineMessage({ defaultMessage: 'Allowed Destinations' }),
@@ -292,9 +292,8 @@ export const typeBasicDetailsDescriptor: DescriptorContentType = {
 			defaultValue: undefined,
 			validations: immutableEmptyObject
 		},
-		/* This field is for the destination paths of the content type. It won't be available until 'config.xml' is removed
-		from the content type. Currently, `config.xml` can't be removed yet, since the back end still uses properties like
-		`form`, `thumbnail`, even `paths`. */
+		/* Destination paths for the content type (includes/excludes). Persisted on form-definition.xml
+		after the 5.0.0.2 content-type merge (#8769); Studio reads them from the form definition. */
 		paths: {
 			id: 'paths',
 			type: 'type-destination-paths-selector',

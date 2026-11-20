@@ -38,6 +38,8 @@ export interface SplitButtonProps {
 	loading?: boolean;
 	storageKey?: string;
 	fullWidth?: boolean;
+	/** Id of visible text that explains why the button is unavailable. */
+	describedBy?: string;
 }
 
 export interface SplitButtonUIProps {
@@ -48,6 +50,7 @@ export interface SplitButtonUIProps {
 	anchorRef: MutableRefObject<HTMLDivElement>;
 	selectedIndex: number;
 	fullWidth?: SplitButtonProps['fullWidth'];
+	describedBy?: string;
 	open: boolean;
 	handleClick(e): void;
 	handleToggle(e): void;

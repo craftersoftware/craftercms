@@ -6,7 +6,7 @@ studio-ui/	@rart
 js-sdk/		@rart
 
 # Specific ownership
-README.md	@sumerjabri
+./README.md	@sumerjabri
 CONTRIBUTING.md	@sumerjabri
 CODE_OF_CONDUCT.md @sumerjabri
 CODEOWNERS	@sumerjabri

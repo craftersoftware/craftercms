@@ -26,6 +26,7 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import React, { ReactNode, useCallback, useEffect } from 'react';
 import {
 	DashletEmptyMessage,
+	dashletSelectableRowSx,
 	getItemSkeleton,
 	List,
 	ListItemIcon,
@@ -37,7 +38,7 @@ import RefreshRounded from '@mui/icons-material/RefreshRounded';
 import Checkbox from '@mui/material/Checkbox';
 import ListItemText from '@mui/material/ListItemText';
 import { LIVE_COLOUR, STAGING_COLOUR } from '../ItemPublishingTargetIcon/styles';
-import ListItemButton from '@mui/material/ListItemButton';
+import ListItem from '@mui/material/ListItem';
 import { asLocalizedDateTime } from '../../utils/datetime';
 import useLocale from '../../hooks/useLocale';
 import { ActionsBar, ActionsBarAction } from '../ActionsBar';
@@ -303,12 +304,16 @@ export function ScheduledDashlet(props: ScheduledDashletProps) {
 			{Boolean(publishingPackages?.length) && (
 				<List sx={{ pb: 0 }}>
 					{publishingPackages.map((pkg, index) => (
-						<ListItemButton key={index} onClick={(e) => onSelectItem(e, pkg as PublishPackage)} sx={{ pt: 0, pb: 0 }}>
+						<ListItem key={index} onClick={(e) => onSelectItem(e, pkg as PublishPackage)} sx={dashletSelectableRowSx}>
 							<ListItemIcon>
 								<Checkbox
 									edge="start"
 									checked={isSelected(pkg)}
-									onClick={(e) => onSelectItem(e, pkg as PublishPackage)}
+									onClick={(e) => e.stopPropagation()}
+									onChange={(e) => onSelectItem(e, pkg as PublishPackage)}
+									slotProps={{
+										input: { 'aria-label': formatMessage({ defaultMessage: 'Select {name}' }, { name: pkg.title }) }
+									}}
 								/>
 							</ListItemIcon>
 							{pkg.submitter && (
@@ -365,10 +370,11 @@ export function ScheduledDashlet(props: ScheduledDashletProps) {
 									e.stopPropagation();
 									onPackageDetailsClick(pkg.id);
 								}}
+								aria-label={formatMessage({ defaultMessage: 'Package Details' })}
 							>
 								<ChevronRightRoundedIcon />
 							</IconButton>
-						</ListItemButton>
+						</ListItem>
 					))}
 				</List>
 			)}

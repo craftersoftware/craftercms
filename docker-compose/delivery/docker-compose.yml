@@ -21,7 +21,7 @@ services:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - "DISABLE_SECURITY_PLUGIN=true"
-      - "ES_JAVA_OPTS=-Xss1024K -Xmx1G"
+      - "OPENSEARCH_JAVA_OPTS=-Xss1024K -Xmx1G -XX:-UseBASE64Intrinsics"
     ulimits:
       memlock:
         soft: -1

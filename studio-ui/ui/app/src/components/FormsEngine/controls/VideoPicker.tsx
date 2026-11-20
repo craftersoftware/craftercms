@@ -148,7 +148,7 @@ export function VideoPicker(props: VideoPickerProps) {
 										<br />
 									</Typography>
 									<Box>
-										<Tooltip title={<FormattedMessage defaultMessage="Replace" />}>
+										<Tooltip title={formatMessage({ defaultMessage: 'Replace' })}>
 											<IconButton
 												disabled={readonly || !actionsReady}
 												aria-label={formatMessage({ defaultMessage: 'Replace' })}
@@ -162,7 +162,7 @@ export function VideoPicker(props: VideoPickerProps) {
 												<EditOutlined />
 											</IconButton>
 										</Tooltip>
-										<Tooltip title={<FormattedMessage defaultMessage="Download" />}>
+										<Tooltip title={formatMessage({ defaultMessage: 'Download' })}>
 											<IconButton
 												aria-label={formatMessage({ defaultMessage: 'Download' })}
 												size="small"
@@ -173,7 +173,7 @@ export function VideoPicker(props: VideoPickerProps) {
 												<DownloadOutlined />
 											</IconButton>
 										</Tooltip>
-										<Tooltip title={<FormattedMessage defaultMessage="Delete" />}>
+										<Tooltip title={formatMessage({ defaultMessage: 'Delete' })}>
 											<IconButton
 												disabled={readonly}
 												size="small"

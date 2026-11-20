@@ -17,7 +17,7 @@
 import type { ImageEditorDialogProps } from './types';
 import type { EditorMode } from './ImageEditorDialogContainer';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { useIntl } from 'react-intl';
 import IconButton from '@mui/material/IconButton';
 import CropIcon from '@mui/icons-material/Crop';
 import Divider from '@mui/material/Divider';
@@ -46,6 +46,19 @@ const shouldRenderFlip = (tools: ImageEditorDialogProps['tools']) => tools && to
  * contrast), and it renders only the actions configured in the `tools` prop */
 export function ActionsBar(props: ActionsBarProps) {
 	const { tools, currentMode, setMode: setEditorMode, onRotate, onFlip } = props;
+	const { formatMessage } = useIntl();
+
+	// MUI's Tooltip copies a string title onto the button as its aria-label, so these stay
+	// formatMessage strings instead of <FormattedMessage />. The explicit aria-label is a guard
+	// for a non-string title.
+	const cropLabel = formatMessage({ defaultMessage: 'Crop' });
+	const rotateLeftLabel = formatMessage({ defaultMessage: 'Rotate left' });
+	const rotateRightLabel = formatMessage({ defaultMessage: 'Rotate right' });
+	const flipVerticalLabel = formatMessage({ defaultMessage: 'Flip vertical' });
+	const flipHorizontalLabel = formatMessage({ defaultMessage: 'Flip horizontal' });
+	const saturationLabel = formatMessage({ defaultMessage: 'Saturation' });
+	const brightnessLabel = formatMessage({ defaultMessage: 'Brightness' });
+	const contrastLabel = formatMessage({ defaultMessage: 'Contrast' });
 
 	return (
 		<Box
@@ -58,10 +71,12 @@ export function ActionsBar(props: ActionsBarProps) {
 			}}
 		>
 			{shouldRenderCrop(tools) && (
-				<Tooltip title={<FormattedMessage defaultMessage="Crop" />}>
+				<Tooltip title={cropLabel}>
 					<IconButton
 						color={currentMode === 'crop' ? 'primary' : 'default'}
+						aria-pressed={currentMode === 'crop'}
 						onClick={() => setEditorMode(currentMode !== 'crop' ? 'crop' : null)}
+						aria-label={cropLabel}
 					>
 						<CropIcon />
 					</IconButton>
@@ -72,13 +87,13 @@ export function ActionsBar(props: ActionsBarProps) {
 					{shouldRenderCrop(tools) && (
 						<Divider orientation="vertical" flexItem sx={{ height: 30, alignSelf: 'center' }} />
 					)}
-					<Tooltip title={<FormattedMessage defaultMessage="Rotate left" />}>
-						<IconButton onClick={() => onRotate(-90)}>
+					<Tooltip title={rotateLeftLabel}>
+						<IconButton onClick={() => onRotate(-90)} aria-label={rotateLeftLabel}>
 							<RotateLeftIcon />
 						</IconButton>
 					</Tooltip>
-					<Tooltip title={<FormattedMessage defaultMessage="Rotate right" />}>
-						<IconButton onClick={() => onRotate(90)}>
+					<Tooltip title={rotateRightLabel}>
+						<IconButton onClick={() => onRotate(90)} aria-label={rotateRightLabel}>
 							<RotateRightIcon />
 						</IconButton>
 					</Tooltip>
@@ -86,13 +101,13 @@ export function ActionsBar(props: ActionsBarProps) {
 			)}
 			{shouldRenderFlip(tools) && (
 				<>
-					<Tooltip title={<FormattedMessage defaultMessage="Flip vertical" />}>
-						<IconButton onClick={() => onFlip(true, false)}>
+					<Tooltip title={flipHorizontalLabel}>
+						<IconButton onClick={() => onFlip(true, false)} aria-label={flipHorizontalLabel}>
 							<FlipIcon />
 						</IconButton>
 					</Tooltip>
-					<Tooltip title={<FormattedMessage defaultMessage="Flip horizontal" />}>
-						<IconButton onClick={() => onFlip(false, true)}>
+					<Tooltip title={flipVerticalLabel}>
+						<IconButton onClick={() => onFlip(false, true)} aria-label={flipVerticalLabel}>
 							<FlipIcon sx={{ transform: 'rotate(90deg)' }} />
 						</IconButton>
 					</Tooltip>
@@ -103,26 +118,32 @@ export function ActionsBar(props: ActionsBarProps) {
 					{(shouldRenderCrop(tools) || shouldRenderRotate(tools) || shouldRenderFlip(tools)) && (
 						<Divider orientation="vertical" flexItem sx={{ height: 30, alignSelf: 'center' }} />
 					)}
-					<Tooltip title={<FormattedMessage defaultMessage="Saturation" />}>
+					<Tooltip title={saturationLabel}>
 						<IconButton
 							color={currentMode === 'saturation' ? 'primary' : 'default'}
+							aria-pressed={currentMode === 'saturation'}
 							onClick={() => setEditorMode(currentMode !== 'saturation' ? 'saturation' : null)}
+							aria-label={saturationLabel}
 						>
 							<SaturationIcon />
 						</IconButton>
 					</Tooltip>
-					<Tooltip title={<FormattedMessage defaultMessage="Brightness" />}>
+					<Tooltip title={brightnessLabel}>
 						<IconButton
 							color={currentMode === 'brightness' ? 'primary' : 'default'}
+							aria-pressed={currentMode === 'brightness'}
 							onClick={() => setEditorMode(currentMode !== 'brightness' ? 'brightness' : null)}
+							aria-label={brightnessLabel}
 						>
 							<BrightnessIcon />
 						</IconButton>
 					</Tooltip>
-					<Tooltip title={<FormattedMessage defaultMessage="Contrast" />}>
+					<Tooltip title={contrastLabel}>
 						<IconButton
 							color={currentMode === 'contrast' ? 'primary' : 'default'}
+							aria-pressed={currentMode === 'contrast'}
 							onClick={() => setEditorMode(currentMode !== 'contrast' ? 'contrast' : null)}
+							aria-label={contrastLabel}
 						>
 							<ContrastIcon />
 						</IconButton>

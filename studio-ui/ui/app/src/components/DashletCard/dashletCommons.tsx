@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -22,7 +22,7 @@ import MuiCheckbox from '@mui/material/Checkbox';
 import ListItemText from '@mui/material/ListItemText';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
-import React, { PropsWithChildren, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import React, { PropsWithChildren, ReactNode, useCallback, useEffect } from 'react';
 import MuiListItem from '@mui/material/ListItem';
 import MuiListItemIcon from '@mui/material/ListItemIcon';
 import MuiListSubheader from '@mui/material/ListSubheader';
@@ -36,14 +36,14 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import { defineMessages, FormattedMessage, MessageDescriptor, useIntl } from 'react-intl';
 import { Pagination } from '../Pagination';
-import { Activity, AllItemActions, PackageActions, PublishPackage } from '../../models';
+import { AllItemActions, PackageActions, PublishPackage } from '../../models';
 import { SxProps } from '@mui/system';
 import { useDispatch } from 'react-redux';
 import { getOffsetLeft, getOffsetTop } from '@mui/material/Popover';
 import IconButton, { IconButtonProps } from '@mui/material/IconButton';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import Tooltip from '@mui/material/Tooltip';
-import { getPersonFullName, reversePluckProps } from '../../utils/object';
+import { getPersonFullName } from '../../utils/object';
 import { showItemMegaMenu } from '../../state/actions/dialogs';
 import useSpreadState from '../../hooks/useSpreadState';
 import { ContextMenu, ContextMenuOption } from '../ContextMenu';
@@ -51,12 +51,7 @@ import { generatePackageOptions, packageActionDispatcher } from '../../utils/pac
 import { LIVE_COLOUR, STAGING_COLOUR } from '../ItemPublishingTargetIcon/styles';
 import { asLocalizedDateTime } from '../../utils/datetime';
 import useLocale from '../../hooks/useLocale';
-import { useTheme } from '@mui/material/styles';
-import { fetchPackage } from '../../services/publishing';
-import useActiveSiteId from '../../hooks/useActiveSiteId';
-import { pushErrorDialog } from '../../utils/system';
-import { extractErrorPayload } from '../../utils/ajax';
-import { Subscription } from 'rxjs';
+import { Theme, useTheme } from '@mui/material/styles';
 
 export const actionsToBeShown: AllItemActions[] = [
 	'edit',
@@ -108,7 +103,8 @@ export const getItemSkeleton = ({
 			<ListItem key={index} sx={{ pl: 2, pr: 2 }}>
 				{showCheckbox && (
 					<ListItemIcon>
-						<Checkbox edge="start" disabled />
+						{/* Loading placeholder. Hidden from the accessibility tree until the real row checkbox replaces it. */}
+						<Checkbox edge="start" disabled slotProps={{ input: { 'aria-hidden': true } }} />
 					</ListItemIcon>
 				)}
 				{showAvatar && (
@@ -177,6 +173,9 @@ export function Pager(props: {
 }) {
 	const { totalPages, totalItems, currentPage, rowsPerPage, onPagePickerChange, onPageChange, onRowsPerPageChange } =
 		props;
+	const { formatMessage } = useIntl();
+	// "Page N" is the closed select's value, not its label, so the name stays the word Page.
+	const pageLabel = formatMessage({ id: 'words.page', defaultMessage: 'Page' });
 
 	return (
 		<>
@@ -185,6 +184,18 @@ export function Pager(props: {
 				disableUnderline
 				value={`${currentPage}`}
 				onChange={(e) => onPagePickerChange(parseInt(e.target.value))}
+				inputProps={{
+					'aria-label': pageLabel
+				}}
+				MenuProps={{
+					slotProps: {
+						// The open listbox is named only through labelId. This select has none, so the same name goes on the list.
+						list: {
+							'aria-label': pageLabel,
+							'aria-labelledby': undefined
+						}
+					}
+				}}
 				sx={{ fontSize: (theme) => theme.typography.fontSize }}
 			>
 				{new Array(totalPages).fill(null).map((nothing, index) => (
@@ -209,6 +220,30 @@ export function Pager(props: {
 	);
 }
 
+/**
+ * Styles for a dashlet row that selects itself when clicked. The row is not a button: the checkbox inside it is the
+ * keyboard (and assistive technology) way to select, so the click is a pointer convenience. Making the row a button
+ * would nest the checkbox and the row's other controls inside it (axe `nested-interactive`).
+ */
+export const dashletSelectableRowSx: SxProps<Theme> = {
+	pt: 0,
+	pb: 0,
+	cursor: 'pointer',
+	'&:hover': { bgcolor: 'action.hover' }
+};
+
+/**
+ * Hides a dashlet options button until its row is hovered, while keeping it available to keyboard focus and to touch
+ * (or any coarse or hover-less pointer). `pointer-events: none` stops a hidden button from taking the row's click; the
+ * button stays in the tab order.
+ */
+export const getDashletRevealOnHoverSx = (visible: boolean): SxProps<Theme> => ({
+	opacity: visible ? 1 : 0,
+	pointerEvents: visible ? 'auto' : 'none',
+	'&:focus-visible': { opacity: 1, pointerEvents: 'auto' },
+	'@media (hover: none), (any-pointer: coarse)': { opacity: 1, pointerEvents: 'auto' }
+});
+
 export function DashletItemOptions(props: { path: string; iconButtonProps?: IconButtonProps }) {
 	const { path, iconButtonProps } = props;
 	const dispatch = useDispatch();
@@ -228,7 +263,7 @@ export function DashletItemOptions(props: { path: string; iconButtonProps?: Icon
 	};
 
 	return (
-		<Tooltip title={<FormattedMessage defaultMessage="Options" />}>
+		<Tooltip title={formatMessage({ defaultMessage: 'Options' })}>
 			<IconButton
 				size="small"
 				onClick={(e) => {
@@ -259,44 +294,18 @@ export function usePackageContextMenu() {
 	const position = contextMenu.el?.getBoundingClientRect();
 	const theme = useTheme();
 	const transitionDuration = theme.transitions.duration.standard;
-	const siteId = useActiveSiteId();
-	const subscriptionRef = useRef<Subscription | null>(null);
-	const [isFetchingPackage, setIsFetchingPackage] = useState<boolean>(false);
-
 	const handleContextMenuClick = useCallback(
-		(e: React.MouseEvent<HTMLButtonElement>, pkg: PublishPackage) => {
-			// https://github.com/craftersoftware/craftercms/issues/8552 - Because of a limitation in the back end, the packages at
-			// this point may not have the full AA. So we need to fetch the package to generate the proper set of options.
-			const currentTarget = e.currentTarget;
-			subscriptionRef.current?.unsubscribe();
-			setContextMenu({ el: currentTarget });
-			setIsFetchingPackage(true);
-			subscriptionRef.current = fetchPackage(siteId, pkg.id).subscribe({
-				next(publishPackage) {
-					setIsFetchingPackage(false);
-					const contextMenuOptions = generatePackageOptions([publishPackage], {
-						includeOnly: ['view', 'resubmit']
-					}).map((option) => ({
-						id: option.id,
-						label: formatMessage(option.label as MessageDescriptor)
-					}));
-					setContextMenu({ package: publishPackage, options: contextMenuOptions });
-				},
-				error(error) {
-					setIsFetchingPackage(false);
-					dispatch(pushErrorDialog({ props: { error: extractErrorPayload(error) } }));
-				}
-			});
+		(e: React.MouseEvent<HTMLButtonElement>, publishPackage: PublishPackage) => {
+			const options = generatePackageOptions([publishPackage], {
+				includeOnly: ['view', 'resubmit']
+			}).map((option) => ({
+				id: option.id,
+				label: formatMessage(option.label as MessageDescriptor)
+			}));
+			setContextMenu({ el: e.currentTarget, package: publishPackage, options });
 		},
-		[formatMessage, setContextMenu, siteId, dispatch]
+		[formatMessage, setContextMenu]
 	);
-
-	useEffect(() => {
-		return () => {
-			// Cleanup on unmount
-			subscriptionRef.current?.unsubscribe();
-		};
-	}, []);
 
 	const handleContextMenuClose = useCallback(() => {
 		setContextMenu({
@@ -339,7 +348,6 @@ export function usePackageContextMenu() {
 			options={[contextMenu.options]}
 			onMenuItemClicked={(option) => handleOptionClicked(option as PackageActions, contextMenu.package!)}
 			transitionDuration={transitionDuration}
-			isLoading={isFetchingPackage}
 		/>
 	);
 	return {

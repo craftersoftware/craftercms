@@ -27,8 +27,9 @@ import OpenInFullOutlinedIcon from '@mui/icons-material/OpenInFullOutlined';
 import CloseFullscreenOutlinedIcon from '@mui/icons-material/CloseFullscreenOutlined';
 import IconButton from '@mui/material/IconButton';
 import useSiteDashboardContext from '../SiteDashboard/useSiteDashboardContext';
-import CardActionArea from '@mui/material/CardActionArea';
+import ButtonBase from '@mui/material/ButtonBase';
 import { useIntl } from 'react-intl';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 export type DashletCardProps = PropsWithChildren<
 	CommonDashletProps & {
@@ -76,10 +77,8 @@ export function DashletCard(props: DashletCardProps) {
 	const [isExpanded, setIsExpanded] = useState(true);
 	const { formatMessage } = useIntl();
 	const showCardBody = isExpanded || isMaximized;
-	const HeaderActionArea = isMaximized || !collapsible ? 'div' : CardActionArea;
-	const [disableHeaderActionAreaRipple, setDisableHeaderActionAreaRipple] = useState(false);
-	const cardActionAreaProps =
-		isMaximized || !collapsible ? {} : { component: 'div', disableRipple: disableHeaderActionAreaRipple };
+	const isToggleable = collapsible && !isMaximized;
+	const [disableHeaderToggleRipple, setDisableHeaderToggleRipple] = useState(false);
 
 	const updateMaximized = () => {
 		setIsMaximized(!isMaximized);
@@ -120,37 +119,61 @@ export function DashletCard(props: DashletCardProps) {
 		>
 			{/* region Header */}
 			{renderCardHeader && (
-				<HeaderActionArea
-					{...cardActionAreaProps}
-					onClick={!isMaximized && collapsible ? () => setIsExpanded(!isExpanded) : null}
-				>
-					<CardHeader
-						title={title}
-						slotProps={{ title: { variant: 'h6', component: 'h2' } }}
-						action={
-							<div
-								onClick={(e) => e.stopPropagation()}
-								onMouseOver={() => setDisableHeaderActionAreaRipple(true)}
-								onMouseOut={() => setDisableHeaderActionAreaRipple(false)}
+				<CardHeader
+					title={
+						isToggleable ? (
+							// The title is the only control in the header. Its ::after stretches over the whole header so a mouse
+							// click anywhere toggles the dashlet, while the header actions are siblings (not descendants) of
+							// the toggle button, which is what keeps interactive controls from nesting.
+							<ButtonBase
+								type="button"
+								disableRipple={disableHeaderToggleRipple}
+								aria-expanded={isExpanded}
+								onClick={() => setIsExpanded(!isExpanded)}
+								sx={{
+									position: 'static',
+									font: 'inherit',
+									color: 'inherit',
+									textAlign: 'start',
+									'&::after': { content: '""', position: 'absolute', inset: 0, cursor: 'pointer' },
+									'&.Mui-focusVisible': { outline: 'none' },
+									'&.Mui-focusVisible::after': getFocusRingSx({ inset: true })
+								}}
 							>
-								{maximizable && (
-									<IconButton
-										onClick={updateMaximized}
-										aria-label={
-											isMaximized
-												? formatMessage({ defaultMessage: 'Minimize' })
-												: formatMessage({ defaultMessage: 'Maximize' })
-										}
-									>
-										{isMaximized ? <CloseFullscreenOutlinedIcon /> : <OpenInFullOutlinedIcon />}
-									</IconButton>
-								)}
-								{headerAction}
-							</div>
-						}
-						sx={sxs?.header}
-					/>
-				</HeaderActionArea>
+								{title}
+							</ButtonBase>
+						) : (
+							title
+						)
+					}
+					slotProps={{ title: { variant: 'h6', component: 'h2' } }}
+					action={
+						<Box
+							sx={{ position: 'relative', zIndex: 1 }}
+							onMouseOver={() => setDisableHeaderToggleRipple(true)}
+							onMouseOut={() => setDisableHeaderToggleRipple(false)}
+						>
+							{maximizable && (
+								<IconButton
+									onClick={updateMaximized}
+									aria-label={
+										isMaximized
+											? formatMessage({ defaultMessage: 'Minimize' })
+											: formatMessage({ defaultMessage: 'Maximize' })
+									}
+								>
+									{isMaximized ? <CloseFullscreenOutlinedIcon /> : <OpenInFullOutlinedIcon />}
+								</IconButton>
+							)}
+							{headerAction}
+						</Box>
+					}
+					sx={{
+						position: 'relative',
+						...(isToggleable && { '&:hover': { bgcolor: 'action.hover' } }),
+						...sxs?.header
+					}}
+				/>
 			)}
 			{/* endregion */}
 			{showCardBody && (

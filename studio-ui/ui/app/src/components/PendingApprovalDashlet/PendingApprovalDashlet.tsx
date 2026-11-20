@@ -24,6 +24,7 @@ import {
 import DashletCard from '../DashletCard/DashletCard';
 import {
 	DashletEmptyMessage,
+	dashletSelectableRowSx,
 	getItemSkeleton,
 	List,
 	ListItemIcon,
@@ -40,7 +41,7 @@ import RefreshRounded from '@mui/icons-material/RefreshRounded';
 import { ActionsBar, ActionsBarAction } from '../ActionsBar';
 import { READY_MASK, UNDEFINED } from '../../utils/constants';
 import { useDispatch } from 'react-redux';
-import ListItemButton from '@mui/material/ListItemButton';
+import ListItem from '@mui/material/ListItem';
 import {
 	deleteContentEvent,
 	publishEvent,
@@ -61,6 +62,7 @@ import IconButton from '@mui/material/IconButton';
 import { generatePackageOptions, packageActionDispatcher } from '../../utils/packageActions';
 import { PublishPackage } from '../../models';
 import { showPackageDetails } from '../ViewPackagesDialog/utils';
+import { formatPendingApprovalTotal } from './formatPendingApprovalTotal';
 
 interface PendingApprovalDashletProps extends CommonDashletProps {}
 
@@ -224,8 +226,8 @@ export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 					defaultMessage="Pending Approval <render_total>{total}</render_total>"
 					values={{
 						total,
-						render_total(total) {
-							return total ? `(${total})` : '';
+						render_total() {
+							return formatPendingApprovalTotal(total);
 						}
 					}}
 				/>
@@ -295,12 +297,16 @@ export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 			{Boolean(publishingPackages?.length) && (
 				<List sx={{ pb: 0 }}>
 					{publishingPackages.map((pkg, index) => (
-						<ListItemButton key={index} onClick={(e) => onSelectItem(e, pkg as PublishPackage)} sx={{ pt: 0, pb: 0 }}>
+						<ListItem key={index} onClick={(e) => onSelectItem(e, pkg as PublishPackage)} sx={dashletSelectableRowSx}>
 							<ListItemIcon>
 								<Checkbox
 									edge="start"
 									checked={isSelected(pkg)}
-									onClick={(e) => onSelectItem(e, pkg as PublishPackage)}
+									onClick={(e) => e.stopPropagation()}
+									onChange={(e) => onSelectItem(e, pkg as PublishPackage)}
+									slotProps={{
+										input: { 'aria-label': formatMessage({ defaultMessage: 'Select {name}' }, { name: pkg.title }) }
+									}}
 								/>
 							</ListItemIcon>
 							{pkg.submitter && (
@@ -337,7 +343,7 @@ export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 							>
 								<ChevronRightRoundedIcon />
 							</IconButton>
-						</ListItemButton>
+						</ListItem>
 					))}
 				</List>
 			)}

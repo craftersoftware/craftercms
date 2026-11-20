@@ -25,6 +25,7 @@ import type {
 	ResolvedDataSources
 } from '../dataSources/types';
 import { buildActionGroups, invokeActionChoice } from '../dataSources/actionAdapters';
+import { installTinyMceKeyboard } from '../../editorKeyboard/tinyMceKeyboard';
 
 export type OpenRteDataSourcePicker = (
 	actions: readonly ResolvedDataSourceAction[],
@@ -236,6 +237,7 @@ export function getTinyMceInitOptions(
 					//   //   });
 				}),
 		setup(editor) {
+			installTinyMceKeyboard(editor);
 			const pluginManager = window.tinymce.util.Tools.resolve('tinymce.PluginManager');
 
 			editor.on('DblClick', (e) => {

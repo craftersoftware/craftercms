@@ -12,6 +12,13 @@
 * [utils/system]:
   * Removed `pickShowContentFormAction`. Replaced by `showContentFormAction`, which always opens `craftercms.components.FormsEngineDialog`. The `useLegacyFormEngine` localStorage flag is no longer honored.
 * [components]
+  * The shared focus-visible ring (`styles/focusRing.ts`, `ui/scss/src/_focus-ring.scss` and the `CrafterThemeProvider` `focusVisible` patch) is from #9376. This PR applies it to the controls it touches.
+  * [SelectionList] `onItemClicked` is now `(event: MouseEvent | null, path: string)`. The event is always `null`; selection comes from the checkbox, which the item text labels.
+  * [ToolsPanelListItemButton] New optional `secondaryActionLabel`. When `onSecondaryActionClick` is set, the trailing button's default accessible name is `Open {title}`.
+  * [ToolsPanelListItemButton] The row renders as a `div` instead of an `li`, since tools panel widgets are not placed in a list. New optional `listItemComponent` prop sets the row's root element; pass `listItemComponent="li"` when placing the row inside a `List`. (`component` still applies to the inner button.)
+  * [PaddingModeSwitchListItem] New optional `component` prop. It renders as a `div` by default instead of an `li`; pass `component="li"` when placing it inside a `List`.
+  * [PaddingModeSwitchListItem] Helper text renders inside the row. A sibling paragraph under a `List` is not a list item.
+  * [PreviewSettingsPanel] Each setting's helper text is inside its list item, and the section rules are the list item divider. The settings `ul` only contains `li` elements.
   * Removed `pages/QuickCreateMenu` component.
   * Removed `SuspenseWithEmptyState` and `WithEmptyState` components.
   * Removed `resource` prop from StoreProvider
@@ -74,6 +81,8 @@
   * Removed `LegacyFormDialog` component (`craftercms.components.LegacyFormDialog`). Use `showContentFormAction` / `craftercms.components.FormsEngineDialog` instead.
   * [TypeList] Added `disableSelected` prop.
   * [UserManagement] Removed delete user functionality. Only `enable`/`disable` users is allowed.
+  * [theme] `MuiTooltip` defaults: removed `disableInteractive: true` (tooltips are now hoverable, WCAG 1.4.13) and added `leaveDelay: 200` so the pointer can move onto them. Applies to every Tooltip that does not override them.
+  * [NotistackVariant] Error and warning snackbars use `role="alert"`; success, info and default snackbars use `role="status"`. The `default` variant now renders `NotistackDefaultVariant` (registered via the provider's `Components` prop) instead of notistack's `MaterialDesignContent`.
 * [hooks]
   * Removed `useLogicResource` hook.
   * Removed `useSelectorResource` hook.

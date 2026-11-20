@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
 import CardContent from '@mui/material/CardContent';
@@ -30,7 +30,10 @@ import Tooltip from '@mui/material/Tooltip';
 import cardTitleStyles, { cardSubtitleStyles } from '../../styles/card';
 import SecondaryButton from '../SecondaryButton';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
+import { visuallyHidden } from '@mui/utils';
 import PluginMediaCarousel from '../PluginDetailsView/PluginMediaCarousel';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 interface PluginCardProps {
 	plugin: MarketplacePlugin;
@@ -79,6 +82,13 @@ const messages = defineMessages({
 	}
 });
 
+/** An icon passed as `useLabel` does not contribute text, so the button name has to carry the verb. */
+function isAriaHiddenIcon(label: PluginCardProps['useLabel']): boolean {
+	if (!label || typeof label === 'string' || !React.isValidElement(label)) return false;
+	const hidden = (label.props as { 'aria-hidden'?: unknown })['aria-hidden'];
+	return hidden === true || hidden === 'true';
+}
+
 function PluginCard(props: PluginCardProps) {
 	const [index, setIndex] = useState(0);
 	const [play, setPlay] = useState(false);
@@ -95,9 +105,13 @@ function PluginCard(props: PluginCardProps) {
 	} = props;
 	const { media, name, license, id, developer } = plugin;
 	const { formatMessage } = useIntl();
+	const pluginLabel =
+		typeof name === 'string' ? name : id === 'DUPLICATE' ? formatMessage({ defaultMessage: 'Duplicate Project' }) : id;
 	const isGitCard = id === 'GIT';
 	const isDuplicateCard = id === 'DUPLICATE';
 	const isGitOrDuplicateCard = isGitCard || isDuplicateCard;
+	const titleId = useId();
+	const descriptionId = useId();
 	const sliderRef = useRef<{ moveToItem: (itemIndex: number) => void } | null>(null);
 
 	function handleChangeIndex(value: number) {
@@ -186,31 +200,52 @@ function PluginCard(props: PluginCardProps) {
 		const merged = [...videos, ...screenshots];
 		return merged.map((item, index) => {
 			if (item.type !== 'video') {
-				return (
+				const image = item.icon ? (
+					<Box sx={{ pl: '20px', pr: '5px', color: (theme) => theme.palette.text.secondary }}>{item.icon}</Box>
+				) : (
 					<Box
-						key={index}
+						component="img"
 						sx={{
-							background: isGitOrDuplicateCard ? 'none' : backgroundColor,
+							width: isGitOrDuplicateCard ? '120px' : '100%',
 							height: isGitOrDuplicateCard ? 'unset' : '180px',
-							overflow: 'hidden'
+							objectFit: isGitOrDuplicateCard ? 'fill' : 'cover'
+						}}
+						src={item.url}
+						alt={item.description ?? ''}
+					/>
+				);
+				const frameSx = {
+					display: 'block',
+					width: '100%',
+					background: isGitOrDuplicateCard ? 'none' : backgroundColor,
+					height: isGitOrDuplicateCard ? 'unset' : '180px',
+					overflow: 'hidden'
+				};
+				// Git and duplicate images are not buttons. The card action area is the only control.
+				if (isGitOrDuplicateCard) {
+					return (
+						<Box key={index} sx={frameSx}>
+							{image}
+						</Box>
+					);
+				}
+				return (
+					<ButtonBase
+						key={index}
+						aria-label={
+							item.description
+								? formatMessage({ defaultMessage: 'View {description}' }, { description: item.description })
+								: formatMessage({ defaultMessage: 'View image {number}' }, { number: index + 1 })
+						}
+						sx={{
+							...frameSx,
+							// Inset: the carousel clips overflow, so an outer outline would be cut off.
+							'&:focus-visible': getFocusRingSx({ inset: true })
 						}}
 						onClick={(event) => onImageClick(event, index)}
 					>
-						{item.icon ? (
-							<Box sx={{ pl: '20px', pr: '5px', color: (theme) => theme.palette.text.secondary }}>{item.icon}</Box>
-						) : (
-							<Box
-								component="img"
-								sx={{
-									width: isGitOrDuplicateCard ? '120px' : '100%',
-									height: isGitOrDuplicateCard ? 'unset' : '180px',
-									objectFit: isGitOrDuplicateCard ? 'fill' : 'cover'
-								}}
-								src={item.url}
-								alt={item.description}
-							/>
-						)}
-					</Box>
+						{image}
+					</ButtonBase>
 				);
 			} else {
 				return (
@@ -224,7 +259,8 @@ function PluginCard(props: PluginCardProps) {
 						sx={{
 							width: '100%',
 							height: '180px',
-							outline: 'none',
+							// The carousel clips overflow, so the video's ring is inset too.
+							'&:focus-visible': getFocusRingSx({ inset: true }),
 							background: backgroundColor
 						}}
 						onPlaying={handlePlay}
@@ -293,30 +329,76 @@ function PluginCard(props: PluginCardProps) {
 					/>
 				</CardActionArea>
 			)}
-			<CardActionArea
-				disabled={disableCardActionClick}
-				onClick={() => {
-					onPluginSelected(plugin, 1);
-				}}
-				sx={isGitOrDuplicateCard ? { display: 'flex', justifyContent: 'start' } : null}
-			>
-				<PluginMediaCarousel
-					ref={sliderRef}
-					items={renderMedias(id)}
-					onChangeItem={handleChangeIndex}
-					sx={{ width: isGitOrDuplicateCard ? 'unset' : '100%' }}
-				/>
-				{isGitOrDuplicateCard && (
-					<CardContent sx={isGitOrDuplicateCard ? { height: 'unset !important' } : null} className="cardContent">
-						<Typography gutterBottom variant="subtitle2" component="h2" className="cardTitle">
+			{isGitOrDuplicateCard ? (
+				// The visible label is the title. Naming the button from that title while the description
+				// stayed inside it made the accessible name shorter than the visible text (WCAG 2.5.3).
+				// The description is a sibling, exposed with aria-describedby, and the button still covers
+				// the card so the click target and focus ring stay on the whole control.
+				<Box
+					sx={{
+						display: 'grid',
+						gridTemplateColumns: 'auto minmax(0, 1fr)',
+						gridTemplateRows: 'auto auto',
+						width: '100%'
+					}}
+				>
+					<CardActionArea
+						disabled={disableCardActionClick}
+						onClick={() => onPluginSelected(plugin, 1)}
+						aria-labelledby={titleId}
+						aria-describedby={plugin.description ? descriptionId : undefined}
+						sx={{
+							gridColumn: '1 / -1',
+							gridRow: '1 / -1',
+							zIndex: 1,
+							display: 'grid',
+							gridTemplateColumns: 'subgrid',
+							gridTemplateRows: 'subgrid',
+							justifyContent: 'start',
+							width: 'auto',
+							height: 'auto'
+						}}
+					>
+						<PluginMediaCarousel
+							ref={sliderRef}
+							items={renderMedias(id)}
+							onChangeItem={handleChangeIndex}
+							sx={{ width: 'unset', gridColumn: 1, gridRow: '1 / -1' }}
+						/>
+						<Typography
+							id={titleId}
+							gutterBottom
+							variant="subtitle2"
+							component="h2"
+							className="cardTitle"
+							sx={{ gridColumn: 2, gridRow: 1, padding: '12px 14px 0 14px' }}
+						>
 							{name}
 						</Typography>
-						<Typography gutterBottom variant="subtitle2" component="h2" color="textSecondary">
+					</CardActionArea>
+					{plugin.description ? (
+						<Typography
+							id={descriptionId}
+							gutterBottom
+							variant="subtitle2"
+							component="p"
+							color="textSecondary"
+							sx={{ gridColumn: 2, gridRow: 2, padding: '0 14px 5px 14px' }}
+						>
 							{plugin.description}
 						</Typography>
-					</CardContent>
-				)}
-			</CardActionArea>
+					) : null}
+				</Box>
+			) : (
+				<Box>
+					<PluginMediaCarousel
+						ref={sliderRef}
+						items={renderMedias(id)}
+						onChangeItem={handleChangeIndex}
+						sx={{ width: '100%' }}
+					/>
+				</Box>
+			)}
 			{steps > 0 && !isGitOrDuplicateCard && (
 				<MobileStepper
 					variant="dots"
@@ -344,6 +426,11 @@ function PluginCard(props: PluginCardProps) {
 							sx={{ width: '50%' }}
 						>
 							{useLabel ? useLabel : formatMessage(messages.use)}
+							<Box component="span" sx={visuallyHidden}>
+								{isAriaHiddenIcon(useLabel)
+									? formatMessage({ defaultMessage: 'Use {name}' }, { name: pluginLabel })
+									: ` ${pluginLabel}`}
+							</Box>
 						</SecondaryButton>
 					)}
 					<Button
@@ -353,6 +440,7 @@ function PluginCard(props: PluginCardProps) {
 							color: (theme) => theme.palette.text.secondary,
 							flex: 1
 						}}
+						aria-label={formatMessage({ defaultMessage: 'More about {name}' }, { name: pluginLabel })}
 						onClick={() => onDetails(plugin)}
 					>
 						{formatMessage(messages.more)}

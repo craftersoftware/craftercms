@@ -252,6 +252,19 @@ intArray[1] <<= 3;
 """)
 	}
 
+	void testRemainder() {
+		// Groovy 5+ calls remainder() for %, so -7 % 3 is -1 (mod() would give 2)
+		assertIntercept("Integer.remainder(Integer)", -1, "def x = -7; x % 3")
+	}
+
+	void testRemainderCompoundAssignment() {
+		assertIntercept("Script1.zot/Integer.remainder(Integer)/Script1.zot=Integer", 2, "zot %= 3")
+		assertIntercept(
+			"Script2.intArray/int[][Integer]/Integer.remainder(Integer)/int[][Integer]=Integer",
+			1,
+			"intArray[4] %= 3")
+	}
+
 	void testComparison() {
 		assertIntercept(
 			"Script1.point/Script1.point/Point.equals(Point)/Integer.compareTo(Integer)",

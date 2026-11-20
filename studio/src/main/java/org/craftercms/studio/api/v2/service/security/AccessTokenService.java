@@ -55,15 +55,24 @@ public interface AccessTokenService {
 	void updateRefreshToken(Authentication auth, HttpServletResponse response);
 
 	/**
+	 * Starts a new session: restarts the session time limit and starts counting the extensions from zero
+	 *
+	 * @param auth the current authentication
+	 */
+	void resetSessionExtensions(Authentication auth);
+
+	/**
 	 * Creates the access &amp; refresh tokens for the given authentication
 	 *
 	 * @param auth     the current authentication
 	 * @param request  the request
 	 * @param response the response
+	 * @param extendSession true to restart the session and inactivity time limits of the user
 	 * @return the access token
 	 * @throws ServiceLayerException if there is any error creating the access token
 	 */
-	AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response) throws ServiceLayerException;
+	AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response,
+							 boolean extendSession) throws ServiceLayerException;
 
 	/**
 	 * Deletes the refresh token for the given user

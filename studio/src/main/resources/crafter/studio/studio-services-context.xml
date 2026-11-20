@@ -445,6 +445,7 @@
 		<property name="siteDao" ref="siteDao"/>
 		<property name="retryingDatabaseOperationFacade" ref="studio.retryingDatabaseOperationFacade"/>
 		<property name="activityStreamDAO" ref="activityStreamDao"/>
+		<property name="publishPackageAvailableActionResolver" ref="studio.publishPackageAvailableActionResolver"/>
 	</bean>
 
 	<!-- ////////////////////// -->
@@ -1211,6 +1212,8 @@
 				 value="#{studioConfiguration.getProperty('studio.security.sessionTimeout')}"/>
 		<constructor-arg name="inactivityTimeout"
 				 value="#{studioConfiguration.getProperty('studio.security.inactivityTimeout')}"/>
+		<constructor-arg name="sessionMaxExtensions"
+				 value="#{studioConfiguration.getProperty('studio.security.sessionMaxExtensions')}"/>
 		<constructor-arg name="securityMapper" ref="securityDao"/>
 		<constructor-arg name="instanceService" ref="instanceService"/>
 		<constructor-arg name="auditService" ref="auditServiceInternal"/>

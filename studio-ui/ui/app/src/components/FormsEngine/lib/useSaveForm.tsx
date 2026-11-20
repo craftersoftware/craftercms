@@ -30,13 +30,16 @@ import {
 	commitFormVisibility,
 	complementValuesWithSystemProps,
 	composePathForType,
+	embeddedFileName,
 	EMPTY_CHANGED_FIELD_IDS,
 	extractAtomValues,
 	getBasePath,
 	getFileNameValueFromPath,
 	readInvalidFieldIds,
-	showAlert
+	showAlert,
+	xmlFileNamesForPath
 } from './formUtils';
+import { buildContentXml } from './valueSerializers';
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
 import { contentFormSaveAction } from '../../../utils/contentFormLaunch';
 import { applySaveGate, childFields, draftFlagAfterBeforeSave, repositorySaveFollowUp } from './formVisibility';
@@ -53,11 +56,10 @@ import {
 import { AjaxError, AjaxResponse } from 'rxjs/ajax';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { buildContentXml } from './valueSerializers';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled, isInternalNameValid } from './validators';
-import { cancelPackages } from '../../../services/workflow';
+import { cancelPackages, fetchAffectedPackages } from '../../../services/workflow';
 import { switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
 import { createComponentId, pushConfirmDialog } from '../../../utils/system';
@@ -386,8 +388,6 @@ export function useSaveForm(props: UseSaveFormProps) {
 				});
 
 				complementValuesWithSystemProps(id, values, contentObject, contentType, saveAsDraft);
-				const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
-				const xml = buildContentXml(valuesWithoutFileName, contentTypesById);
 				// Embedded handled here. If true, execution ends inside if statement.
 				if (isEmbedded) {
 					// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
@@ -403,6 +403,12 @@ export function useSaveForm(props: UseSaveFormProps) {
 						});
 					}
 
+					// Parents (e.g. NodeSelector) merge `values` into the in-memory component, not `xml`/`dom`.
+					// Mutate in place so relevance WeakMap association is kept for stacked commits.
+					// Do not read `file-name` from form values: stacked embeds delete it at bootstrap, and a
+					// top-level embed may seed a path-derived slug. Use the component's stored element.
+					values[XmlKeys.fileName] = embeddedFileName(id, contentObject?.[XmlKeys.fileName] as string);
+					const xml = buildContentXml(values, contentTypesById);
 					const dom = fromString(xml);
 
 					// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
@@ -427,10 +433,16 @@ export function useSaveForm(props: UseSaveFormProps) {
 					const saveEmbeddedContent = (cancelPackagesComment: string = '') => {
 						const writeService$ = updateEmbeddedComponent(siteId, path, id, xml, { comment: versionComment });
 						const saveOrCancel$ = affectedPackages?.length
-							? cancelPackages(siteId, {
-									packageIds: affectedPackages.map((pkg) => pkg.id),
-									comment: cancelPackagesComment
-								}).pipe(switchMap(() => writeService$))
+							? fetchAffectedPackages(siteId, path).pipe(
+									switchMap((pkgs) =>
+										pkgs?.length
+											? cancelPackages(siteId, {
+													packageIds: pkgs.map((pkg) => pkg.id),
+													comment: cancelPackagesComment
+												}).pipe(switchMap(() => writeService$))
+											: writeService$
+									)
+								)
 							: writeService$;
 
 						saveOrCancel$.subscribe({
@@ -499,6 +511,9 @@ export function useSaveForm(props: UseSaveFormProps) {
 					}
 				}
 
+				// Keep `values` as the UI slug; only the XML copy gets the path basename (`index.xml`, `foo.xml`).
+				const xml = buildContentXml({ ...values, ...xmlFileNamesForPath(path) }, contentTypesById);
+
 				const saveActionCallbacks = {
 					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
 						try {
@@ -561,13 +576,15 @@ export function useSaveForm(props: UseSaveFormProps) {
 						? moveAndUpdateContent(siteId, itemPath, path, xml)
 						: writeContent(siteId, path, xml, { comment: versionComment });
 					const saveOrCancel$ = affectedPackages?.length
-						? cancelPackages(siteId, {
-								packageIds: affectedPackages.map((pkg) => pkg.id),
-								comment: cancelPackagesComment
-							}).pipe(
-								switchMap(() => {
-									return saveOrMoveService$;
-								})
+						? fetchAffectedPackages(siteId, itemPath).pipe(
+								switchMap((pkgs) =>
+									pkgs?.length
+										? cancelPackages(siteId, {
+												packageIds: pkgs.map((pkg) => pkg.id),
+												comment: cancelPackagesComment
+											}).pipe(switchMap(() => saveOrMoveService$))
+										: saveOrMoveService$
+								)
 							)
 						: saveOrMoveService$;
 

@@ -30,12 +30,16 @@ import React, {
 	PropsWithChildren,
 	ReactNode,
 	SyntheticEvent,
+	useContext,
 	useEffect,
+	useId,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState
 } from 'react';
 import { isEmptyValue } from '../lib/validators';
+import { fieldDescribedById, fieldDescriptionId, fieldErrorId, FormValidationAnnouncerContext } from '../lib/fieldA11y';
 import FormLabel from '@mui/material/FormLabel';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { HelpOutlineRounded } from '@mui/icons-material';
@@ -53,7 +57,7 @@ import {
 import { useAtomValue, useStore as useJotaiStore } from 'jotai';
 import { isScopeActive, revealField } from '../lib/formVisibility';
 import { changedFieldAtom, commitFormVisibility, getAdditionalFieldIds, useStackSubmitting } from '../lib/formUtils';
-import { FieldValidityMessages } from './FieldValidityMessages';
+import { FieldValidityMessages, translateValidityMessage } from './FieldValidityMessages';
 import { FieldDescribedByProvider } from './useControlAria';
 import { XmlKeys } from '../lib/formConsts';
 import { mergeSx } from '../lib/mergeSx';
@@ -63,6 +67,11 @@ import { useDispatch } from 'react-redux';
 import useSelection from '../../../hooks/useSelection';
 import { pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
+
+/** Whether `node` is the button or comes after it in document order. The portal menu renders at the end of the body. */
+function isButtonOrFollows(button: Node | null | undefined, node: Node) {
+	return !button || node === button || Boolean(button.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING);
+}
 
 /** The `length/max` counter shown next to a field label, or null when there is neither. */
 function createLengthBlock({ length, max }: { length: number; max: number }) {
@@ -83,6 +92,11 @@ export type FormsEngineFieldProps = PropsWithChildren<{
 	field: ContentTypeField;
 	autoFocus?: boolean;
 	htmlFor?: string;
+	/**
+	 * Id the description and error ids derive from, for a control the label's `htmlFor` does not point at
+	 * (a select, the rich text editor). Ignored when `htmlFor` is set. See `useFieldControlA11y`.
+	 */
+	controlId?: string;
 	labelId?: string;
 	value?: unknown;
 	min?: number;
@@ -133,6 +147,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		length,
 		action,
 		htmlFor,
+		controlId: controlIdProp,
 		labelId,
 		autoFocus,
 		menu = true,
@@ -158,10 +173,60 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const sourceLabel = useSelection<string | undefined>((state) =>
 		sourcePath ? state.content.itemsByPath[sourcePath]?.label : undefined
 	);
+	const editSourceLabel = formatMessage({ defaultMessage: 'Edit {item}' }, { item: sourceLabel ?? sourcePath });
 	const labelRef = useRef<HTMLLabelElement>(null);
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
 	const [showHelp, setShowHelp] = useState(false);
+	const generatedId = useId();
+	const menuId = `${generatedId}-options-menu`;
+	// Whether focus is on the Options button or on something after it (the control, the options menu, which renders
+	// in a portal but is a React child). Help and the field action come before the button, and focus on them must
+	// not make the button a tab stop, or Tab from Help would land on it ahead of the control.
+	const [hasFocusWithin, setHasFocusWithin] = useState(false);
+	// A field whose control can't take focus (read-only, disabled, Uuid, Label) has no other way in, so its button stays tabbable.
+	const [hasOtherTabStop, setHasOtherTabStop] = useState(true);
+	useLayoutEffect(() => {
+		const root = menuButtonRef.current?.closest('[data-field-id]');
+		if (!root) return undefined;
+		const recheckTabStops = () =>
+			setHasOtherTabStop(
+				Array.from(
+					root.querySelectorAll<HTMLElement>(
+						'a[href], button, input:not([type="hidden"]), select, textarea, iframe, [tabindex], [contenteditable="true"]'
+					)
+				).some((el) => {
+					// MUI Collapse hides its closed content with `visibility: hidden`, which checkVisibility() only
+					// reports with `visibilityProperty`. Where the method is missing, read the computed style.
+					const visible =
+						el.checkVisibility?.({ visibilityProperty: true }) ?? window.getComputedStyle(el).visibility !== 'hidden';
+					return (
+						el !== menuButtonRef.current &&
+						isButtonOrFollows(menuButtonRef.current, el) &&
+						el.tabIndex >= 0 &&
+						!el.matches(':disabled') &&
+						visible
+					);
+				})
+			);
+		const check = () => {
+			recheckTabStops();
+			// Removing the focused control fires no blur, so the flag would stay set with focus elsewhere.
+			const active = document.activeElement;
+			if (!active || !(root.contains(active) || document.getElementById(menuId)?.contains(active))) {
+				setHasFocusWithin(false);
+			}
+		};
+		check();
+		const observer = new MutationObserver(check);
+		observer.observe(root, {
+			subtree: true,
+			childList: true,
+			attributes: true,
+			attributeFilter: ['disabled', 'tabindex']
+		});
+		return () => observer.disconnect();
+	}, [menu, showHelp, menuId]);
 	const customControls = useSelection((state) => state.uiConfig?.controls);
 	const additionalFieldIds = useMemo(() => getAdditionalFieldIds(field, customControls), [field, customControls]);
 	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id, additionalFieldIds));
@@ -175,8 +240,61 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const isValid = fieldState.props.isValid;
 	const indicatorProps = fieldState.props;
 	const dispatch = useDispatch();
+	const announceValidation = useContext(FormValidationAnnouncerContext);
+	// The value atom is the edit signal. Select, the rich-text iframe, pickers and the node selector
+	// change it without a bubbling input event. The flag is recorded after commit, before paint, so the
+	// first blur after an edit still sees it. Controller setValue and rollback tag the write and are ignored.
+	const editedRef = useRef(false);
+	const committedValueRef = useRef(value);
+	const systemWriteRef = useRef(false);
+	const fieldUpdates$ = stableForm.fieldUpdates$;
+	useLayoutEffect(() => {
+		if (!fieldUpdates$) return undefined;
+		const subscription = fieldUpdates$.subscribe((update) => {
+			if (update.fieldId !== fieldId) return;
+			// The latest write decides. A same-value controller setValue or rollback still emits, and the
+			// value effect does not run, so leaving the flag true would swallow the author's next edit.
+			systemWriteRef.current = Boolean(update.origin);
+		});
+		return () => subscription.unsubscribe();
+	}, [fieldUpdates$, fieldId]);
+	useLayoutEffect(() => {
+		if (Object.is(committedValueRef.current, value)) return;
+		committedValueRef.current = value;
+		if (systemWriteRef.current) {
+			systemWriteRef.current = false;
+			return;
+		}
+		editedRef.current = true;
+	}, [value]);
+	// The label id is the group name. A control with no label id passes the id `useFieldControlA11y` uses.
+	const describedByBase = fieldDescribedById(labelId, htmlFor || controlIdProp || generatedId);
+	const menuButtonId = `${generatedId}-options-button`;
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
+	const isInMenu = (node: Node) => Boolean(document.getElementById(menuId)?.contains(node));
+	const handleFieldFocus = (event: React.FocusEvent<HTMLDivElement>) =>
+		setHasFocusWithin(isButtonOrFollows(menuButtonRef.current, event.target) || isInMenu(event.target));
+	const handleFieldBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+		const next = event.relatedTarget;
+		// The menu renders in a portal, so a target inside it is not a DOM descendant but still counts as inside.
+		const nextNode = next instanceof Node ? next : null;
+		const inside = nextNode != null && (event.currentTarget.contains(nextNode) || isInMenu(nextNode));
+		setHasFocusWithin(
+			nextNode != null && inside && (isButtonOrFollows(menuButtonRef.current, nextNode) || isInMenu(nextNode))
+		);
+		if (inside) return;
+		if (isValid || validityData.state !== 'hasData') return;
+		const errorText = (validityData.data?.messages ?? [])
+			.map((messageData) => translateValidityMessage(messageData, formatMessage))
+			.join(' ');
+		if (!errorText) return;
+		// Blur announces only edited fields, to cut noise while tabbing.
+		// Untouched invalid fields still expose their error on focus through aria-describedby, and a failed
+		// Save still announces the full error count and summary, so nothing is lost.
+		if (!editedRef.current) return;
+		announceValidation(formatMessage({ defaultMessage: '{field}: {error}' }, { field: field.name, error: errorText }));
+	};
 	useEffect(() => {
 		// Offer controls the option to focus on the label when the field is rendered.
 		if (autoFocus) {
@@ -184,9 +302,9 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		}
 	}, [autoFocus]);
 	const errorShown = !isValid && validityData.state === 'hasData';
-	const helpId = labelId && hasHelpText && showHelp ? `${labelId}-help` : undefined;
-	const descriptionId = labelId && hasDescription ? `${labelId}-description` : undefined;
-	const errorId = labelId && errorShown ? `${labelId}-error` : undefined;
+	const helpId = hasHelpText && showHelp ? `${describedByBase}-help` : undefined;
+	const descriptionId = hasDescription ? fieldDescriptionId(describedByBase) : undefined;
+	const errorId = errorShown ? fieldErrorId(describedByBase) : undefined;
 	const describedByIds = [helpId, descriptionId, errorId].filter((id): id is string => Boolean(id));
 	return (
 		<FormControl
@@ -197,6 +315,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			data-field-id={fieldId}
 			required={isRequired}
 			className={className}
+			onFocus={handleFieldFocus}
+			onBlur={handleFieldBlur}
 			sx={mergeSx({ '.MuiFormLabel-asterisk': { display: 'none' } }, sx)}
 		>
 			<FieldDescribedByProvider value={{ labelId, describedByIds }}>
@@ -224,7 +344,12 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						</FormLabel>
 						<FieldStateIndicator {...indicatorProps} announce={false} />
 						{hasHelpText && (
-							<IconButton size="small" onClick={() => setShowHelp(!showHelp)}>
+							<IconButton
+								size="small"
+								onClick={() => setShowHelp(!showHelp)}
+								aria-expanded={showHelp}
+								aria-label={formatMessage({ defaultMessage: 'Help for {fieldName}' }, { fieldName: field.name })}
+							>
 								<HelpOutlineRounded fontSize="small" />
 							</IconButton>
 						)}
@@ -239,8 +364,24 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						{action}
 						{menu && (
 							<>
-								{/* TODO: Should the menu button be tabbable? Perhaps it could be a preference whether it should be tabbable or not. */}
-								<IconButton size="small" tabIndex={-1} ref={menuButtonRef} onClick={() => setOpenMenu(true)}>
+								{/*
+								 * The button is tabbable only while focus is inside the field, so it adds no tab stop per field,
+								 * unless the field has no other tab stop and this is the only way in.
+								 * It precedes the control in the DOM, so Shift+Tab from the control reaches it. A keyboard
+								 * shortcut is not offered: every candidate clashes with a browser, screen reader, native text
+								 * input, select or TinyMCE binding.
+								 */}
+								<IconButton
+									size="small"
+									id={menuButtonId}
+									tabIndex={hasFocusWithin || openMenu || !hasOtherTabStop ? 0 : -1}
+									ref={menuButtonRef}
+									onClick={() => setOpenMenu(true)}
+									aria-label={formatMessage({ defaultMessage: 'Options for {fieldName}' }, { fieldName: field.name })}
+									aria-haspopup="menu"
+									aria-expanded={openMenu}
+									aria-controls={openMenu ? menuId : undefined}
+								>
 									<MoreVertRounded fontSize="small" />
 								</IconButton>
 								<Menu
@@ -248,6 +389,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 									anchorEl={menuButtonRef.current}
 									onClose={handleCloseMenu}
 									onClick={handleCloseMenu}
+									slotProps={{ list: { id: menuId, 'aria-labelledby': menuButtonId } }}
 								>
 									<MenuItem
 										onClick={() => {
@@ -303,7 +445,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 				</Box>
 				{hasHelpText && (
 					<Collapse in={showHelp}>
-						<Alert severity="info" variant="outlined" sx={{ border: 'none' }}>
+						<Alert role="note" severity="info" variant="outlined" sx={{ border: 'none' }}>
 							<Typography
 								variant="body2"
 								component="section"
@@ -317,6 +459,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 				)}
 				{sourcePath && (
 					<Alert
+						role="note"
 						variant="standard"
 						severity="info"
 						icon={
@@ -344,8 +487,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 											update: { path: sourcePath }
 										});
 									}}
-									aria-label={formatMessage({ defaultMessage: 'Edit' })}
-									title={formatMessage({ defaultMessage: 'Edit' })}
+									aria-label={editSourceLabel}
+									title={editSourceLabel}
 								>
 									<EditOutlined fontSize="small" />
 								</IconButton>
@@ -376,14 +519,12 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 				)}
 				{children}
 				{hasDescription && <FormHelperText id={descriptionId}>{field.description}</FormHelperText>}
-				{errorShown &&
-					(errorId ? (
-						<Box id={errorId}>
-							<FieldValidityMessages messages={validityData.data?.messages} />
-						</Box>
-					) : (
+				{/* Rendered while invalid, even with no messages, so the control's aria-describedby always resolves. */}
+				{errorShown && (
+					<Box id={errorId}>
 						<FieldValidityMessages messages={validityData.data?.messages} />
-					))}
+					</Box>
+				)}
 			</FieldDescribedByProvider>
 		</FormControl>
 	);

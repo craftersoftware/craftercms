@@ -190,6 +190,7 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 								itemsByPath,
 								node,
 								dependencyTypeMap,
+								formatMessage,
 								onMenuClick: onContextMenuOpen,
 								onCheckboxChange,
 								selectedDependencies: selectedDependenciesPaths,
@@ -230,12 +231,16 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 														e.stopPropagation();
 														onContextMenuOpen?.(e, path);
 													}}
-													aria-label={formatMessage({ defaultMessage: 'Options' })}
+													aria-label={formatMessage(
+														{ defaultMessage: 'Options for {name}' },
+														{ name: itemMap[path].label || path }
+													)}
 												>
 													<MoreVertRounded />
 												</IconButton>
 												{dependencyTypeMap?.[path] === 'soft' && (
 													<Tooltip
+														describeChild
 														title={
 															!itemMap[path].canRequestPublish ? (
 																<FormattedMessage defaultMessage="This reference can't be selected because you don't have permission to publish it." />
@@ -249,6 +254,14 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 																size="small"
 																disabled={!itemMap[path].canRequestPublish}
 																checked={selectedDependenciesMap[path]}
+																slotProps={{
+																	input: {
+																		'aria-label': formatMessage(
+																			{ defaultMessage: 'Include {name}' },
+																			{ name: itemMap[path].label || path }
+																		)
+																	}
+																}}
 																onChange={(e, checked) => onCheckboxChange?.(e, checked, path)}
 															/>
 														</span>

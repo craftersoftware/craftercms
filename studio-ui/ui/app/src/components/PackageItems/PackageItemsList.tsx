@@ -90,7 +90,7 @@ export function PackageItemsList(props: PackageItemsListProps) {
 								/>
 
 								{over === item.path && (
-									<Tooltip title={<FormattedMessage defaultMessage="Options" />}>
+									<Tooltip title={formatMessage({ defaultMessage: 'Options' })}>
 										<IconButton
 											size="small"
 											onClick={(e) => {

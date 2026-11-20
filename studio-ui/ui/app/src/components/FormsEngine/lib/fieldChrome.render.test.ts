@@ -33,7 +33,8 @@ import type PluginDescriptor from '../../../models/PluginDescriptor';
 const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { IntlProvider } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom } = await import('jotai');
@@ -101,6 +102,8 @@ function fieldFor(id: string, type: string): ContentTypeField {
 	return { id, name: `Label of ${id}`, type, validations: {}, helpText: '' } as ContentTypeField;
 }
 
+const intl = createTestIntl();
+
 function Harness(props: { fieldIds: string[]; children: React.ReactNode }) {
 	const valueAtom = atom('x');
 	const validationAtom = atom({ isValid: true });
@@ -123,8 +126,8 @@ function Harness(props: { fieldIds: string[]; children: React.ReactNode }) {
 		Provider,
 		{ store },
 		React.createElement(
-			IntlProvider,
-			{ locale: 'en', messages: {}, onError: () => undefined },
+			RawIntlProvider,
+			{ value: intl },
 			React.createElement(
 				StableGlobalContext.Provider,
 				{ value: { formsStackData: [], api: {} } },
