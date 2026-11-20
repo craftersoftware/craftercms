@@ -17,23 +17,37 @@
 import React, { useId } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import Box from '@mui/material/Box';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import { TypeBuilderControl } from '../utils';
 import Typography from '@mui/material/Typography';
 import { StringListEditor } from './StringListEditor';
 
 export type TypeDestinationPathsSelectorProps = TypeBuilderControl<DestinationPaths>;
 
-const messages = defineMessages({
-	includes: { id: 'typeDestinationPaths.includes', defaultMessage: 'Includes' },
-	excludes: { id: 'typeDestinationPaths.excludes', defaultMessage: 'Excludes' },
-	includesPattern: { id: 'typeDestinationPaths.includesPattern', defaultMessage: 'Includes pattern {index}' },
-	excludesPattern: { id: 'typeDestinationPaths.excludesPattern', defaultMessage: 'Excludes pattern {index}' },
-	addInclude: { id: 'typeDestinationPaths.addInclude', defaultMessage: 'Add include path' },
-	addExclude: { id: 'typeDestinationPaths.addExclude', defaultMessage: 'Add exclude path' },
-	removeInclude: { id: 'typeDestinationPaths.removeInclude', defaultMessage: 'Remove include pattern {index}' },
-	removeExclude: { id: 'typeDestinationPaths.removeExclude', defaultMessage: 'Remove exclude pattern {index}' }
-});
+const messages = {
+	...defineMessages({
+		includes: { id: 'typeDestinationPaths.includes', defaultMessage: 'Includes' },
+		excludes: { id: 'typeDestinationPaths.excludes', defaultMessage: 'Excludes' },
+		addInclude: { id: 'typeDestinationPaths.addInclude', defaultMessage: 'Add include path' },
+		addExclude: { id: 'typeDestinationPaths.addExclude', defaultMessage: 'Add exclude path' }
+	}),
+	includesPattern: defineMessage<{ readonly index: MessageValue }>({
+		id: 'typeDestinationPaths.includesPattern',
+		defaultMessage: 'Includes pattern {index}'
+	}),
+	excludesPattern: defineMessage<{ readonly index: MessageValue }>({
+		id: 'typeDestinationPaths.excludesPattern',
+		defaultMessage: 'Excludes pattern {index}'
+	}),
+	removeInclude: defineMessage<{ readonly index: MessageValue }>({
+		id: 'typeDestinationPaths.removeInclude',
+		defaultMessage: 'Remove include pattern {index}'
+	}),
+	removeExclude: defineMessage<{ readonly index: MessageValue }>({
+		id: 'typeDestinationPaths.removeExclude',
+		defaultMessage: 'Remove exclude pattern {index}'
+	})
+};
 
 type Destination = 'includes' | 'excludes';
 interface DestinationPaths {

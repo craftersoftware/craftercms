@@ -14,16 +14,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages } from 'react-intl';
+import { defineMessage, defineMessages, type MessageValue } from 'react-intl';
 
-export const translations = defineMessages({
-	placeholder: {
-		id: 'createFolder.placeholder',
-		defaultMessage: 'Please type a folder name'
-	},
-	policyError: {
+export const translations = {
+	...defineMessages({
+		placeholder: {
+			id: 'createFolder.placeholder',
+			defaultMessage: 'Please type a folder name'
+		}
+	}),
+	policyError: defineMessage<{ readonly detail: MessageValue; readonly fileName: MessageValue }>({
 		defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
-	}
-});
+	}),
+};
 
 export default translations;

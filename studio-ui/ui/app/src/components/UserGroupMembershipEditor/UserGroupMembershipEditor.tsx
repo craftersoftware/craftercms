@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Group from '../../models/Group';
@@ -33,21 +33,23 @@ export interface UserGroupMembershipEditorProps {
 	onChange?(selectedGroupIds: string[]): void;
 }
 
-const messages = defineMessages({
-	addToGroupsSuccess: {
+const messages = {
+	...defineMessages({
+		error: {
+			id: 'userGroupMembershipEditor.addOrRemoveError',
+			defaultMessage: 'Error modifying user group(s). Please try again momentarily.'
+		}
+	}),
+	addToGroupsSuccess: defineMessage<{ readonly numOfGroups: number | bigint; readonly user: MessageValue }>({
 		id: 'userGroupMembershipEditor.addToGroupsSuccess',
 		defaultMessage: '"{user}" added to {numOfGroups, plural, one {the specified group} other {{numOfGroups} groups}}'
-	},
-	removeFromGroupsSuccess: {
+	}),
+	removeFromGroupsSuccess: defineMessage<{ readonly numOfGroups: number | bigint; readonly user: MessageValue }>({
 		id: 'userGroupMembershipEditor.removeFromGroupsSuccess',
 		defaultMessage:
 			'"{user}" removed from {numOfGroups, plural, one {the specified group} other {{numOfGroups} groups}}'
-	},
-	error: {
-		id: 'userGroupMembershipEditor.addOrRemoveError',
-		defaultMessage: 'Error modifying user group(s). Please try again momentarily.'
-	}
-});
+	})
+};
 
 export function UserGroupMembershipEditor(props: UserGroupMembershipEditorProps) {
 	const { username, onChange } = props;

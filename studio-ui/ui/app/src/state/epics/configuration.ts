@@ -37,17 +37,17 @@ import {
 	emitSystemEvents,
 	showSystemNotification
 } from '../actions/system';
-import { defineMessages } from 'react-intl';
+import { defineMessage, type MessageValue } from 'react-intl';
 import { Observable } from 'rxjs';
 import StandardAction from '../../models/StandardAction';
 import { fetchQuickCreateList } from '../actions/content';
 
-const configurationMessages = defineMessages({
-	localeError: {
+const configurationMessages = {
+	localeError: defineMessage<{ readonly message: MessageValue }>({
 		id: 'configurationMessages.localeError',
 		defaultMessage: 'Incorrect locale configuration: {message}. Using browser locale settings. Check site config xml.'
-	}
-});
+	})
+};
 
 function handleSystemEvent(action: StandardAction): StandardAction[] {
 	if (action.type !== configurationEvent.type) {

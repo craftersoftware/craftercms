@@ -18,7 +18,7 @@ import React, { memo, useCallback, useEffect, useState, useSyncExternalStore } f
 import { styled } from '@mui/material/styles';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import OpenWithRounded from '@mui/icons-material/OpenWithRounded';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, type MessageValue, useIntl } from 'react-intl';
 import { focusRingStyles } from '@craftercms/studio-ui/styles/focusRing';
 import { HighlightMode } from '../constants';
 import { elementRegistryChanges$, get, getElementRecords } from '../elementRegistry';
@@ -45,12 +45,20 @@ import {
 } from '../utils/zoneFocus';
 import { useDispatch, useStore } from './GuestContext';
 
-const iceMessages = defineMessages({
-	editZone: { id: 'ice.editZone', defaultMessage: 'Edit {label}' },
-	selectToMove: { id: 'ice.selectToMove', defaultMessage: 'Select {label} to move' },
-	zoneControls: { id: 'ice.zoneControls', defaultMessage: 'In-context editing' },
-	untitledZone: { id: 'ice.untitledZone', defaultMessage: 'Content zone' }
-});
+const iceMessages = {
+	...defineMessages({
+		zoneControls: { id: 'ice.zoneControls', defaultMessage: 'In-context editing' },
+		untitledZone: { id: 'ice.untitledZone', defaultMessage: 'Content zone' }
+	}),
+	editZone: defineMessage<{ readonly label: MessageValue }>({
+		id: 'ice.editZone',
+		defaultMessage: 'Edit {label}'
+	}),
+	selectToMove: defineMessage<{ readonly label: MessageValue }>({
+		id: 'ice.selectToMove',
+		defaultMessage: 'Select {label} to move'
+	})
+};
 
 const IceZoneButton = styled('button')(({ theme }) => ({
 	position: 'absolute',

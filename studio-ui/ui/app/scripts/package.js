@@ -44,7 +44,9 @@ const peerDeps = [
 	'redux',
 	'redux-observable',
 	'rxjs',
-	'video.js'
+	'@videojs/react',
+	'@videojs/hlsjs-video',
+	'@videojs/dash-video'
 ];
 
 async function createPackageFile() {

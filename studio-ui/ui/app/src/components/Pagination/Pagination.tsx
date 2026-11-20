@@ -20,7 +20,7 @@ import TablePagination, {
 	TablePaginationProps
 } from '@mui/material/TablePagination';
 import React from 'react';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import { PartialSxRecord } from '../../models/CustomRecord';
 import { Theme } from '@mui/material';
 import { inputBaseClasses } from '@mui/material/InputBase';
@@ -38,28 +38,30 @@ export interface PaginationProps extends TablePaginationProps<any, {}> {
 	showBottomBorder?: boolean;
 }
 
-const translations = defineMessages({
-	previousPage: {
-		id: 'pagination.previousPage',
-		defaultMessage: 'Previous page'
-	},
-	nextPage: {
-		id: 'pagination.nextPage',
-		defaultMessage: 'Next page'
-	},
-	itemsPerPage: {
-		id: 'pagination.itemsPerPage',
-		defaultMessage: 'Items per page'
-	},
-	noResults: {
-		id: 'pagination.noResults',
-		defaultMessage: 'No results'
-	},
-	rangeOfMoreThan: {
+const translations = {
+	...defineMessages({
+		previousPage: {
+			id: 'pagination.previousPage',
+			defaultMessage: 'Previous page'
+		},
+		nextPage: {
+			id: 'pagination.nextPage',
+			defaultMessage: 'Next page'
+		},
+		itemsPerPage: {
+			id: 'pagination.itemsPerPage',
+			defaultMessage: 'Items per page'
+		},
+		noResults: {
+			id: 'pagination.noResults',
+			defaultMessage: 'No results'
+		}
+	}),
+	rangeOfMoreThan: defineMessage<{ readonly from: MessageValue; readonly to: MessageValue }>({
 		id: 'pagination.rangeOfMoreThan',
 		defaultMessage: '{from}-{to} of more than {to}'
-	}
-});
+	})
+};
 
 function getStyles(sx: PaginationPartialSx, props: PaginationProps): PaginationProps['sx'] {
 	sx = sx ?? {};

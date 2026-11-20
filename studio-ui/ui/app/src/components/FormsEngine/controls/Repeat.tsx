@@ -27,7 +27,7 @@ import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemButton from '@mui/material/ListItemButton';
 import Box from '@mui/material/Box';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import ArrowUpwardRounded from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRounded from '@mui/icons-material/ArrowDownwardRounded';
 import {
@@ -73,12 +73,21 @@ import {
 	isRepeatAddDisabled,
 	isRepeatRemoveDisabled
 } from '../../../utils/countLimits';
-const repeatMessages = defineMessages({
-	addItems: { defaultMessage: 'Add items' },
-	addItemsTo: { defaultMessage: 'Add items to {fieldName}' },
-	maxReached: { defaultMessage: 'Maximum of {max, plural, one {# item} other {# items}} reached' },
-	minRequired: { defaultMessage: 'At least {min, plural, one {# item is} other {# items are}} required' }
-});
+const repeatMessages = {
+	...defineMessages({
+		addItems: { defaultMessage: 'Add items' },
+		deleteItem: { defaultMessage: 'Delete' }
+	}),
+	addItemsTo: defineMessage<{ readonly fieldName: string }>({
+		defaultMessage: 'Add items to {fieldName}'
+	}),
+	maxReached: defineMessage<{ readonly max: number | bigint }>({
+		defaultMessage: 'Maximum of {max, plural, one {# item} other {# items}} reached'
+	}),
+	minRequired: defineMessage<{ readonly min: number | bigint }>({
+		defaultMessage: 'At least {min, plural, one {# item is} other {# items are}} required'
+	})
+};
 
 export type RepeatItem = Record<string, unknown>;
 

@@ -15,21 +15,26 @@
  */
 
 import { ReactNode } from 'react';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import IconButton, { IconButtonProps } from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 
 export type ReorderControl = 'up' | 'down' | 'top' | 'bottom';
 
-const messages = defineMessages({
-	upLabel: { defaultMessage: 'Move up: {name}' },
-	upTooltip: { defaultMessage: 'Move up' },
-	downLabel: { defaultMessage: 'Move down: {name}' },
-	downTooltip: { defaultMessage: 'Move down' },
-	topLabel: { defaultMessage: 'Move to top: {name}' },
-	topTooltip: { defaultMessage: 'Move to top' },
-	bottomLabel: { defaultMessage: 'Move to bottom: {name}' },
-	bottomTooltip: { defaultMessage: 'Move to bottom' }
+type NameValues = { readonly name: MessageValue };
+
+const labelMessages = {
+	up: defineMessage<NameValues>({ defaultMessage: 'Move up: {name}' }),
+	down: defineMessage<NameValues>({ defaultMessage: 'Move down: {name}' }),
+	top: defineMessage<NameValues>({ defaultMessage: 'Move to top: {name}' }),
+	bottom: defineMessage<NameValues>({ defaultMessage: 'Move to bottom: {name}' })
+};
+
+const tooltipMessages = defineMessages({
+	up: { defaultMessage: 'Move up' },
+	down: { defaultMessage: 'Move down' },
+	top: { defaultMessage: 'Move to top' },
+	bottom: { defaultMessage: 'Move to bottom' }
 });
 
 export interface ReorderMoveButtonProps {
@@ -60,7 +65,7 @@ export function ReorderMoveButton({
 	size = 'small'
 }: ReorderMoveButtonProps) {
 	const { formatMessage } = useIntl();
-	const label = formatMessage(messages[`${control}Label`], { name });
+	const label = formatMessage(labelMessages[control], { name });
 	const button = (
 		<IconButton
 			size={size}
@@ -78,7 +83,7 @@ export function ReorderMoveButton({
 		</IconButton>
 	);
 	return (
-		<Tooltip describeChild title={formatMessage(messages[`${control}Tooltip`])}>
+		<Tooltip describeChild title={formatMessage(tooltipMessages[control])}>
 			{disabled ? <span>{button}</span> : button}
 		</Tooltip>
 	);

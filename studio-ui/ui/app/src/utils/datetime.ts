@@ -15,16 +15,16 @@
  */
 
 import moment, { Moment } from 'moment-timezone';
-import { defineMessages } from 'react-intl';
+import { defineMessage } from 'react-intl';
 import { getCurrentIntl } from './i18n';
 import GlobalState from '../models/GlobalState';
 
-const translations = defineMessages({
-	ordinals: {
+const translations = {
+	ordinals: defineMessage<{ readonly day: number | bigint }>({
 		id: 'dateTime.ordinals',
 		defaultMessage: '{day, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}'
-	}
-});
+	})
+};
 
 export interface TimezoneDescriptor {
 	name: string;
@@ -51,7 +51,7 @@ export function asDayMonthDateTime(date: string): string {
 		year: 'numeric'
 	});
 	return `${parts[0].value} ${parts[2].value} ${getCurrentIntl().formatMessage(translations.ordinals, {
-		day: parts[4].value
+		day: Number(parts[4].value)
 	})} ${parts[6].value} @ ${getCurrentIntl().formatTime(date)}`;
 }
 
