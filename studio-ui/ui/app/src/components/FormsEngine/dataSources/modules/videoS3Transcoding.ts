@@ -36,7 +36,7 @@ export const videoS3TranscodingDataSourceModule: DataSourceModule = defineDataSo
 			getActions() {
 				return [
 					createExternalUploadAction({
-						label: `Transcode - ${record.title}`,
+						title: record.title,
 						path,
 						inputProfileId,
 						outputProfileId,

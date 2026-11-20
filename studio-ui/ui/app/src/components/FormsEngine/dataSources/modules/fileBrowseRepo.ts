@@ -31,7 +31,7 @@ export const fileBrowseRepoDataSourceModule: DataSourceModule = defineDataSource
 			getActions() {
 				return [
 					createBrowseAction({
-						label: `Browse - ${record.title}`,
+						title: record.title,
 						path,
 						selection: 'item'
 					})

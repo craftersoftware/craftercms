@@ -23,7 +23,8 @@ import {
 	createSearchAction,
 	type CreateTarget,
 	propBoolean,
-	propString
+	propString,
+	resolveActionLabel
 } from '../moduleHelpers';
 import { expandPathOrRaw } from '../pathUtils';
 
@@ -42,9 +43,9 @@ export const sharedContentDataSourceModule: DataSourceModule = defineDataSourceM
 		const contentTypeId = propString(record, 'type').trim();
 
 		const advertised: DataSourceAction[] = [];
-		if (enableBrowseExisting) advertised.push({ id: 'browse', kind: 'browse', label: 'Browse' });
-		if (enableSearchExisting) advertised.push({ id: 'search', kind: 'search', label: 'Search' });
-		if (enableCreateNew) advertised.push({ id: 'create', kind: 'create', label: 'Create' });
+		if (enableBrowseExisting) advertised.push({ id: 'browse', kind: 'browse', label: resolveActionLabel('browse') });
+		if (enableSearchExisting) advertised.push({ id: 'search', kind: 'search', label: resolveActionLabel('search') });
+		if (enableCreateNew) advertised.push({ id: 'create', kind: 'create', label: resolveActionLabel('create') });
 
 		return createInstanceFromRecord(record, sharedContentDataSourceModule, {
 			capabilities: capabilitiesFromActions(advertised),
@@ -56,7 +57,7 @@ export const sharedContentDataSourceModule: DataSourceModule = defineDataSourceM
 				if (enableBrowseExisting) {
 					actions.push(
 						createBrowseAction({
-							label: `Browse - ${record.title}`,
+							title: record.title,
 							path: browsePath,
 							contentTypes,
 							selection: 'item'
@@ -66,7 +67,7 @@ export const sharedContentDataSourceModule: DataSourceModule = defineDataSourceM
 				if (enableSearchExisting) {
 					actions.push(
 						createSearchAction({
-							label: `Search - ${record.title}`,
+							title: record.title,
 							path: browsePath,
 							contentTypes,
 							selection: 'item'
@@ -77,7 +78,7 @@ export const sharedContentDataSourceModule: DataSourceModule = defineDataSourceM
 					if (contentTypeId) {
 						actions.push(
 							createCreateAction({
-								label: `Create - ${record.title}`,
+								title: record.title,
 								createTargets: [{ contentTypeId, path: repoPath, strategy: 'shared' }]
 							})
 						);
@@ -86,7 +87,7 @@ export const sharedContentDataSourceModule: DataSourceModule = defineDataSourceM
 						actions.push({
 							id: 'create',
 							kind: 'create',
-							label: `Create - ${record.title}`,
+							label: resolveActionLabel('create', { title: record.title }),
 							meta: { createTargets: [] as CreateTarget[], createPaths: [repoPath] },
 							async run(ctx, options) {
 								if (options?.target?.type !== 'create') {

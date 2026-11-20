@@ -32,7 +32,7 @@ export const videoWebDAVUploadDataSourceModule: DataSourceModule = defineDataSou
 			getActions() {
 				return [
 					createExternalUploadAction({
-						label: `Upload - ${record.title}`,
+						title: record.title,
 						path,
 						profileId,
 						profileType: 'webdav',

@@ -24,6 +24,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import js from '@eslint/js';
 import { FlatCompat } from '@eslint/eslintrc';
+import formatjs from 'eslint-plugin-formatjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,7 +57,7 @@ export default [
 	})),
 	{
 		files: ['**/*.ts', '**/*.tsx'],
-		plugins: { 'react-refresh': reactRefresh, 'jsx-a11y': jsxA11y },
+		plugins: { 'react-refresh': reactRefresh, 'jsx-a11y': jsxA11y, formatjs },
 		languageOptions: {
 			globals: { ...globals.browser },
 			parser: tsParser,
@@ -87,7 +88,8 @@ export default [
 				}
 			],
 			// Enable the TypeScript-specific rule with allowShortCircuit option
-			'@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true }]
+			'@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true }],
+			'formatjs/no-literal-string-in-jsx': ['warn']
 		}
 	}
 ];
