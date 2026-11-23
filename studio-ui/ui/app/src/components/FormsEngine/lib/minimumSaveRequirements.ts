@@ -46,6 +46,15 @@ export function missingMinimumSaveRequirements(args: {
 	return missing;
 }
 
+/**
+ * Whether the field is the Internal Name system field. When a type defines it, it is always required: the save rule
+ * ({@link missingMinimumSaveRequirements}) enforces it whatever the field's stored `required` constraint says, so the
+ * field-level required marker and error use this too. See craftersoftware/craftercms#9505.
+ */
+export function isInternalNameField(field: { id?: string } | null | undefined): boolean {
+	return field?.id === XmlKeys.internalName;
+}
+
 /** Not empty and not only whitespace. */
 export function isInternalNameFilled(value: unknown): boolean {
 	return (value?.toString() ?? '').trim() !== '';

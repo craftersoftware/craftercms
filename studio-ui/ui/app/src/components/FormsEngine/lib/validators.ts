@@ -18,7 +18,7 @@ import ContentType, { type ContentTypeField } from '../../../models/ContentType'
 import type { BuiltInControlType } from './controlMap';
 import LookupTable from '../../../models/LookupTable';
 import { XmlKeys } from './formConsts';
-import { missingMinimumSaveRequirements } from './minimumSaveRequirements';
+import { isInternalNameField, missingMinimumSaveRequirements } from './minimumSaveRequirements';
 import { defineMessage, defineMessages, type MessageDescriptor } from 'react-intl';
 import type { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { nnou, nou } from '../../../utils/object';
@@ -421,7 +421,8 @@ export async function validateFieldValue(
 ): Promise<FieldValidityState> {
 	const messages: FieldValidityState['messages'] = [];
 	const isEmpty = isFieldValueEmpty(field, currentValue);
-	const requiredByConstraint = Boolean(field.validations?.required?.value);
+	// Internal Name is always required when the type defines it, whatever its stored `required` constraint says (#9505).
+	const requiredByConstraint = isInternalNameField(field) || Boolean(field.validations?.required?.value);
 	// A positive minCount is reported by the occurrence check. Don't add a second "required" message.
 	const minimum = countLimitValue(field.validations?.minCount?.value);
 	// This control's validator applies required itself, against the value it actually edits.
@@ -542,6 +543,9 @@ export function isFieldValueEmpty(field: ContentTypeField, value: unknown): bool
  *
  */
 export function isFieldRequired(field: ContentTypeField): boolean {
+	// Internal Name is always required when the type defines it, regardless of the stored `required` constraint, so the
+	// asterisk and aria-required match the save rule (#9505).
+	if (isInternalNameField(field)) return true;
 	// The marker is the required constraint, or a positive minimum. See utils/countLimits.ts.
 	return Boolean(field.validations?.required?.value) || countLimitValue(field.validations?.minCount?.value) != null;
 }
