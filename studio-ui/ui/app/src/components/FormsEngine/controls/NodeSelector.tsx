@@ -14,7 +14,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useItemMetaContext, useStableFormContext, useStableGlobalApiContext } from '../lib/formsEngineContext';
+import {
+	useItemMetaContext,
+	useStableFormContext,
+	useStableGlobalApiContext,
+	useStableGlobalContext
+} from '../lib/formsEngineContext';
+import { useStore as useJotaiStore } from 'jotai';
 import { useFormItem } from '../lib/formItem';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
@@ -113,7 +119,15 @@ import {
 	isMediaContent
 } from '../../PathNavigator/utils';
 import useSelection from '../../../hooks/useSelection';
-import { getFormContextPath, getValidationValue, isFieldReadOnly, showAlert } from '../lib/formUtils';
+import {
+	extractAtomValues,
+	getFormContextPath,
+	getValidationValue,
+	isFieldReadOnly,
+	showAlert
+} from '../lib/formUtils';
+import { embeddedItemContentTypeId, enumerateNodeSelectorMoveTargets } from '../lib/nodeSelectorMoveTargets';
+import MoveToFieldDialog from '../components/MoveToFieldDialog';
 import TypeList from '../../ContentTypeManagement/components/TypeList';
 import { SearchBar } from '../../SearchBar';
 import useDebouncedInput from '../../../hooks/useDebouncedInput';
@@ -241,6 +255,8 @@ function NodeSelector(props: NodeSelectorProps) {
 		);
 	};
 	const stableForm = useStableFormContext();
+	const { formsStackData } = useStableGlobalContext();
+	const store = useJotaiStore();
 	const { id, pathInSite } = useItemMetaContext();
 	// Create forms have no store item (`getItem()` is null). See getFormContextPath.
 	const getContextItemPath = () =>
@@ -258,6 +274,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	const dispatch = useDispatch();
 	const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLButtonElement | null>(null);
 	const [itemMenu, setItemMenu] = useState<{ anchor: HTMLElement; index: number } | null>(null);
+	const [moveDialogIndex, setMoveDialogIndex] = useState<number | null>(null);
 	const contentTypes = useContentTypes();
 	const siteId = useActiveSiteId();
 	const authoringBase = useSelection((state) => state.env.authoringBase);
@@ -726,6 +743,30 @@ function NodeSelector(props: NodeSelectorProps) {
 	const itemMenuCanEdit = itemMenuEntry ? canEditItem(itemMenuEntry) : false;
 	const itemMenuOpensForEdit = itemMenuCanEdit && !readonly;
 	const itemMenuLabel = itemMenuEntry ? getItemLabel(itemMenuEntry) : '';
+	const moveDialogItem = moveDialogIndex != null ? value[moveDialogIndex] : null;
+	/** List of possible destinations for the move dialog. Calculated when moveDialogItem and index are present. */
+	const moveDialogTargets = useMemo(() => {
+		if (moveDialogItem == null || moveDialogIndex == null) return [];
+		const rootForm = formsStackData[0];
+		const rootAtoms = rootForm?.atoms?.valueByFieldId;
+		const rootContentType = rootForm?.itemMeta?.contentType;
+		const rootModelId = rootForm?.itemMeta?.id;
+		if (!rootAtoms || !rootContentType || !rootModelId || !contentTypes) return [];
+		const itemContentTypeId =
+			embeddedItemContentTypeId(moveDialogItem) ?? itemsByPath[moveDialogItem.include]?.contentTypeId;
+		if (!itemContentTypeId) return [];
+		return enumerateNodeSelectorMoveTargets({
+			item: moveDialogItem,
+			itemContentTypeId,
+			source: { modelId: id, fieldId: field.id, index: moveDialogIndex },
+			rootModelId,
+			rootValues: extractAtomValues(store, rootAtoms),
+			rootContentType,
+			contentTypesById: contentTypes,
+			formReadonly: readonly
+		});
+	}, [moveDialogItem, moveDialogIndex, formsStackData, itemsByPath, id, field.id, store, contentTypes, readonly]);
+	const closeMoveDialog = () => setMoveDialogIndex(null);
 	return (
 		<>
 			<Menu
@@ -777,8 +818,9 @@ function NodeSelector(props: NodeSelectorProps) {
 				{!readonly && (
 					<MenuItem
 						onClick={() => {
+							const index = itemMenu!.index;
 							closeItemMenu();
-							// Destination dialog lands in a later step of #1461.
+							setMoveDialogIndex(index);
 						}}
 					>
 						<ListItemText>
@@ -807,6 +849,13 @@ function NodeSelector(props: NodeSelectorProps) {
 					</MenuItem>
 				]}
 			</Menu>
+			<MoveToFieldDialog
+				open={moveDialogItem != null}
+				itemLabel={moveDialogItem ? getItemLabel(moveDialogItem) : ''}
+				targets={moveDialogTargets}
+				onClose={closeMoveDialog}
+				// Applying the move lands in a later step of #1461; this step only opens the destination UI.
+			/>
 			<Dialog
 				open={pickerDialogOpen}
 				onClose={handleCloseDataSourcePickerDialog}
