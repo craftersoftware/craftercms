@@ -11,7 +11,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-FROM alpine:3.21 AS main
+FROM alpine:3.24 AS main
 
 # Add default variables. Default cron runs the logrotate every hour.
 ENV CRON_SCHEDULE='0 * * * *' \
