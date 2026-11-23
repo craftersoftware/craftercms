@@ -19,6 +19,7 @@ import type {
 	ContentTypeFieldValidation,
 	ContentTypeSection,
 	DataSource,
+	FormDefinitionPlugin,
 	LegacyDataSource,
 	LegacyFormDefinitionField,
 	LegacyFormDefinitionProperty,
@@ -83,6 +84,7 @@ import { getPossibleTranslation } from '../../utils/i18n';
 import { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { commonControlFieldsDescriptors, defaultDataSourcesSection } from './descriptors/controls/commonDescriptors';
 import internalNameDescriptor from './descriptors/controls/internalName';
+import { isInternalNameField } from '../FormsEngine/lib/minimumSaveRequirements';
 
 // TODO: assess which of the utils here should go to utils/contentType.ts, or other places (serializers, etc.)
 
@@ -183,7 +185,7 @@ export function resolveFieldControlDescriptor(
 	field: Pick<ContentTypeField, 'id' | 'type'>,
 	descriptorByType?: DescriptorContentType | null
 ): DescriptorContentType | undefined {
-	if (field?.id === XmlKeys.internalName && field.type === systemFieldsTypesMap[XmlKeys.internalName]) {
+	if (isInternalNameField(field)) {
 		return internalNameDescriptor;
 	}
 	return descriptorByType ?? undefined;
@@ -377,9 +379,10 @@ export function reverseTypeFieldValuesObject(
 				// The maxlength property is mapped from properties to `field.validations` as `maxLength`.
 				const valueKey = validationKey === 'maxLength' ? 'maxlength' : validationKey;
 				validations[validationKey as ValidationKeys] = { ...mergedValidations[validationKey as ValidationKeys] };
-				// A stored constraint the control's descriptor doesn't define has no form value. Keep it as is instead of
-				// clearing it (e.g. Internal Name keeps its stored `required` although it isn't editable). See #9505.
-				if (!(valueKey in values)) continue;
+				// Scoped to Internal Name: its descriptor no longer lists `required` (it is always required, see #9505), so
+				// the form has no value for a stored `required`. Keep the stored constraint as is instead of clearing it.
+				// Every other control keeps clearing a constraint that has no form value.
+				if (isInternalNameField(field) && !(valueKey in values)) continue;
 				validations[validationKey as ValidationKeys].value =
 					// TODO: Should we use upgrade manager to remove from properties and into constraints?
 					values[valueKey];
@@ -1246,4 +1249,60 @@ export function getPropertiesAndValidationsFromDescriptor(descriptor: Descriptor
 	});
 
 	return { properties, validations };
+}
+
+export function getNewFieldFromDescriptor(
+	fieldType: string,
+	descriptor: DescriptorContentType,
+	configEntry?: { plugin?: FormDefinitionPlugin; descriptor?: DescriptorContentType }
+): NewContentTypeField {
+	const newField: NewContentTypeField = {
+		NEW: true,
+		id: systemFieldsIdsMap[fieldType] ?? null,
+		name: '',
+		helpText: '',
+		description: '',
+		type: systemFieldsTypesMap[fieldType] ?? fieldType,
+		validations: {},
+		defaultValue: '',
+		properties: {}
+	};
+	if (!descriptor) return newField;
+
+	if (descriptor.id === 'repeat') newField.fields = {};
+	const { properties, validations } = getPropertiesAndValidationsFromDescriptor(descriptor);
+
+	newField.properties = properties;
+	newField.validations = validations;
+	const plugin = extractPluginLocatorFromConfigEntry(configEntry);
+	if (plugin) {
+		Object.assign(newField.properties, { plugin });
+	}
+
+	return newField;
+}
+
+export function extractPluginLocatorFromConfigEntry(
+	configEntry?: { plugin?: FormDefinitionPlugin | Record<string, unknown> } & Record<string, unknown>
+): FormDefinitionPlugin | undefined {
+	if (!configEntry?.plugin || typeof configEntry.plugin !== 'object') return undefined;
+	const raw = configEntry.plugin as Record<string, unknown>;
+	// ui.xml attribute form: <plugin id type name fileName />; form-definition uses pluginId/filename.
+	const type = raw.type;
+	const name = raw.name;
+	const filename = raw.filename ?? raw.fileName ?? raw.file;
+	const pluginId = raw.pluginId ?? raw.id;
+	if (
+		typeof type === 'string' &&
+		typeof name === 'string' &&
+		typeof filename === 'string' &&
+		typeof pluginId === 'string' &&
+		type &&
+		name &&
+		filename &&
+		pluginId
+	) {
+		return { type, name, filename, pluginId };
+	}
+	return undefined;
 }

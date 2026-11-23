@@ -50,12 +50,14 @@ export const internalNameDescriptor: DescriptorContentType = {
 			fields: ['pattern']
 		})
 	],
+	// Defaults (maxlength, pattern) match the input descriptor on purpose: existing Internal Name fields were edited
+	// through it, which showed and wrote these defaults. Leaving them undefined would change what open + save writes.
 	fields: {
 		maxlength: {
 			id: 'maxlength',
 			type: 'int',
 			name: defineMessage({ defaultMessage: 'Max Length' }),
-			defaultValue: undefined,
+			defaultValue: 50,
 			validations: immutableEmptyObject
 		},
 		readonly: commonFieldPropertiesDescriptors['readonly'],
@@ -63,7 +65,7 @@ export const internalNameDescriptor: DescriptorContentType = {
 		escapeContent: {
 			id: 'escapeContent',
 			type: 'boolean',
-			name: 'escapeContent',
+			name: defineMessage({ defaultMessage: 'Escape Content' }),
 			defaultValue: undefined,
 			validations: immutableEmptyObject
 		},
@@ -71,7 +73,7 @@ export const internalNameDescriptor: DescriptorContentType = {
 			id: 'pattern',
 			type: 'string',
 			name: defineMessage({ defaultMessage: 'Match Pattern' }),
-			defaultValue: undefined,
+			defaultValue: '',
 			validations: immutableEmptyObject
 		}
 	},

@@ -42,10 +42,11 @@ import {
 	DescriptorContentType,
 	editTypeTemplate,
 	getFieldFromType,
-	getPropertiesAndValidationsFromDescriptor,
 	getSectionFromType,
 	getDataSourceSiblingIds,
+	extractPluginLocatorFromConfigEntry,
 	getFieldIdSet,
+	getNewFieldFromDescriptor,
 	getSiblingFieldIds,
 	isComposedPath,
 	typeForNextArtefactForm,
@@ -54,8 +55,6 @@ import {
 	prepareSerializeToXmlTypeObject,
 	resolveFieldControlDescriptor,
 	reverseTypeFieldValuesObject,
-	systemFieldsIdsMap,
-	systemFieldsTypesMap,
 	TYPE_TEMPLATE_BASE_PATH,
 	TypePropsToEdit,
 	typePropsToEdit
@@ -1708,37 +1707,6 @@ function parseConfigPlugins(
 	return createLookupTable(parsedPlugins);
 }
 
-function getNewFieldFromDescriptor(
-	fieldType: string,
-	descriptor: DescriptorContentType,
-	configEntry?: { plugin?: FormDefinitionPlugin; descriptor?: DescriptorContentType }
-): NewContentTypeField {
-	const newField: NewContentTypeField = {
-		NEW: true,
-		id: systemFieldsIdsMap[fieldType] ?? null,
-		name: '',
-		helpText: '',
-		description: '',
-		type: systemFieldsTypesMap[fieldType] ?? fieldType,
-		validations: {},
-		defaultValue: '',
-		properties: {}
-	};
-	if (!descriptor) return newField;
-
-	if (descriptor.id === 'repeat') newField.fields = {};
-	const { properties, validations } = getPropertiesAndValidationsFromDescriptor(descriptor);
-
-	newField.properties = properties;
-	newField.validations = validations;
-	const plugin = extractPluginLocatorFromConfigEntry(configEntry);
-	if (plugin) {
-		Object.assign(newField.properties, { plugin });
-	}
-
-	return newField;
-}
-
 function getNewDataSourceFromDescriptor(
 	dataSourceType: string,
 	descriptor: DescriptorContentType,
@@ -1767,31 +1735,6 @@ function getNewDataSourceFromDescriptor(
 	}
 
 	return newDataSource;
-}
-
-function extractPluginLocatorFromConfigEntry(
-	configEntry?: { plugin?: FormDefinitionPlugin | Record<string, unknown> } & Record<string, unknown>
-): FormDefinitionPlugin | undefined {
-	if (!configEntry?.plugin || typeof configEntry.plugin !== 'object') return undefined;
-	const raw = configEntry.plugin as Record<string, unknown>;
-	// ui.xml attribute form: <plugin id type name fileName />; form-definition uses pluginId/filename.
-	const type = raw.type;
-	const name = raw.name;
-	const filename = raw.filename ?? raw.fileName ?? raw.file;
-	const pluginId = raw.pluginId ?? raw.id;
-	if (
-		typeof type === 'string' &&
-		typeof name === 'string' &&
-		typeof filename === 'string' &&
-		typeof pluginId === 'string' &&
-		type &&
-		name &&
-		filename &&
-		pluginId
-	) {
-		return { type, name, filename, pluginId };
-	}
-	return undefined;
 }
 
 function reorderSectionFields(

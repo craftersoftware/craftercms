@@ -28,10 +28,12 @@ const { parseLegacyFormDefinition } = await import('../../services/contentTypes.
 const {
 	createTypeFieldValuesObject,
 	createVirtualTypeForField,
+	getNewFieldFromDescriptor,
 	prepareSerializeToXmlTypeObject,
 	resolveFieldControlDescriptor,
 	reverseTypeFieldValuesObject
 } = await import('./utils.ts');
+const { messageSource } = await import('../../../test/messageSource.mjs');
 const { controlDescriptors } = await import('./descriptors/controls/index.ts');
 const { internalNameDescriptor } = await import('./descriptors/controls/internalName.ts');
 const { inputDescriptor } = await import('./descriptors/controls/input.ts');
@@ -68,7 +70,39 @@ describe('resolveFieldControlDescriptor', () => {
 	});
 });
 
+function labelOf(name: unknown): unknown {
+	return typeof name === 'string' ? name : messageSource((name as { defaultMessage: unknown }).defaultMessage);
+}
+
 describe('internalNameDescriptor', () => {
+	// The Options panel shows these labels, so a shared field must read the same as it does for input.
+	it('labels the fields it shares with input the same way', () => {
+		const shared = Object.keys(internalNameDescriptor.fields).filter((key) => key in inputDescriptor.fields);
+		assert.deepEqual(shared.sort(), ['escapeContent', 'maxlength', 'pattern', 'readonly', 'tokenize']);
+		for (const key of shared) {
+			const ours = internalNameDescriptor.fields[key];
+			const theirs = inputDescriptor.fields[key];
+			assert.equal(typeof ours.name, 'object', `${key} label is a message, not a raw string`);
+			assert.equal(labelOf(ours.name), labelOf(theirs.name), `${key} label`);
+			assert.equal(ours.type, theirs.type, `${key} type`);
+		}
+		assert.equal(labelOf(internalNameDescriptor.fields.escapeContent.name), 'Escape Content');
+	});
+
+	// Open + save of a field with no stored value used to write the input defaults, so they stay the same.
+	it('keeps the input defaults for the fields it shares', () => {
+		for (const key of Object.keys(internalNameDescriptor.fields)) {
+			if (!(key in inputDescriptor.fields)) continue;
+			assert.equal(
+				internalNameDescriptor.fields[key].defaultValue,
+				inputDescriptor.fields[key].defaultValue,
+				`${key} default`
+			);
+		}
+		assert.equal(internalNameDescriptor.fields.maxlength.defaultValue, 50);
+		assert.equal(internalNameDescriptor.fields.pattern.defaultValue, '');
+	});
+
 	// FE1 and FE2 always require Internal Name, so a toggle for it would do nothing.
 	it('does not offer required', () => {
 		assert.equal('required' in internalNameDescriptor.fields, false);
@@ -160,5 +194,106 @@ describe('internal-name stored required round trip', () => {
 			after.constraints.some((item) => item.name === 'required'),
 			false
 		);
+	});
+});
+
+describe('stored required without a form value on other controls', () => {
+	function parseField(id: string, type: string) {
+		return parseLegacyFormDefinition({
+			'content-type': '/page/custom',
+			title: 'Custom',
+			description: '',
+			objectType: 'page',
+			sections: {
+				section: {
+					title: 'Main',
+					description: '',
+					defaultOpen: 'true',
+					fields: {
+						field: {
+							id,
+							title: id,
+							description: '',
+							type,
+							constraints: { constraint: [{ name: 'required', value: 'true', type: 'boolean' }] }
+						}
+					}
+				}
+			}
+		} as never);
+	}
+
+	function savedRequired(type: ReturnType<typeof parseField>, id: string) {
+		const section = [prepareSerializeToXmlTypeObject(type).sections.section].flat()[0];
+		const field = [section.fields.field].flat().find((item) => item.id === id);
+		return [field.constraints?.constraint ?? []].flat().find((item) => item.name === 'required');
+	}
+
+	// The form has no value for `required`, as when a descriptor does not list it.
+	function editWithoutRequiredValue(
+		type: ReturnType<typeof parseField>,
+		id: string,
+		descriptor: typeof inputDescriptor
+	) {
+		const field = type.fields[id];
+		const values = createTypeFieldValuesObject(field);
+		assert.equal(values.required, true);
+		delete values.required;
+		return { ...type, fields: { ...type.fields, [id]: reverseTypeFieldValuesObject(field, values, descriptor) } };
+	}
+
+	// Only Internal Name keeps a stored constraint the form has no value for. Everything else is cleared as before.
+	for (const [id, type] of [
+		['title_t', 'input'],
+		['file-name', 'file-name'],
+		['file-name', 'auto-filename'],
+		['internal-name', 'checkbox']
+	] as const) {
+		it(`clears a stored required on ${id} (${type}) when the form has no value for it`, () => {
+			const parsed = parseField(id, type);
+			assert.notEqual(savedRequired(parsed, id), undefined);
+			const descriptor = resolveFieldControlDescriptor(parsed.fields[id], controlDescriptors[type]);
+			assert.notEqual(descriptor, internalNameDescriptor);
+			assert.equal(savedRequired(editWithoutRequiredValue(parsed, id, descriptor), id), undefined);
+		});
+	}
+
+	// A normal input whose required toggle the author turns off still has it cleared.
+	it('clears required on a normal input when the author clears it in the form', () => {
+		const parsed = parseField('title_t', 'input');
+		const field = parsed.fields.title_t;
+		const values = { ...createTypeFieldValuesObject(field), required: undefined };
+		const edited = reverseTypeFieldValuesObject(field, values, inputDescriptor);
+		const type = { ...parsed, fields: { ...parsed.fields, title_t: edited } };
+		assert.equal(savedRequired(type, 'title_t'), undefined);
+	});
+
+	// Sanity: the same edit on Internal Name keeps it.
+	it('keeps required on internal-name for the same edit', () => {
+		const parsed = parseField('internal-name', 'input');
+		const edited = editWithoutRequiredValue(parsed, 'internal-name', internalNameDescriptor);
+		assert.equal(String(savedRequired(edited, 'internal-name')?.value), 'true');
+	});
+});
+
+describe('inserting the internal-name field', () => {
+	// Insert stores type input with the reserved id, and offers no required constraint.
+	it('keeps type input and writes no required constraint', () => {
+		const field = getNewFieldFromDescriptor('internal-name', controlDescriptors['internal-name']);
+		assert.equal(field.type, 'input');
+		assert.equal(field.id, 'internal-name');
+		assert.equal('required' in field.validations, false);
+		assert.equal('required' in (field.properties ?? {}), false);
+		assert.equal(
+			resolveFieldControlDescriptor(field, controlDescriptors['input']),
+			internalNameDescriptor,
+			'the inserted field reopens with the internal-name descriptor'
+		);
+	});
+
+	// A normal input still offers required.
+	it('still offers required for a normal input', () => {
+		const field = getNewFieldFromDescriptor('input', controlDescriptors['input']);
+		assert.equal('required' in field.validations, true);
 	});
 });
