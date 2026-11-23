@@ -149,6 +149,7 @@ import type { DataSourceActionChoice, DataSourceSelection, ResolvedDataSourceAct
 import Alert from '@mui/material/Alert';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
 import { MenuList } from '@mui/material';
+import { showSystemNotification } from '../../../state/actions/system';
 
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
@@ -790,6 +791,14 @@ function NodeSelector(props: NodeSelectorProps) {
 			target: { modelId: target.modelId, fieldId: target.fieldId },
 			targetIndex
 		});
+		dispatch(
+			showSystemNotification({
+				message: formatMessage(
+					{ defaultMessage: 'Moved {item} to {target}' },
+					{ item: moveDialogItem.value, target: target.labelPath }
+				)
+			})
+		);
 	};
 	return (
 		<>

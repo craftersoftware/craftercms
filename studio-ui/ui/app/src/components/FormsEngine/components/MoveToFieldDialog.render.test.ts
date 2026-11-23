@@ -102,10 +102,11 @@ describe('MoveToFieldDialog', () => {
 		assert.match(dialog.textContent ?? '', /Field is read-only/);
 		assert.match(dialog.textContent ?? '', /Insert last/);
 
-		const locked = Array.from(dialog.querySelectorAll('input[type="radio"]')).find(
-			(input) => (input as HTMLInputElement).disabled
-		) as HTMLInputElement;
+		const locked = Array.from(dialog.querySelectorAll('.MuiListItemButton-root')).find(
+			(button) => (button as HTMLButtonElement).disabled || button.getAttribute('aria-disabled') === 'true'
+		);
 		assert.ok(locked);
+		assert.match(locked.textContent ?? '', /Locked/);
 
 		const move = Array.from(dialog.querySelectorAll('button')).find((button) => button.textContent === 'Move');
 		assert.ok(move);

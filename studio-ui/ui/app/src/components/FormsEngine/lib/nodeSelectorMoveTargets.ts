@@ -190,7 +190,7 @@ export function enumerateNodeSelectorMoveTargets(args: EnumerateNodeSelectorMove
 		for (const field of Object.values(contentType.fields)) {
 			if (field.type !== 'node-selector') continue;
 			const items = asArray(values[field.id] as NodeSelectorItem | NodeSelectorItem[]);
-			const labelPath = [...pathLabels, field.name || field.id].join(' › ');
+			const labelPath = [...pathLabels, field.name || field.id].join(' / ');
 			const target = evaluateTarget({
 				field,
 				modelId,

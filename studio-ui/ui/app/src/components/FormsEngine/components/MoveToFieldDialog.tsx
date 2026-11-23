@@ -23,9 +23,9 @@ import PrimaryButton from '../../PrimaryButton';
 import { FormattedMessage, useIntl } from 'react-intl';
 import FormControl from '@mui/material/FormControl';
 import FormLabel from '@mui/material/FormLabel';
-import RadioGroup from '@mui/material/RadioGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Radio from '@mui/material/Radio';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { EmptyState } from '../../EmptyState';
@@ -104,53 +104,67 @@ export function MoveToFieldDialogBody(props: MoveToFieldDialogProps) {
 						subtitle={<FormattedMessage defaultMessage="There are no other fields that can accept this item." />}
 					/>
 				) : (
-					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-						<FormControl>
-							<FormLabel id={destinationLabelId}>
-								<FormattedMessage defaultMessage="Move {item} to" values={{ item: itemLabel }} />
-							</FormLabel>
-							<RadioGroup
-								aria-labelledby={destinationLabelId}
-								name="moveToFieldDestination"
-								value={selectedKey}
-								onChange={(_, next) => setSelectedKey(next)}
-								sx={{ mt: 1, gap: 0.5 }}
-							>
-								{targets.map((target) => {
-									const key = targetKey(target);
-									const disabled = target.disabled;
-									return (
-										<FormControlLabel
-											key={key}
-											value={key}
-											disabled={disabled}
-											control={<Radio />}
-											slotProps={{ typography: { variant: 'body2', sx: { minWidth: 0 } } }}
-											label={
-												<Box sx={{ minWidth: 0 }}>
-													<Typography variant="body2" component="span" noWrap>
-														{target.labelPath}
-													</Typography>
-													{target.reason && (
-														<Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-															{reasonMessage(target.reason)}
-														</Typography>
-													)}
-												</Box>
-											}
-										/>
-									);
-								})}
-							</RadioGroup>
-						</FormControl>
-						<InsertPositionPicker
-							items={positionItems}
-							value={position}
-							onChange={setPosition}
-							disabled={!selectedTarget}
-							emptyMode="firstOnly"
-							afterSelectLabel={formatMessage({ defaultMessage: 'Item to insert after' })}
-						/>
+					<Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch', minHeight: '40vh', minWidth: 0 }}>
+						<Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+							<FormControl sx={{ width: '100%' }}>
+								<FormLabel id={destinationLabelId}>
+									<FormattedMessage defaultMessage="Destination field" />
+								</FormLabel>
+								<List
+									disablePadding
+									aria-labelledby={destinationLabelId}
+									sx={{ mt: 0.5, maxHeight: 280, overflow: 'auto' }}
+								>
+									{targets.map((target) => {
+										const key = targetKey(target);
+										return (
+											<ListItemButton
+												key={key}
+												disabled={target.disabled}
+												selected={selectedKey === key}
+												onClick={() => {
+													setSelectedKey(key);
+												}}
+												sx={{ '&.Mui-selected': { backgroundImage: 'none' } }}
+											>
+												<ListItemText
+													primary={target.labelPath}
+													secondary={target.reason ? reasonMessage(target.reason) : undefined}
+												/>
+											</ListItemButton>
+										);
+									})}
+								</List>
+							</FormControl>
+						</Box>
+						<Box
+							sx={{
+								width: 300,
+								flexShrink: 0,
+								minWidth: 0,
+								overflow: 'hidden',
+								borderLeft: 1,
+								borderColor: 'divider',
+								pl: 2,
+								display: 'flex',
+								flexDirection: 'column',
+								gap: 1
+							}}
+						>
+							{!selectedTarget && (
+								<Typography variant="body2" color="text.secondary">
+									<FormattedMessage defaultMessage="Select an item to choose its insert position." />
+								</Typography>
+							)}
+							<InsertPositionPicker
+								items={positionItems}
+								value={position}
+								onChange={setPosition}
+								disabled={!selectedTarget}
+								emptyMode="firstOnly"
+								afterSelectLabel={formatMessage({ defaultMessage: 'Item to insert after' })}
+							/>
+						</Box>
 					</Box>
 				)}
 			</DialogBody>
@@ -169,8 +183,11 @@ export function MoveToFieldDialogBody(props: MoveToFieldDialogProps) {
 export function MoveToFieldDialog(props: MoveToFieldDialogProps) {
 	const { open, onClose, itemLabel, ...bodyProps } = props;
 	return (
-		<Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-			<DialogHeader title={<FormattedMessage defaultMessage="Move to field" />} onCloseButtonClick={onClose} />
+		<Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+			<DialogHeader
+				title={<FormattedMessage defaultMessage="Move {item} to field" values={{ item: itemLabel }} />}
+				onCloseButtonClick={onClose}
+			/>
 			{open && <MoveToFieldDialogBody {...bodyProps} open={open} itemLabel={itemLabel} onClose={onClose} />}
 		</Dialog>
 	);
