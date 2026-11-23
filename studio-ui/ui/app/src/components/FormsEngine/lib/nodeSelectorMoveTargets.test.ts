@@ -212,6 +212,36 @@ describe('enumerateNodeSelectorMoveTargets', () => {
 		assert.equal(left?.labelPath, 'Left Rail');
 	});
 
+	it('disables destinations under a readonly field but keeps writable fields enabled', () => {
+		const moving = embeddedHero('h1', 'Hero One');
+		const lockedParent = embeddedHero('h9', 'Locked Parent');
+		const writableParent = embeddedHero('h8', 'Writable Parent');
+		const targets = enumerateNodeSelectorMoveTargets({
+			item: moving,
+			itemContentTypeId: heroType,
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 0 },
+			rootModelId,
+			rootValues: {
+				left_o: [moving, writableParent],
+				right_o: [],
+				footer_o: [],
+				locked_o: [lockedParent]
+			},
+			rootContentType: pageType,
+			contentTypesById
+		});
+
+		const lockedChild = targets.find((target) => target.modelId === lockedParent.key);
+		assert.equal(lockedChild?.fieldId, 'children_o');
+		assert.equal(lockedChild?.disabled, true);
+		assert.equal(lockedChild?.reason, 'readonly');
+
+		const writableChild = targets.find((target) => target.modelId === writableParent.key);
+		assert.equal(writableChild?.fieldId, 'children_o');
+		assert.equal(writableChild?.disabled, false);
+		assert.equal(targets.find((target) => target.fieldId === 'right_o')?.disabled, false);
+	});
+
 	it('accepts shared items by the provided content type id', () => {
 		const moving = sharedHero('/site/components/hero.xml', 'Shared Hero');
 		const targets = enumerateNodeSelectorMoveTargets({

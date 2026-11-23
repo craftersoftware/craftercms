@@ -185,7 +185,14 @@ export function enumerateNodeSelectorMoveTargets(args: EnumerateNodeSelectorMove
 	const blockedModelIds = collectEmbeddedSelfAndDescendantIds(item, contentTypesById);
 	const targets: NodeSelectorMoveTarget[] = [];
 
-	const walk = (modelId: string, contentType: ContentType, values: LookupTable<unknown>, pathLabels: string[]) => {
+	/** `inheritedReadonly` is true when an ancestor node-selector field is readonly; it applies to every descendant. */
+	const walk = (
+		modelId: string,
+		contentType: ContentType,
+		values: LookupTable<unknown>,
+		pathLabels: string[],
+		inheritedReadonly: boolean
+	) => {
 		if (!contentType?.fields) return;
 		for (const field of Object.values(contentType.fields)) {
 			if (field.type !== 'node-selector') continue;
@@ -199,22 +206,24 @@ export function enumerateNodeSelectorMoveTargets(args: EnumerateNodeSelectorMove
 				itemKey: item.key,
 				itemContentTypeId,
 				source,
-				formReadonly,
+				formReadonly: inheritedReadonly,
 				blockedModelIds
 			});
 			if (target) targets.push(target);
 
+			// Embedded children live under this field, so they inherit its readonly state too.
+			const childReadonly = isFieldReadOnly(field, inheritedReadonly);
 			for (const child of items) {
 				if (!child?.component) continue;
 				const childTypeId = embeddedItemContentTypeId(child);
 				const childType = childTypeId ? contentTypesById[childTypeId] : undefined;
 				if (!childType) continue;
 				const childLabel = child.value || child.key;
-				walk(child.key, childType, child.component as LookupTable<unknown>, [...pathLabels, childLabel]);
+				walk(child.key, childType, child.component as LookupTable<unknown>, [...pathLabels, childLabel], childReadonly);
 			}
 		}
 	};
 
-	walk(rootModelId, rootContentType, rootValues, []);
+	walk(rootModelId, rootContentType, rootValues, [], formReadonly);
 	return targets;
 }
