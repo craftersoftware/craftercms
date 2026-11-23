@@ -17,6 +17,7 @@
 ########################################################################################################################
 ################################################ GLOBALS ###############################################################
 REQUIRED_JAVA_VERSION=21
+MIN_JAVA_VERSION=21.0.13.1
 REQUIRED_GIT_VERSION=2.15.0
 
 ################################################ COMMONS ###############################################################
@@ -56,6 +57,43 @@ function isTailTomcat() {
   return 1
 }
 
+# Return 0 when actual is greater than or equal to minimum.
+# Compare dotted numeric components. A missing component is 0.
+# Ignore a suffix that starts with +, - or _, such as +build, -LTS or _N.
+function javaVersionAtLeast() {
+  local actual minimum actual_part minimum_part
+  actual="${1%%[+_-]*}"
+  minimum="${2%%[+_-]*}"
+
+  while [ -n "$actual" ] || [ -n "$minimum" ]; do
+    actual_part="${actual%%.*}"
+    minimum_part="${minimum%%.*}"
+
+    case "$actual" in
+      *.*) actual="${actual#*.}" ;;
+      *) actual="" ;;
+    esac
+    case "$minimum" in
+      *.*) minimum="${minimum#*.}" ;;
+      *) minimum="" ;;
+    esac
+
+    actual_part="${actual_part%%[!0-9]*}"
+    minimum_part="${minimum_part%%[!0-9]*}"
+    [ -n "$actual_part" ] || actual_part=0
+    [ -n "$minimum_part" ] || minimum_part=0
+
+    if [ "$actual_part" -gt "$minimum_part" ]; then
+      return 0
+    fi
+    if [ "$actual_part" -lt "$minimum_part" ]; then
+      return 1
+    fi
+  done
+
+  return 0
+}
+
 # shellcheck disable=SC2120
 function preFlightCheck() {
   cecho "Preflight check.\n" "info"
@@ -86,6 +124,12 @@ function preFlightCheck() {
 	if [[ ! "$version" = "$REQUIRED_JAVA_VERSION" ]]; then
 		cecho "CrafterCMS requires Java version $REQUIRED_JAVA_VERSION, detected Java with major version $version, aborting.\n" "error"
 		exit 4
+	fi
+
+	# Older patch builds of the required major still start. Warn, and do not exit.
+	full_version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
+	if ! javaVersionAtLeast "$full_version" "$MIN_JAVA_VERSION"; then
+		cecho "The detected JDK version $full_version should be upgraded to >= $MIN_JAVA_VERSION.\n" "warning"
 	fi
 
 	# Check if JAVA_HOME is set, and set to the correct Java version
