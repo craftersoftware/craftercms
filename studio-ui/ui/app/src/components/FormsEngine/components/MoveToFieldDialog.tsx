@@ -122,6 +122,7 @@ export function MoveToFieldDialogBody(props: MoveToFieldDialogProps) {
 												key={key}
 												disabled={target.disabled}
 												selected={selectedKey === key}
+												aria-pressed={selectedKey === key}
 												onClick={() => {
 													setSelectedKey(key);
 												}}
