@@ -188,7 +188,7 @@ export function EditModeHeader({ isEmbedded, titleId }: { isEmbedded: boolean; t
 	const isLargeContainer = useAtomValue(atoms.isLargeContainer);
 	const internalNameAtom = atoms.valueByFieldId[XmlKeys.internalName];
 	const itemLabel = isEmbedded
-		? internalNameAtom
+		? item && internalNameAtom
 			? (getFieldAtomValue(internalNameAtom, store) as string)
 			: ''
 		: (item?.label ?? '');

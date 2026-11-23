@@ -421,6 +421,30 @@ describe('form item subscriptions', () => {
 		assert.equal(host.querySelector('[title]')?.getAttribute('title') ?? '', '');
 		assert.equal(host.textContent?.includes(formPath), false);
 	});
+
+	it('shows no embedded label before the item is stored, even with a typed internal name', async () => {
+		const store = createItemsStore({});
+		const entry = createEntry(['internal-name']);
+		const host = await mountTree(
+			store,
+			React.createElement(
+				FormHost,
+				{ entry, create: true, itemKey: null },
+				React.createElement(EditModeHeader, { isEmbedded: true })
+			)
+		);
+		assert.equal(host.querySelector('[title]')?.getAttribute('title') ?? '', '');
+	});
+
+	it('labels a stored embedded component with its internal name', async () => {
+		const store = createItemsStore(baseItems());
+		const entry = createEntry(['internal-name']);
+		const host = await mountTree(
+			store,
+			React.createElement(FormHost, { entry }, React.createElement(EditModeHeader, { isEmbedded: true }))
+		);
+		assert.equal(host.querySelector('[title]')?.getAttribute('title'), 'x');
+	});
 });
 
 /** The item's lock, as the header's state text would show it, in a form a test can read. */
