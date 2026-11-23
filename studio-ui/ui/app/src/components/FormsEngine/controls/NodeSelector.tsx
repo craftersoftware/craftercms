@@ -156,6 +156,9 @@ import { useSnackbar } from 'notistack';
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
 
+/** Shared so any NodeSelector can dismiss the Move snackbar (item often lands in another field). */
+const MOVE_TO_FIELD_SNACKBAR_KEY = 'formsEngine.moveToField';
+
 export type NodeSelectorProps = ControlProps<NodeSelectorItem[]>;
 
 export interface NodeSelectorItem {
@@ -281,6 +284,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	const [createPickerChoice, setCreatePickerChoice] = useState<CreateDataSourcePickerData>(null);
 	const dispatch = useDispatch();
 	const { closeSnackbar } = useSnackbar();
+	const dismissMoveSnackbar = () => closeSnackbar(MOVE_TO_FIELD_SNACKBAR_KEY);
 	const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLButtonElement | null>(null);
 	const [itemMenu, setItemMenu] = useState<{ anchor: HTMLElement; index: number } | null>(null);
 	const [moveDialogIndex, setMoveDialogIndex] = useState<number | null>(null);
@@ -408,7 +412,10 @@ function NodeSelector(props: NodeSelectorProps) {
 			value,
 			index,
 			(newList) => {
-				if (!readonly) setValue(newList);
+				if (!readonly) {
+					dismissMoveSnackbar();
+					setValue(newList);
+				}
 			},
 			(itemIndex, edit) =>
 				// Row click, E, and the More menu Edit item all open writable when the item and field allow it.
@@ -811,6 +818,7 @@ function NodeSelector(props: NodeSelectorProps) {
 					{ item: moveDialogItem.value, target: target.labelPath }
 				),
 				options: {
+					key: MOVE_TO_FIELD_SNACKBAR_KEY,
 					action: (snackbarKey) => (
 						<Button
 							size="small"
@@ -1140,6 +1148,7 @@ function NodeSelector(props: NodeSelectorProps) {
 															if (next == null) {
 																return;
 															}
+															dismissMoveSnackbar();
 															remember(next, 'up', itemLabel);
 															sortableListActionProcessor('up', false, value, index, setValue);
 														}}
@@ -1156,6 +1165,7 @@ function NodeSelector(props: NodeSelectorProps) {
 															if (next == null) {
 																return;
 															}
+															dismissMoveSnackbar();
 															remember(next, 'down', itemLabel);
 															sortableListActionProcessor('down', false, value, index, setValue);
 														}}
