@@ -72,9 +72,43 @@ export function isGroup(contentType: ContentType, fieldId: string): boolean {
 	return getField(contentType, fieldId).type === 'repeat';
 }
 
-export function doesFieldAccept(contentType: ContentType, fieldId: string) {
-	// const field = ContentType.getField(contentType, fieldId);
-	throw new Error('[doesFieldAccept] Not implemented');
+/** How a content type may be stored in a node-selector / component holder. */
+export type ContentTypeCreateMode = 'embedded' | 'shared' | 'sharedExisting';
+
+/**
+ * Whether `contentTypeId` is accepted by a receiver field, optionally for a specific storage mode.
+ * When `createMode` is omitted, any entry in `allowedContentTypes` (including `*`) counts — the same
+ * rule XB uses when resolving move drop targets.
+ */
+export function isTypeAcceptedAsByField(
+	receiverField: ContentTypeField,
+	contentTypeId: string,
+	createMode?: ContentTypeCreateMode | ContentTypeCreateMode[]
+): boolean {
+	const processCreateMode = (mode: ContentTypeCreateMode | undefined) =>
+		(mode === 'shared'
+			? receiverField?.validations?.allowedSharedContentTypes?.value
+			: mode === 'embedded'
+				? receiverField?.validations?.allowedEmbeddedContentTypes?.value
+				: mode === 'sharedExisting'
+					? receiverField?.validations?.allowedSharedExistingContentTypes?.value
+					: Object.keys(receiverField?.validations?.allowedContentTypes?.value ?? {})) ?? [];
+	const acceptedTypes: string[] = Array.isArray(createMode)
+		? createMode.flatMap((mode) => processCreateMode(mode))
+		: processCreateMode(createMode);
+	return acceptedTypes.some((typeId) => typeId === contentTypeId || typeId === '*');
+}
+
+/**
+ * Whether the field on `contentType` accepts `contentTypeId` (see {@link isTypeAcceptedAsByField}).
+ */
+export function doesFieldAccept(
+	contentType: ContentType,
+	fieldId: string,
+	contentTypeId: string,
+	createMode?: ContentTypeCreateMode | ContentTypeCreateMode[]
+): boolean {
+	return isTypeAcceptedAsByField(getField(contentType, fieldId), contentTypeId, createMode);
 }
 
 export function getField(
