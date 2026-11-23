@@ -196,9 +196,11 @@ export function MoveToFieldDialogBody(props: MoveToFieldDialogProps) {
 
 export function MoveToFieldDialog(props: MoveToFieldDialogProps) {
 	const { open, onClose, itemLabel, ...bodyProps } = props;
+	const titleId = useId();
 	return (
-		<Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+		<Dialog open={open} onClose={onClose} fullWidth maxWidth="md" aria-labelledby={titleId}>
 			<DialogHeader
+				titleId={titleId}
 				title={<FormattedMessage defaultMessage="Move {item} to field" values={{ item: itemLabel }} />}
 				onCloseButtonClick={onClose}
 			/>
