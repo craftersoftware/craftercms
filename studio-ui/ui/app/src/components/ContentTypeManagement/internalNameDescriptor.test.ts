@@ -31,12 +31,25 @@ const {
 	getNewFieldFromDescriptor,
 	prepareSerializeToXmlTypeObject,
 	resolveFieldControlDescriptor,
+	isInternalNameSystemInput,
+	extractPluginLocatorFromConfigEntry,
 	reverseTypeFieldValuesObject
 } = await import('./utils.ts');
 const { messageSource } = await import('../../../test/messageSource.mjs');
 const { controlDescriptors } = await import('./descriptors/controls/index.ts');
 const { internalNameDescriptor } = await import('./descriptors/controls/internalName.ts');
 const { inputDescriptor } = await import('./descriptors/controls/input.ts');
+
+describe('isInternalNameSystemInput', () => {
+	// Type Builder is strict: the dedicated descriptor and the kept constraint need the id and the stored type input.
+	it('is the internal-name id stored as input only', () => {
+		assert.equal(isInternalNameSystemInput({ id: 'internal-name', type: 'input' }), true);
+		assert.equal(isInternalNameSystemInput({ id: 'internal-name', type: 'checkbox' }), false);
+		assert.equal(isInternalNameSystemInput({ id: 'internal-name', type: 'internal-name' }), false);
+		assert.equal(isInternalNameSystemInput({ id: 'title_t', type: 'input' }), false);
+		assert.equal(isInternalNameSystemInput(undefined), false);
+	});
+});
 
 describe('resolveFieldControlDescriptor', () => {
 	// The system field is identified by its reserved id and the stored type `input`.
@@ -295,5 +308,35 @@ describe('inserting the internal-name field', () => {
 	it('still offers required for a normal input', () => {
 		const field = getNewFieldFromDescriptor('input', controlDescriptors['input']);
 		assert.equal('required' in field.validations, true);
+	});
+});
+
+describe('extractPluginLocatorFromConfigEntry', () => {
+	const expected = { type: 'control', name: 'my-control', filename: 'main.js', pluginId: 'org.example.plugin' };
+
+	// ui.xml attribute form: <plugin id type name fileName />
+	it('reads the ui.xml form (id, fileName)', () => {
+		assert.deepEqual(
+			extractPluginLocatorFromConfigEntry({
+				plugin: { type: 'control', name: 'my-control', fileName: 'main.js', id: 'org.example.plugin' }
+			}),
+			expected
+		);
+	});
+
+	// form-definition form: pluginId and filename
+	it('reads the form-definition form (pluginId, filename)', () => {
+		assert.deepEqual(
+			extractPluginLocatorFromConfigEntry({
+				plugin: { type: 'control', name: 'my-control', filename: 'main.js', pluginId: 'org.example.plugin' }
+			}),
+			expected
+		);
+	});
+
+	it('returns undefined when the locator is missing or incomplete', () => {
+		assert.equal(extractPluginLocatorFromConfigEntry(undefined), undefined);
+		assert.equal(extractPluginLocatorFromConfigEntry({}), undefined);
+		assert.equal(extractPluginLocatorFromConfigEntry({ plugin: { type: 'control', name: 'x' } }), undefined);
 	});
 });

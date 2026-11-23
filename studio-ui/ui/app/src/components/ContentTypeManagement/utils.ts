@@ -84,7 +84,6 @@ import { getPossibleTranslation } from '../../utils/i18n';
 import { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { commonControlFieldsDescriptors, defaultDataSourcesSection } from './descriptors/controls/commonDescriptors';
 import internalNameDescriptor from './descriptors/controls/internalName';
-import { isInternalNameField } from '../FormsEngine/lib/minimumSaveRequirements';
 
 // TODO: assess which of the utils here should go to utils/contentType.ts, or other places (serializers, etc.)
 
@@ -158,6 +157,16 @@ export const systemFieldsTypesMap: Partial<Record<BuiltInControlType, string>> =
 };
 
 /**
+ * Whether the field is the Internal Name system field as Type Builder stores it: the reserved `internal-name` id with
+ * type `input` (see {@link systemFieldsTypesMap}). Type Builder is strict here because it swaps the properties
+ * descriptor and the constraints it keeps. FE2's required rules identify the field by id alone, as FE1 did
+ * (`isInternalNameField` in FormsEngine/lib/minimumSaveRequirements.ts). See craftersoftware/craftercms#9505.
+ */
+export function isInternalNameSystemInput(field: Pick<ContentTypeField, 'id' | 'type'> | null | undefined): boolean {
+	return field?.id === XmlKeys.internalName && field.type === systemFieldsTypesMap[XmlKeys.internalName];
+}
+
+/**
  * Resolves the properties-form descriptor for an existing field, giving the Internal Name system field its dedicated
  * descriptor instead of the generic `input` one.
  *
@@ -185,7 +194,7 @@ export function resolveFieldControlDescriptor(
 	field: Pick<ContentTypeField, 'id' | 'type'>,
 	descriptorByType?: DescriptorContentType | null
 ): DescriptorContentType | undefined {
-	if (isInternalNameField(field)) {
+	if (isInternalNameSystemInput(field)) {
 		return internalNameDescriptor;
 	}
 	return descriptorByType ?? undefined;
@@ -382,7 +391,7 @@ export function reverseTypeFieldValuesObject(
 				// Scoped to Internal Name: its descriptor no longer lists `required` (it is always required, see #9505), so
 				// the form has no value for a stored `required`. Keep the stored constraint as is instead of clearing it.
 				// Every other control keeps clearing a constraint that has no form value.
-				if (isInternalNameField(field) && !(valueKey in values)) continue;
+				if (isInternalNameSystemInput(field) && !(valueKey in values)) continue;
 				validations[validationKey as ValidationKeys].value =
 					// TODO: Should we use upgrade manager to remove from properties and into constraints?
 					values[valueKey];

@@ -44,38 +44,42 @@ function field(id: string, validations: Record<string, unknown> = {}, type = 'in
 }
 
 describe('isInternalNameField', () => {
-	it('is the reserved id stored as input', () => {
-		assert.equal(isInternalNameField({ id: 'internal-name', type: 'input' }), true);
+	// FE1 identified the field by id for any type, and the save rule and the system-props writer still do.
+	it('is the reserved id, whatever the stored type', () => {
+		assert.equal(isInternalNameField({ id: 'internal-name' }), true);
+		for (const type of ['input', 'checkbox', 'repeat', 'textarea']) {
+			assert.equal(isInternalNameField({ id: 'internal-name', type } as never), true, type);
+		}
 	});
 
-	it('is not another type that happens to use the id, or another id', () => {
-		assert.equal(isInternalNameField({ id: 'internal-name', type: 'checkbox' }), false);
-		assert.equal(isInternalNameField({ id: 'internal-name', type: 'repeat' }), false);
-		assert.equal(isInternalNameField({ id: 'title_t', type: 'input' }), false);
+	it('is not another id', () => {
+		assert.equal(isInternalNameField({ id: 'title_t' }), false);
+		assert.equal(isInternalNameField({ id: 'internal-name-2' }), false);
 		assert.equal(isInternalNameField(undefined), false);
 	});
 });
 
 describe('contentTypeDefinesInternalName', () => {
-	// The save rule and the field-level rule must agree on what the system field is.
-	it('follows the same definition as the field-level rule', () => {
+	it('is true when the type has an internal-name field of any type', () => {
 		const def = (fields: Record<string, { id: string; type: string }>) => contentTypeDefinesInternalName({ fields });
 		assert.equal(def({ 'internal-name': { id: 'internal-name', type: 'input' } }), true);
-		assert.equal(def({ 'internal-name': { id: 'internal-name', type: 'checkbox' } }), false);
+		assert.equal(def({ 'internal-name': { id: 'internal-name', type: 'checkbox' } }), true);
 		assert.equal(def({ title_t: { id: 'title_t', type: 'input' } }), false);
+		assert.equal(contentTypeDefinesInternalName({}), false);
 		assert.equal(contentTypeDefinesInternalName(undefined), false);
 	});
 
-	it('blocks save on a blank internal name only when the type defines the system field', () => {
+	// A blank name must block save for a stored type other than input too, or the writer would save an empty element.
+	it('blocks save on a blank internal name whatever the field type', () => {
 		const args = { isRepeatMode: false, isEmbedded: false, fileNameValid: true, internalName: '' };
-		const defines = contentTypeDefinesInternalName({
-			fields: { 'internal-name': { id: 'internal-name', type: 'input' } }
-		});
-		const other = contentTypeDefinesInternalName({
-			fields: { 'internal-name': { id: 'internal-name', type: 'checkbox' } }
-		});
-		assert.deepEqual(missingMinimumSaveRequirements({ ...args, hasInternalNameField: defines }), ['internalName']);
-		assert.deepEqual(missingMinimumSaveRequirements({ ...args, hasInternalNameField: other }), []);
+		for (const type of ['input', 'checkbox']) {
+			const hasInternalNameField = contentTypeDefinesInternalName({
+				fields: { 'internal-name': { id: 'internal-name', type } }
+			});
+			assert.deepEqual(missingMinimumSaveRequirements({ ...args, hasInternalNameField }), ['internalName'], type);
+		}
+		const hasInternalNameField = contentTypeDefinesInternalName({ fields: {} });
+		assert.deepEqual(missingMinimumSaveRequirements({ ...args, hasInternalNameField }), []);
 	});
 });
 
@@ -89,9 +93,9 @@ describe('isFieldRequired for internal-name', () => {
 		assert.equal(isFieldRequired(field('internal-name')), true);
 	});
 
-	it('is not forced for another type that uses the id', () => {
-		assert.equal(isFieldRequired(field('internal-name', { required: false }, 'checkbox')), false);
-		assert.equal(isFieldRequired(field('internal-name', { required: true }, 'checkbox')), true);
+	it('is required for any type stored under the id', () => {
+		assert.equal(isFieldRequired(field('internal-name', { required: false }, 'checkbox')), true);
+		assert.equal(isFieldRequired(field('internal-name', { required: false }, 'textarea')), true);
 	});
 
 	it('still follows the stored constraint for other fields', () => {
@@ -108,10 +112,10 @@ describe('validateFieldValue for internal-name', () => {
 		assert.deepEqual(texts(result.messages), ['This field is required.']);
 	});
 
-	it('does not force required on another type that uses the id', async () => {
+	it('reports an empty value as required for any type stored under the id', async () => {
 		const result = await validateFieldValue(field('internal-name', { required: false }, 'textarea'), '', meta);
-		assert.equal(result.isValid, true);
-		assert.deepEqual(texts(result.messages), []);
+		assert.equal(result.isValid, false);
+		assert.deepEqual(texts(result.messages), ['This field is required.']);
 	});
 
 	it('accepts a filled internal name', async () => {

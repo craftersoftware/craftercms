@@ -47,21 +47,23 @@ export function missingMinimumSaveRequirements(args: {
 }
 
 /**
- * Whether the field is the Internal Name system field: the reserved `internal-name` id stored with type `input`
- * (see `resolveFieldControlDescriptor` in ContentTypeManagement/utils.ts). When a type defines it, it is always
- * required: the save rule ({@link missingMinimumSaveRequirements}) enforces it whatever the field's stored `required`
- * constraint says, so the field-level required marker and error use this too. A field that merely reuses the id with
- * another type is not the system field. See craftersoftware/craftercms#9505.
+ * Whether the field is the Internal Name field. Identified by its reserved id alone, whatever its stored type, as FE1
+ * did (`['file-name', 'internal-name'].includes(field.id)` in forms-engine.js). The save rule
+ * ({@link missingMinimumSaveRequirements}) and the system-props writer in formUtils match by id too, so the field-level
+ * required marker and error use this same definition to agree with them: a type that defines the field always requires
+ * it, whatever its stored `required` constraint says. Type Builder uses a stricter id plus type `input` check to select
+ * its properties descriptor (`isInternalNameSystemInput` in ContentTypeManagement/utils.ts). See
+ * craftersoftware/craftercms#9505.
  */
-export function isInternalNameField(field: { id?: string; type?: string } | null | undefined): boolean {
-	return field?.id === XmlKeys.internalName && field.type === 'input';
+export function isInternalNameField(field: { id?: string } | null | undefined): boolean {
+	return field?.id === XmlKeys.internalName;
 }
 
-/** Whether the content type defines the Internal Name system field. This is what makes the save require it. */
+/** Whether the content type defines the Internal Name field. This is what makes the save require it. */
 export function contentTypeDefinesInternalName(
-	contentType: { fields?: LookupTable<{ id?: string; type?: string }> } | null | undefined
+	contentType: { fields?: LookupTable<unknown> } | null | undefined
 ): boolean {
-	return isInternalNameField(contentType?.fields?.[XmlKeys.internalName]);
+	return Boolean(contentType?.fields?.[XmlKeys.internalName]);
 }
 
 /** Not empty and not only whitespace. */
