@@ -39,10 +39,7 @@ export interface MoveToFieldDialogProps {
 	itemLabel: string;
 	targets: NodeSelectorMoveTarget[];
 	onClose(): void;
-	/**
-	 * Called when the user accepts a destination and position.
-	 * Step 5 wires the dialog only; applying the move lands in a later step.
-	 */
+	/** Called when the user accepts a destination and insert position. */
 	onAccept?(target: NodeSelectorMoveTarget, targetIndex: number): void;
 }
 

@@ -126,7 +126,12 @@ import {
 	isFieldReadOnly,
 	showAlert
 } from '../lib/formUtils';
-import { embeddedItemContentTypeId, enumerateNodeSelectorMoveTargets } from '../lib/nodeSelectorMoveTargets';
+import {
+	embeddedItemContentTypeId,
+	enumerateNodeSelectorMoveTargets,
+	type NodeSelectorMoveTarget
+} from '../lib/nodeSelectorMoveTargets';
+import { applyNodeSelectorMove } from '../lib/applyNodeSelectorMove';
 import MoveToFieldDialog from '../components/MoveToFieldDialog';
 import TypeList from '../../ContentTypeManagement/components/TypeList';
 import { SearchBar } from '../../SearchBar';
@@ -767,6 +772,25 @@ function NodeSelector(props: NodeSelectorProps) {
 		});
 	}, [moveDialogItem, moveDialogIndex, formsStackData, itemsByPath, id, field.id, store, contentTypes, readonly]);
 	const closeMoveDialog = () => setMoveDialogIndex(null);
+	const handleMoveToField = (target: NodeSelectorMoveTarget, targetIndex: number) => {
+		if (moveDialogIndex == null || !moveDialogItem || !contentTypes) return;
+		const rootForm = formsStackData[0];
+		const rootModelId = rootForm?.itemMeta?.id;
+		const rootContentType = rootForm?.itemMeta?.contentType;
+		if (!rootForm || !rootModelId || !rootContentType) return;
+		applyNodeSelectorMove({
+			store,
+			rootForm,
+			item: moveDialogItem,
+			formsStackData,
+			rootModelId,
+			rootContentType,
+			contentTypesById: contentTypes,
+			source: { modelId: id, fieldId: field.id, index: moveDialogIndex },
+			target: { modelId: target.modelId, fieldId: target.fieldId },
+			targetIndex
+		});
+	};
 	return (
 		<>
 			<Menu
@@ -854,7 +878,7 @@ function NodeSelector(props: NodeSelectorProps) {
 				itemLabel={moveDialogItem ? getItemLabel(moveDialogItem) : ''}
 				targets={moveDialogTargets}
 				onClose={closeMoveDialog}
-				// Applying the move lands in a later step of #1461; this step only opens the destination UI.
+				onAccept={handleMoveToField}
 			/>
 			<Dialog
 				open={pickerDialogOpen}
