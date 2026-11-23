@@ -127,9 +127,9 @@ function preFlightCheck() {
 	fi
 
 	# Older patch builds of the required major still start. Warn, and do not exit.
-	# An empty version string is skipped so the warning is not blank.
+	# An empty parse is skipped so the message is not printed with a blank version.
 	full_version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
-	if [ -n "$full_version" ] && ! javaVersionAtLeast "$full_version" "$MIN_JAVA_VERSION"; then
+	if [[ -n "$full_version" ]] && ! javaVersionAtLeast "$full_version" "$MIN_JAVA_VERSION"; then
 		cecho "The detected JDK version $full_version should be upgraded to >= $MIN_JAVA_VERSION.\n" "warning"
 	fi
 
@@ -147,10 +147,14 @@ function preFlightCheck() {
 		exit 6
 	fi
 
-	# Same warning for the JAVA_HOME java. Skip an empty version and a version already reported for PATH. Do not exit.
+	# Same warning for the JAVA_HOME JDK. Do not exit. Skip an empty parse, and
+	# skip when this is the same binary or the same version already checked above.
 	javahome_full_version=$("$_java_in_javahome" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
-	if [ -n "$javahome_full_version" ] && [ "$javahome_full_version" != "$full_version" ] && ! javaVersionAtLeast "$javahome_full_version" "$MIN_JAVA_VERSION"; then
-		cecho "The detected JDK version $javahome_full_version should be upgraded to >= $MIN_JAVA_VERSION.\n" "warning"
+	path_java=$(type -p java)
+	if [[ "$path_java" != "$_java_in_javahome" && "$javahome_full_version" != "$full_version" ]]; then
+		if [[ -n "$javahome_full_version" ]] && ! javaVersionAtLeast "$javahome_full_version" "$MIN_JAVA_VERSION"; then
+			cecho "The detected JDK version $javahome_full_version should be upgraded to >= $MIN_JAVA_VERSION.\n" "warning"
+		fi
 	fi
 
 	# Check lsof
