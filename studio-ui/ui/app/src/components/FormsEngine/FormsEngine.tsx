@@ -198,6 +198,7 @@ import { useInvalidFieldIds } from './lib/useInvalidFieldIds';
 import { useMinimumSaveRequirements } from './lib/useMinimumSaveRequirements';
 import {
 	blockingFieldName,
+	contentTypeDefinesInternalName,
 	firstBlockingFieldId,
 	minimumRequirementsNotice,
 	validationAlertVariant
@@ -1262,7 +1263,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 		{
 			isRepeatMode,
 			isEmbedded,
-			hasInternalNameField: Boolean(contentType.fields?.[XmlKeys.internalName])
+			hasInternalNameField: contentTypeDefinesInternalName(contentType)
 		},
 		fieldUpdates$
 	);
@@ -1271,7 +1272,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 		{
 			isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
 			isEmbedded: isEmbeddedForm(parentEntry?.props ?? {}),
-			hasInternalNameField: Boolean(parentEntry?.itemMeta.contentType?.fields?.[XmlKeys.internalName])
+			hasInternalNameField: contentTypeDefinesInternalName(parentEntry?.itemMeta.contentType)
 		},
 		parentEntry?.fieldUpdates$
 	);

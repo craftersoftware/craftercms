@@ -59,7 +59,12 @@ import Typography from '@mui/material/Typography';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled } from './validators';
-import { embeddedMinimumSaveAlert, fullFormMinimumSaveAlert, isBlankCreateFileName } from './minimumSaveRequirements';
+import {
+	contentTypeDefinesInternalName,
+	embeddedMinimumSaveAlert,
+	fullFormMinimumSaveAlert,
+	isBlankCreateFileName
+} from './minimumSaveRequirements';
 import { cancelPackages, fetchAffectedPackages } from '../../../services/workflow';
 import { switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
@@ -389,7 +394,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 				});
 
 				complementValuesWithSystemProps(id, values, contentObject, contentType, saveAsDraft);
-				const hasInternalNameField = Boolean(contentType.fields?.[XmlKeys.internalName]);
+				const hasInternalNameField = contentTypeDefinesInternalName(contentType);
 				// Embedded handled here. If true, execution ends inside if statement.
 				if (isEmbedded) {
 					// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
