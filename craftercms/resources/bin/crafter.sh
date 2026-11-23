@@ -57,41 +57,40 @@ function isTailTomcat() {
   return 1
 }
 
-# True when dotted version $1 is greater than or equal to $2.
-# Missing components are 0. Suffixes such as +build, -LTS and _N are ignored.
-javaVersionAtLeast() {
-  local actual="${1%%+*}"
-  local required="${2%%+*}"
-  actual="${actual%%-*}"
-  required="${required%%-*}"
-  actual="${actual%%_*}"
-  required="${required%%_*}"
+# Return 0 when actual is greater than or equal to minimum.
+# Compare dotted numeric components. A missing component is 0.
+# Ignore a suffix that starts with +, - or _, such as +build, -LTS or _N.
+function javaVersionAtLeast() {
+  local actual minimum actual_part minimum_part
+  actual="${1%%[+_-]*}"
+  minimum="${2%%[+_-]*}"
 
-  local actual_part required_part
-  while [[ -n "$actual" || -n "$required" ]]; do
+  while [ -n "$actual" ] || [ -n "$minimum" ]; do
     actual_part="${actual%%.*}"
-    required_part="${required%%.*}"
-    if [[ "$actual" == *.* ]]; then
-      actual="${actual#*.}"
-    else
-      actual=""
-    fi
-    if [[ "$required" == *.* ]]; then
-      required="${required#*.}"
-    else
-      required=""
-    fi
-    actual_part="${actual_part//[^0-9]/}"
-    required_part="${required_part//[^0-9]/}"
-    actual_part="${actual_part:-0}"
-    required_part="${required_part:-0}"
-    if (( 10#$actual_part < 10#$required_part )); then
-      return 1
-    fi
-    if (( 10#$actual_part > 10#$required_part )); then
+    minimum_part="${minimum%%.*}"
+
+    case "$actual" in
+      *.*) actual="${actual#*.}" ;;
+      *) actual="" ;;
+    esac
+    case "$minimum" in
+      *.*) minimum="${minimum#*.}" ;;
+      *) minimum="" ;;
+    esac
+
+    actual_part="${actual_part%%[!0-9]*}"
+    minimum_part="${minimum_part%%[!0-9]*}"
+    [ -n "$actual_part" ] || actual_part=0
+    [ -n "$minimum_part" ] || minimum_part=0
+
+    if [ "$actual_part" -gt "$minimum_part" ]; then
       return 0
     fi
+    if [ "$actual_part" -lt "$minimum_part" ]; then
+      return 1
+    fi
   done
+
   return 0
 }
 
@@ -127,9 +126,10 @@ function preFlightCheck() {
 		exit 4
 	fi
 
-	java_full_version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
-	if ! javaVersionAtLeast "$java_full_version" "$MIN_JAVA_VERSION"; then
-		cecho "Detected Java version ${java_full_version}. The JDK should be upgraded to >= ${MIN_JAVA_VERSION}.\n" "warning"
+	# Older patch builds of the required major still start. Warn, and do not exit.
+	full_version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
+	if ! javaVersionAtLeast "$full_version" "$MIN_JAVA_VERSION"; then
+		cecho "The detected JDK version $full_version should be upgraded to >= $MIN_JAVA_VERSION.\n" "warning"
 	fi
 
 	# Check if JAVA_HOME is set, and set to the correct Java version
