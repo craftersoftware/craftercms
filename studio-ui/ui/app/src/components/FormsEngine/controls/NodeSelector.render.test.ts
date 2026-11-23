@@ -284,6 +284,48 @@ describe('NodeSelector E and V shortcuts', () => {
 	});
 });
 
+describe('NodeSelector Move to field entry', () => {
+	it('offers Move to field… from the per-item More menu (keyboard-reachable menu item)', async () => {
+		const store = createItemsStore({
+			...baseItems(),
+			[sourcePath]: {
+				...included,
+				availableActionsMap: { edit: true }
+			}
+		});
+		const entry = createEntry(['nodes_o']);
+		const host = await mountTree(
+			store,
+			React.createElement(
+				FormHost,
+				{ entry },
+				React.createElement(NodeSelector as never, {
+					field: fieldFor('nodes_o', 'node-selector'),
+					value: [{ key: sourcePath, value: 'Source', include: sourcePath }],
+					setValue: () => undefined,
+					readonly: false,
+					autoFocus: false,
+					contentType: { id: '/component/thing', fields: {} }
+				})
+			)
+		);
+		const more = host.querySelector<HTMLButtonElement>('button[aria-label="Options for Source"]');
+		assert.ok(more);
+		assert.equal(more.getAttribute('aria-haspopup'), 'menu');
+		await act(async () => {
+			more.click();
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+		});
+		const menuTexts = Array.from(document.body.querySelectorAll('[role="menuitem"]')).map((item) => item.textContent);
+		assert.ok(
+			menuTexts.some((text) => (text ?? '').includes('Move to field')),
+			`Item More menu lists Move to field…; got: ${JSON.stringify(menuTexts)}`
+		);
+	});
+});
+
 describe('NodeSelector reorder dialog', () => {
 	beforeEach(() => {
 		(window as unknown as Record<string, unknown>).ontouchstart = null;

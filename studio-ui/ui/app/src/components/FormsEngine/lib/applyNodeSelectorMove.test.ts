@@ -22,6 +22,7 @@ import type { ContentTypeField } from '../../../models/ContentType';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 
 const { applyNodeSelectorMove, applyNodeSelectorMoveToValues } = await import('./applyNodeSelectorMove.ts');
+const { buildContentXml } = await import('./valueSerializers.ts');
 const { createStore } = await import('jotai');
 const { createFieldAtoms, createFormStackData } = await import('./formUtils.tsx');
 
@@ -208,6 +209,51 @@ describe('applyNodeSelectorMoveToValues', () => {
 			targetIndex: 0
 		});
 		assert.equal(result, null);
+	});
+
+	it('serializes like a normal form save: shared include and embed content land in the destination field', () => {
+		const shared = sharedHero('/site/components/hero.xml', 'Shared');
+		const child = embeddedHero('child', 'Child');
+		const embedded = embeddedHero('h1', 'Hero', [child]);
+		const sharedMove = applyNodeSelectorMoveToValues({
+			rootValues: {
+				'content-type': pageType.id,
+				objectId: rootModelId,
+				left_o: [shared],
+				right_o: []
+			},
+			rootModelId,
+			rootContentType: pageType,
+			contentTypesById,
+			item: shared,
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 0 },
+			target: { modelId: rootModelId, fieldId: 'right_o' },
+			targetIndex: 0
+		});
+		assert.ok(sharedMove);
+		const sharedXml = buildContentXml(sharedMove.rootValues as never, contentTypesById);
+		assert.match(sharedXml, /<right_o[\s\S]*<include>\/site\/components\/hero\.xml<\/include>/);
+		assert.doesNotMatch(sharedXml, /<left_o[\s\S]*hero\.xml[\s\S]*<\/left_o>/);
+
+		const embedMove = applyNodeSelectorMoveToValues({
+			rootValues: {
+				'content-type': pageType.id,
+				objectId: rootModelId,
+				left_o: [embedded],
+				right_o: []
+			},
+			rootModelId,
+			rootContentType: pageType,
+			contentTypesById,
+			item: embedded,
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 0 },
+			target: { modelId: rootModelId, fieldId: 'right_o' },
+			targetIndex: 0
+		});
+		assert.ok(embedMove);
+		const embedXml = buildContentXml(embedMove.rootValues as never, contentTypesById);
+		assert.match(embedXml, /<right_o[\s\S]*<objectId>h1<\/objectId>[\s\S]*<objectId>child<\/objectId>/);
+		assert.doesNotMatch(embedXml, /<left_o[\s\S]*<objectId>h1<\/objectId>[\s\S]*<\/left_o>/);
 	});
 });
 
