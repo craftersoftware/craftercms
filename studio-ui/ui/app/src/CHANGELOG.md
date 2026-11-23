@@ -177,6 +177,7 @@
   * `actions/system`:
     * `showEditItemSuccessNotification` no longer takes a payload. Draft saves don't dispatch it.
     * Removed `workflowEvent`. Replaced by `workflowEventSubmit`, `workflowEventDirectPublish`, `workflowEventApprove`, `workflowEventReject`, `workflowEventCancel`.
+    * Updated `contentTypeCreated`, `contentTypeUpdated` and `contentTypeDeleted` action payloads to be `{ contentTypeId: string }` (previously dispatched without a payload). Type Builder saves and deletes, and the content type configuration socket events, now include the content type id.
   * `actions/preview`:
     * `requestWorkflowCancellationDialog`: Removed `path`, replaced by `item`.
     * Removed the `EMBEDDED_LEGACY_*` constants used by the legacy form iframe (`EMBEDDED_LEGACY_FORM_CLOSE`, `EMBEDDED_LEGACY_FORM_SUCCESS`, `EMBEDDED_LEGACY_FORM_RENDERED`, `EMBEDDED_LEGACY_FORM_DISABLE_ON_CLOSE`, `EMBEDDED_LEGACY_FORM_ENABLE_ON_CLOSE`, `EMBEDDED_LEGACY_FORM_ENABLE_HEADER`, `EMBEDDED_LEGACY_FORM_DISABLE_HEADER`, `EMBEDDED_LEGACY_FORM_RENDER_FAILED`, `EMBEDDED_LEGACY_FORM_PENDING_CHANGES`, `EMBEDDED_LEGACY_FORM_SAVE`, `EMBEDDED_LEGACY_FORM_FAILURE`, `EMBEDDED_LEGACY_MINIMIZE_REQUEST`, `EMBEDDED_LEGACY_CHANGE_TO_EDIT_MODE`, `EMBEDDED_LEGACY_FORM_SAVE_START`, `EMBEDDED_LEGACY_FORM_SAVE_END`).
