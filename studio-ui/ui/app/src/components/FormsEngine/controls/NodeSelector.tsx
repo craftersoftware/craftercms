@@ -24,6 +24,7 @@ import { useStore as useJotaiStore } from 'jotai';
 import { useFormItem } from '../lib/formItem';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
+import Button from '@mui/material/Button';
 import AddRounded from '@mui/icons-material/AddRounded';
 import HelpOutline from '@mui/icons-material/HelpOutlined';
 import SearchRounded from '@mui/icons-material/SearchRounded';
@@ -150,6 +151,7 @@ import Alert from '@mui/material/Alert';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
 import { MenuList } from '@mui/material';
 import { showSystemNotification } from '../../../state/actions/system';
+import { useSnackbar } from 'notistack';
 
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
@@ -278,6 +280,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	const [pickerDialogOpen, setPickerDialogOpen] = useState(false);
 	const [createPickerChoice, setCreatePickerChoice] = useState<CreateDataSourcePickerData>(null);
 	const dispatch = useDispatch();
+	const { closeSnackbar } = useSnackbar();
 	const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLButtonElement | null>(null);
 	const [itemMenu, setItemMenu] = useState<{ anchor: HTMLElement; index: number } | null>(null);
 	const [moveDialogIndex, setMoveDialogIndex] = useState<number | null>(null);
@@ -773,13 +776,15 @@ function NodeSelector(props: NodeSelectorProps) {
 		});
 	}, [moveDialogItem, moveDialogIndex, formsStackData, itemsByPath, id, field.id, store, contentTypes, readonly]);
 	const closeMoveDialog = () => setMoveDialogIndex(null);
+	const moveUndoRefs = useUpdateRefs({ formsStackData, contentTypes, store, closeSnackbar });
 	const handleMoveToField = (target: NodeSelectorMoveTarget, targetIndex: number) => {
 		if (moveDialogIndex == null || !moveDialogItem || !contentTypes) return;
 		const rootForm = formsStackData[0];
 		const rootModelId = rootForm?.itemMeta?.id;
 		const rootContentType = rootForm?.itemMeta?.contentType;
 		if (!rootForm || !rootModelId || !rootContentType) return;
-		applyNodeSelectorMove({
+		const source = { modelId: id, fieldId: field.id, index: moveDialogIndex };
+		const applied = applyNodeSelectorMove({
 			store,
 			rootForm,
 			item: moveDialogItem,
@@ -787,16 +792,62 @@ function NodeSelector(props: NodeSelectorProps) {
 			rootModelId,
 			rootContentType,
 			contentTypesById: contentTypes,
-			source: { modelId: id, fieldId: field.id, index: moveDialogIndex },
+			source,
 			target: { modelId: target.modelId, fieldId: target.fieldId },
 			targetIndex
 		});
+		if (!applied) return;
+		const undoSource = {
+			modelId: target.modelId,
+			fieldId: target.fieldId,
+			index: applied.insertedIndex
+		};
+		const undoTarget = { modelId: source.modelId, fieldId: source.fieldId };
+		const undoTargetIndex = source.index;
 		dispatch(
 			showSystemNotification({
 				message: formatMessage(
 					{ defaultMessage: 'Moved {item} to {target}' },
 					{ item: moveDialogItem.value, target: target.labelPath }
-				)
+				),
+				options: {
+					action: (snackbarKey) => (
+						<Button
+							size="small"
+							color="inherit"
+							onClick={() => {
+								const {
+									formsStackData: latestStack,
+									contentTypes: latestContentTypes,
+									store: latestStore,
+									closeSnackbar: close
+								} = moveUndoRefs.current;
+								const latestRootForm = latestStack[0];
+								const latestRootModelId = latestRootForm?.itemMeta?.id;
+								const latestRootContentType = latestRootForm?.itemMeta?.contentType;
+								if (!latestRootForm || !latestRootModelId || !latestRootContentType || !latestContentTypes) {
+									close(snackbarKey);
+									return;
+								}
+								applyNodeSelectorMove({
+									store: latestStore,
+									rootForm: latestRootForm,
+									item: applied.item,
+									formsStackData: latestStack,
+									rootModelId: latestRootModelId,
+									rootContentType: latestRootContentType,
+									contentTypesById: latestContentTypes,
+									source: undoSource,
+									target: undoTarget,
+									targetIndex: undoTargetIndex
+								});
+								close(snackbarKey);
+							}}
+						>
+							<FormattedMessage defaultMessage="Undo" />
+						</Button>
+					)
+				}
 			})
 		);
 	};
