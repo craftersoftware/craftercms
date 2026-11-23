@@ -341,4 +341,115 @@ describe('applyNodeSelectorMove', () => {
 		assert.equal(left.length, 1);
 		assert.deepEqual(left[0].component?.children_o, [moving]);
 	});
+
+	it('preserves unsaved stacked-form list items when moving into that field', () => {
+		const moving = embeddedHero('h2', 'Hero Two');
+		const unsaved = embeddedHero('u1', 'Unsaved Child');
+		// Root still has an empty children_o; the open stacked form has an unsaved item.
+		const parent = embeddedHero('p1', 'Parent');
+		const store = createStore();
+		const rootForm = createFormStackData({
+			itemMeta: { path: '/site/website/index.xml', id: rootModelId } as never,
+			originalValues: { left_o: [parent, moving], right_o: [] }
+		});
+		rootForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
+		for (const field of Object.values(pageType.fields)) {
+			const [valueAtom, validationAtom] = createFieldAtoms(field, rootForm.originalValues[field.id], {
+				current: rootForm
+			});
+			rootForm.atoms.valueByFieldId[field.id] = valueAtom;
+			rootForm.atoms.validationByFieldId[field.id] = validationAtom;
+		}
+
+		const childForm = createFormStackData({
+			itemMeta: { path: '/site/website/index.xml', id: parent.key } as never,
+			originalValues: { children_o: [unsaved] }
+		});
+		childForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
+		const childrenField = heroContentType.fields.children_o;
+		const [childrenAtom, childrenValidation] = createFieldAtoms(childrenField, [unsaved], { current: childForm });
+		childForm.atoms.valueByFieldId.children_o = childrenAtom;
+		childForm.atoms.validationByFieldId.children_o = childrenValidation;
+
+		const result = applyNodeSelectorMove({
+			store,
+			rootForm,
+			item: moving,
+			formsStackData: [rootForm, childForm],
+			rootModelId,
+			rootContentType: pageType,
+			contentTypesById,
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 1 },
+			target: { modelId: parent.key, fieldId: 'children_o' },
+			targetIndex: 1
+		});
+
+		assert.ok(result);
+		assert.deepEqual(
+			(store.get(childForm.atoms.valueByFieldId.children_o) as NodeSelectorItem[]).map((item) => item.key),
+			['u1', 'h2']
+		);
+		const left = store.get(rootForm.atoms.valueByFieldId.left_o) as NodeSelectorItem[];
+		assert.equal(left.length, 1);
+		assert.deepEqual(
+			(left[0].component?.children_o as NodeSelectorItem[]).map((item) => item.key),
+			['u1', 'h2']
+		);
+	});
+
+	it('removes from the open stacked-form source list, not a stale root copy', () => {
+		const a = embeddedHero('a', 'A');
+		const b = embeddedHero('b', 'B');
+		const c = embeddedHero('c', 'C');
+		// Root embed only knows about [a]; stacked form has unsaved [a, b, c].
+		const parent = embeddedHero('p1', 'Parent', [a]);
+		const store = createStore();
+		const rootForm = createFormStackData({
+			itemMeta: { path: '/site/website/index.xml', id: rootModelId } as never,
+			originalValues: { left_o: [parent], right_o: [] }
+		});
+		rootForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
+		for (const field of Object.values(pageType.fields)) {
+			const [valueAtom, validationAtom] = createFieldAtoms(field, rootForm.originalValues[field.id], {
+				current: rootForm
+			});
+			rootForm.atoms.valueByFieldId[field.id] = valueAtom;
+			rootForm.atoms.validationByFieldId[field.id] = validationAtom;
+		}
+
+		const childForm = createFormStackData({
+			itemMeta: { path: '/site/website/index.xml', id: parent.key } as never,
+			originalValues: { children_o: [a, b, c] }
+		});
+		childForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
+		const childrenField = heroContentType.fields.children_o;
+		const [childrenAtom, childrenValidation] = createFieldAtoms(childrenField, [a, b, c], { current: childForm });
+		childForm.atoms.valueByFieldId.children_o = childrenAtom;
+		childForm.atoms.validationByFieldId.children_o = childrenValidation;
+
+		const result = applyNodeSelectorMove({
+			store,
+			rootForm,
+			item: b,
+			formsStackData: [rootForm, childForm],
+			rootModelId,
+			rootContentType: pageType,
+			contentTypesById,
+			source: { modelId: parent.key, fieldId: 'children_o', index: 1 },
+			target: { modelId: rootModelId, fieldId: 'right_o' },
+			targetIndex: 0
+		});
+
+		assert.ok(result);
+		assert.deepEqual(
+			(store.get(childForm.atoms.valueByFieldId.children_o) as NodeSelectorItem[]).map((item) => item.key),
+			['a', 'c']
+		);
+		assert.deepEqual(store.get(rootForm.atoms.valueByFieldId.right_o), [b]);
+		const left = store.get(rootForm.atoms.valueByFieldId.left_o) as NodeSelectorItem[];
+		assert.deepEqual(
+			(left[0].component?.children_o as NodeSelectorItem[]).map((item) => item.key),
+			['a', 'c']
+		);
+	});
 });

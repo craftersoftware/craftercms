@@ -227,9 +227,38 @@ export function applyNodeSelectorMove(args: ApplyNodeSelectorMoveArgs): ApplyNod
 	const valueAtoms = rootForm.atoms?.valueByFieldId;
 	if (!valueAtoms) return null;
 
+	let rootValues = extractAtomValues(store, valueAtoms);
+	// Prefer live source/target lists from open stacked forms over stale embeds under the root.
+	if (formsStackData) {
+		for (const { modelId, fieldId } of [
+			{ modelId: valueArgs.source.modelId, fieldId: valueArgs.source.fieldId },
+			{ modelId: valueArgs.target.modelId, fieldId: valueArgs.target.fieldId }
+		]) {
+			if (modelId === valueArgs.rootModelId) continue;
+			let live: NodeSelectorItem[] | undefined;
+			for (const entry of formsStackData) {
+				const entryModelId = entry.itemMeta?.id ?? entry.props?.update?.modelId;
+				if (entryModelId == null || String(entryModelId) !== modelId) continue;
+				const atom = entry.atoms?.valueByFieldId?.[fieldId];
+				if (atom) live = nodeSelectorItems(store.get(atom));
+			}
+			if (!live) continue;
+			const updated = updateModelFieldFromRoot(
+				rootValues,
+				valueArgs.rootModelId,
+				valueArgs.rootContentType,
+				valueArgs.contentTypesById,
+				modelId,
+				fieldId,
+				() => live
+			);
+			if (updated) rootValues = updated.values;
+		}
+	}
+
 	const applied = applyNodeSelectorMoveToValues({
 		...valueArgs,
-		rootValues: extractAtomValues(store, valueAtoms)
+		rootValues
 	});
 	if (!applied) return null;
 
