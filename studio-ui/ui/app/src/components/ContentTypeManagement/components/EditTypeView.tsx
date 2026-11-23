@@ -52,6 +52,7 @@ import {
 	NEW_DATASOURCE_ID,
 	NEW_FIELD_ID,
 	prepareSerializeToXmlTypeObject,
+	resolveFieldControlDescriptor,
 	reverseTypeFieldValuesObject,
 	systemFieldsIdsMap,
 	systemFieldsTypesMap,
@@ -464,8 +465,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// are preserved (e.g. selecting a parent after editing one of its children).
 		const fieldForForm = getFieldFromType(typeForForm, resolvedFieldIdPath) ?? field;
 
-		const controlDescriptor =
-			controlDescriptors[fieldForForm.type as BuiltInControlType] ?? config.controls?.[fieldForForm.type]?.descriptor;
+		const controlDescriptor = resolveFieldControlDescriptor(
+			fieldForForm,
+			controlDescriptors[fieldForForm.type as BuiltInControlType] ?? config.controls?.[fieldForForm.type]?.descriptor
+		);
 		if (!controlDescriptor)
 			return showAlert(`No control descriptor found for field "${fieldForForm.name}" of type "${fieldForForm.type}"`);
 
@@ -661,8 +664,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						typeToSave,
 						formEngine.ignorePostfixFields,
 						(field) =>
-							(controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor)
-								?.metadata?.suffixes
+							resolveFieldControlDescriptor(
+								field,
+								controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor
+							)?.metadata?.suffixes
 					);
 					if (postfixViolations.length) {
 						showAlert({
@@ -1505,7 +1510,10 @@ function updateTypeFromFieldUpdate(
 	if (!state.selectedField) return;
 
 	const fieldType = state.selectedField.type;
-	const descriptor = configDescriptors?.[fieldType] ?? controlDescriptors[fieldType];
+	const descriptor = resolveFieldControlDescriptor(
+		state.selectedField,
+		configDescriptors?.[fieldType] ?? controlDescriptors[fieldType]
+	);
 	if (isComposedPath(fieldIdPath)) {
 		// When the field is not on the root level (composed fieldIdPath), the field is under another field, where each
 		// field contains a lookupTable of fields. In that screnario sections should not be updated.

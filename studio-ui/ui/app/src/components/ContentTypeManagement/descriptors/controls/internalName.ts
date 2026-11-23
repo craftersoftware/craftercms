@@ -20,10 +20,18 @@ import { XmlKeys } from '../../../FormsEngine/lib/formConsts';
 import { defineMessage } from 'react-intl';
 import { commonFieldPropertiesDescriptors } from './commonDescriptors';
 
-// TODO: Why is internal name a control type? Doesn't seem to be in use.
-// We may want to have a separate descriptor without postfixes (since there is no post fixes for internal name), but use
-// the same control (in control map).
-
+/**
+ * Properties descriptor for the Internal Name system field.
+ *
+ * Internal Name is a system field that is stored in the content type XML with type `input` (not `internal-name`), so
+ * this descriptor is never found by the stored field type. It defines which properties Type Builder lets you edit for
+ * the field, and is selected by field identity (see `resolveFieldControlDescriptor`) when editing an existing field and
+ * by `systemFieldsTypesMap` when inserting one.
+ *
+ * `required` is deliberately absent: the field is always required when the type defines it. FE1 hardcoded that, and
+ * the Forms Engine minimum save requirements enforce it, so a toggle would have no effect. Any `required` constraint
+ * already stored in the XML is left untouched. See craftersoftware/craftercms#9505.
+ */
 export const internalNameDescriptor: DescriptorContentType = {
 	id: XmlKeys.internalName,
 	name: defineMessage({ defaultMessage: 'Internal Name' }),
@@ -39,7 +47,7 @@ export const internalNameDescriptor: DescriptorContentType = {
 		createVirtualSection({
 			id: 'constraints',
 			title: defineMessage({ defaultMessage: 'Constraints' }),
-			fields: ['required', 'pattern']
+			fields: ['pattern']
 		})
 	],
 	fields: {
@@ -59,7 +67,6 @@ export const internalNameDescriptor: DescriptorContentType = {
 			defaultValue: undefined,
 			validations: immutableEmptyObject
 		},
-		required: commonFieldPropertiesDescriptors['required'],
 		pattern: {
 			id: 'pattern',
 			type: 'string',
