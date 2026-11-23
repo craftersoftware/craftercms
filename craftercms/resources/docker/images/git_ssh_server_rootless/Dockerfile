@@ -11,7 +11,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-FROM alpine:3.21 AS main
+FROM alpine:3.24 AS main
 
 ENV SSHD_HOME='/home/crafter/sshd'
 
@@ -48,7 +48,6 @@ RUN addgroup -S -g 1000 crafter && adduser -S -D -u 1000 -G crafter crafter; \
     echo 'HostKeyAlgorithms ssh-rsa' >> /etc/ssh/sshd_config; \
     echo '' >> /etc/ssh/sshd_config; \
     echo "HostKey $SSHD_HOME/ssh_host_rsa_key" >> /etc/ssh/sshd_config; \
-    echo "HostKey $SSHD_HOME/ssh_host_dsa_key" >> /etc/ssh/sshd_config; \
     echo "HostKey $SSHD_HOME/ssh_host_ecdsa_key" >> /etc/ssh/sshd_config; \
     echo "HostKey $SSHD_HOME/ssh_host_ed25519_key" >> /etc/ssh/sshd_config;
 
