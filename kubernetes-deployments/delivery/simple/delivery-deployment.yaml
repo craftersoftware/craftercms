@@ -80,6 +80,7 @@ spec:
       # initContainers:
       #   - name: ssh-keys-copier
       #     image: craftercms/delivery_tomcat:4.5.0
+      #     imagePullPolicy: "Always"
       #     volumeMounts:
       #       - name: ssh-keys
       #         mountPath: /.ssh
@@ -130,6 +131,7 @@ spec:
         # Tomcat container
         - name: tomcat
           image: craftercms/delivery_tomcat:4.5.0
+          imagePullPolicy: "Always"
           startupProbe:
             httpGet:
               path: /api/1/monitoring/status.json?token=defaultManagementToken
