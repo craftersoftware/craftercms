@@ -829,10 +829,23 @@ function NodeSelector(props: NodeSelectorProps) {
 									close(snackbarKey);
 									return;
 								}
+								// Use the item currently at the destination so Undo keeps edits from handleEditItem.onSave.
+								let currentItem = applied.item;
+								for (const entry of latestStack) {
+									const entryModelId = entry.itemMeta?.id ?? entry.props?.update?.modelId;
+									if (entryModelId == null || String(entryModelId) !== undoSource.modelId) continue;
+									const atom = entry.atoms?.valueByFieldId?.[undoSource.fieldId];
+									if (!atom) continue;
+									const live = asArray(latestStore.get(atom) as NodeSelectorItem | NodeSelectorItem[])[
+										undoSource.index
+									];
+									if (live) currentItem = live;
+									break;
+								}
 								applyNodeSelectorMove({
 									store: latestStore,
 									rootForm: latestRootForm,
-									item: applied.item,
+									item: currentItem,
 									formsStackData: latestStack,
 									rootModelId: latestRootModelId,
 									rootContentType: latestRootContentType,
