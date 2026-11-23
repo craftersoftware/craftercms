@@ -155,7 +155,7 @@ spec:
               mountPath: /opt/crafter/logs
           env:
             - name: CATALINA_OPTS
-              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0 -XX:-UseBASE64Intrinsics"
+              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0"
           resources:
             requests:
               cpu: 1
@@ -200,7 +200,7 @@ spec:
               mountPath: /opt/crafter/logs
           env:
             - name: DEPLOYER_JAVA_OPTS
-              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0 -XX:-UseBASE64Intrinsics"
+              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0"
           resources:
             requests:
               cpu: 500m

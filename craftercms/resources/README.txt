@@ -7,7 +7,7 @@ Web sites, mobile apps, VR and more, designed for ease of development and scalin
 
 Requirements
 ------------
-To run this bundle you must have Java 1.8 installed.
+To run this bundle you must have Java 21 installed (21.0.13.1 or higher).
 
 **note for Linux users:
     Some of the scripts uses `lsof`.  Please note that some Linux distributions does not come with `lsof` pre-installed and so, may need to be installed.
