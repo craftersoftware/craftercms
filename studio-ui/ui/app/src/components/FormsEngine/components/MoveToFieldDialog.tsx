@@ -104,7 +104,16 @@ export function MoveToFieldDialogBody(props: MoveToFieldDialogProps) {
 						subtitle={<FormattedMessage defaultMessage="There are no other fields that can accept this item." />}
 					/>
 				) : (
-					<Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch', minHeight: '40vh', minWidth: 0 }}>
+					<Box
+						sx={{
+							display: 'flex',
+							flexDirection: { xs: 'column', md: 'row' },
+							gap: 2,
+							alignItems: 'stretch',
+							minHeight: { xs: 'auto', md: '40vh' },
+							minWidth: 0
+						}}
+					>
 						<Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
 							<FormControl sx={{ width: '100%' }}>
 								<FormLabel id={destinationLabelId}>
@@ -140,13 +149,17 @@ export function MoveToFieldDialogBody(props: MoveToFieldDialogProps) {
 						</Box>
 						<Box
 							sx={{
-								width: 300,
-								flexShrink: 0,
+								width: { xs: '100%', md: 300 },
+								flexShrink: { xs: 1, md: 0 },
 								minWidth: 0,
 								overflow: 'hidden',
-								borderLeft: 1,
+								borderLeftWidth: { xs: 0, md: 1 },
+								borderTopWidth: { xs: 1, md: 0 },
+								borderTopStyle: 'solid',
+								borderLeftStyle: 'solid',
 								borderColor: 'divider',
-								pl: 2,
+								pl: { xs: 0, md: 2 },
+								pt: { xs: 2, md: 0 },
 								display: 'flex',
 								flexDirection: 'column',
 								gap: 1
