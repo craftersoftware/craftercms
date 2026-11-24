@@ -130,7 +130,7 @@ function preFlightCheck() {
 	# An empty parse is skipped so the message is not printed with a blank version.
 	full_version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
 	if [[ -n "$full_version" ]] && ! javaVersionAtLeast "$full_version" "$MIN_JAVA_VERSION"; then
-		cecho "The detected JDK version $full_version should be upgraded to >= $MIN_JAVA_VERSION.\n" "warning"
+		cecho "The detected JDK version $full_version should be upgraded to >= $MIN_JAVA_VERSION. Older JDK 21 builds have the Base64 intrinsic bug (JDK-8393212), so keep -XX:-UseBASE64Intrinsics until you upgrade.\n" "warning"
 	fi
 
 	# Check if JAVA_HOME is set, and set to the correct Java version
@@ -153,7 +153,7 @@ function preFlightCheck() {
 	path_java=$(type -p java)
 	if [[ "$path_java" != "$_java_in_javahome" && "$javahome_full_version" != "$full_version" ]]; then
 		if [[ -n "$javahome_full_version" ]] && ! javaVersionAtLeast "$javahome_full_version" "$MIN_JAVA_VERSION"; then
-			cecho "The detected JDK version $javahome_full_version should be upgraded to >= $MIN_JAVA_VERSION.\n" "warning"
+			cecho "The detected JDK version $javahome_full_version should be upgraded to >= $MIN_JAVA_VERSION. Older JDK 21 builds have the Base64 intrinsic bug (JDK-8393212), so keep -XX:-UseBASE64Intrinsics until you upgrade.\n" "warning"
 		fi
 	fi
 

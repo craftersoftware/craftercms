@@ -123,7 +123,7 @@ spec:
               memory: 2.5Gi
         # Tomcat container
         - name: tomcat
-          image: craftercms/authoring_tomcat:4.5.0
+          image: craftercms/authoring_tomcat:4.7.2-SNAPSHOT
           imagePullPolicy: "Always"
           startupProbe:
             httpGet:
@@ -165,8 +165,7 @@ spec:
               memory: 5Gi
         # Deployer container
         - name: deployer
-          image: craftercms/deployer:4.5.0
-          imagePullPolicy: "Always"
+          image: craftercms/deployer:4.7.2-SNAPSHOT
           startupProbe:
             httpGet:
               path: /api/1/monitoring/status?token=defaultManagementToken
