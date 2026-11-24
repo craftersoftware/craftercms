@@ -78,7 +78,7 @@ import EditTypeViewLayout, { EditAppLayoutProps } from './EditTypeViewLayout';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { JotaiStore } from '../../FormsEngine/types';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { createLookupTable, nnou, pluckProps, reversePluckProps } from '../../../utils/object';
 import Box, { BoxProps } from '@mui/material/Box';
 import useEnhancedDialogContext from '../../EnhancedDialog/useEnhancedDialogContext';
@@ -118,12 +118,8 @@ import { fetchContentTypes } from '../../../state/actions/preview';
 import useSelection from '../../../hooks/useSelection';
 import { getXmlBuilder, valueSerializersLookup } from '../../FormsEngine/lib/valueSerializers';
 import { pushErrorDialog } from '../../../utils/system';
-import {
-	contentTypeCreated,
-	contentTypeDeleted,
-	emitSystemEvent,
-	showSystemNotification
-} from '../../../state/actions/system';
+import { contentTypeDeleted, emitSystemEvent, showSystemNotification } from '../../../state/actions/system';
+import { editTypeSaveSuccessActions } from './editTypeSaveSystemEvent';
 import { extractErrorPayload } from '../../../utils/ajax';
 import Typography from '@mui/material/Typography';
 import { AjaxError } from 'rxjs/ajax';
@@ -189,6 +185,21 @@ interface EditAppContextProps {
 	 **/
 	validationSeq: number;
 }
+
+const messages = defineMessages({
+	noFieldControlDescriptor: {
+		defaultMessage: 'No control descriptor found for field "{name}" of type "{type}"'
+	},
+	noDataSourceControlDescriptor: {
+		defaultMessage: 'No control descriptor found for data source "{title}" of type "{type}"'
+	},
+	noFieldTypeDescriptor: {
+		defaultMessage: 'No control descriptor found for field type "{fieldType}"'
+	},
+	noDataSourceDescriptor: {
+		defaultMessage: 'No data source descriptor found for type "{dataSourceType}"'
+	}
+});
 
 export interface ContentTypeManagementConfig {
 	controls: LookupTable<{ descriptor?: DescriptorContentType; icon: { id: string }; id: string }>;
@@ -469,7 +480,12 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const controlDescriptor =
 			controlDescriptors[fieldForForm.type as BuiltInControlType] ?? config.controls?.[fieldForForm.type]?.descriptor;
 		if (!controlDescriptor)
-			return showAlert(`No control descriptor found for field "${fieldForForm.name}" of type "${fieldForForm.type}"`);
+			return showAlert(
+				formatMessage(messages.noFieldControlDescriptor, {
+					name: fieldForForm.name,
+					type: fieldForForm.type
+				})
+			);
 
 		// Adding data sources to the virtual type to ensure they are available for rendering in the dataSourceSelector.
 		const virtualType = createVirtualTypeForField(
@@ -542,7 +558,12 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const dataSourceDescriptor =
 			dataSourceDescriptors[dataSource.type] ?? config.dataSources?.[dataSource.type]?.descriptor;
 		if (!dataSourceDescriptor)
-			return showAlert(`No control descriptor found for field "${dataSource.title}" of type "${dataSource.type}"`);
+			return showAlert(
+				formatMessage(messages.noDataSourceControlDescriptor, {
+					title: dataSource.title,
+					type: dataSource.type
+				})
+			);
 
 		const virtualType = createVirtualTypeForDataSource(dataSourceDescriptor, formatMessage);
 		handleArtefactSelected(
@@ -637,7 +658,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			}
 			case 'deleted':
 				onUpdateHasPendingChanges(false);
-				dispatch(batchActions([emitSystemEvent(contentTypeDeleted()), fetchContentTypes()]));
+				dispatch(batchActions([emitSystemEvent(contentTypeDeleted({ contentTypeId: type.id })), fetchContentTypes()]));
 				onExit?.();
 				break;
 		}
@@ -732,13 +753,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							setContentItemReloadToken((token) => token + 1);
 						}
 						dispatch(
-							batchActions([
-								...(isNew ? [emitSystemEvent(contentTypeCreated())] : []),
-								fetchContentTypes(),
-								showSystemNotification({
-									message: formatMessage({ defaultMessage: 'Save successful.' })
-								})
-							])
+							batchActions(
+								editTypeSaveSuccessActions(isNew, typeToSave.id, formatMessage({ defaultMessage: 'Save successful.' }))
+							)
 						);
 						if (action === 'saveAndClose') {
 							if (postSubmitEdits) {
@@ -860,7 +877,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const configEntry = config.controls?.[fieldType];
 		const descriptor = controlDescriptors[fieldType] ?? configEntry?.descriptor;
 		if (!descriptor) {
-			showAlert(`No control descriptor found for field type "${fieldType}"`);
+			showAlert(formatMessage(messages.noFieldTypeDescriptor, { fieldType }));
 			return;
 		}
 		// Commit open form first so a prior draft is no longer keyed as `{NEW}` before we add another.
@@ -907,7 +924,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const configEntry = config.dataSources?.[dataSourceType];
 		const descriptor = dataSourceDescriptors[dataSourceType] ?? configEntry?.descriptor;
 		if (!descriptor) {
-			showAlert(`No data source descriptor found for type "${dataSourceType}"`);
+			showAlert(formatMessage(messages.noDataSourceDescriptor, { dataSourceType }));
 			return;
 		}
 

@@ -17,6 +17,8 @@
   * [ToolsPanelListItemButton] New optional `secondaryActionLabel`. When `onSecondaryActionClick` is set, the trailing button's default accessible name is `Open {title}`.
   * [ToolsPanelListItemButton] The row renders as a `div` instead of an `li`, since tools panel widgets are not placed in a list. New optional `listItemComponent` prop sets the row's root element; pass `listItemComponent="li"` when placing the row inside a `List`. (`component` still applies to the inner button.)
   * [PaddingModeSwitchListItem] New optional `component` prop. It renders as a `div` by default instead of an `li`; pass `component="li"` when placing it inside a `List`.
+  * [PaddingModeSwitchListItem] Helper text renders inside the row. A sibling paragraph under a `List` is not a list item.
+  * [PreviewSettingsPanel] Each setting's helper text is inside its list item, and the section rules are the list item divider. The settings `ul` only contains `li` elements.
   * Removed `pages/QuickCreateMenu` component.
   * Removed `SuspenseWithEmptyState` and `WithEmptyState` components.
   * Removed `resource` prop from StoreProvider
@@ -177,6 +179,7 @@
   * `actions/system`:
     * `showEditItemSuccessNotification` no longer takes a payload. Draft saves don't dispatch it.
     * Removed `workflowEvent`. Replaced by `workflowEventSubmit`, `workflowEventDirectPublish`, `workflowEventApprove`, `workflowEventReject`, `workflowEventCancel`.
+    * Updated `contentTypeCreated`, `contentTypeUpdated` and `contentTypeDeleted` action payloads to be `{ contentTypeId: string }` (previously dispatched without a payload). Type Builder saves and deletes, and the content type configuration socket events, now include the content type id.
   * `actions/preview`:
     * `requestWorkflowCancellationDialog`: Removed `path`, replaced by `item`.
     * Removed the `EMBEDDED_LEGACY_*` constants used by the legacy form iframe (`EMBEDDED_LEGACY_FORM_CLOSE`, `EMBEDDED_LEGACY_FORM_SUCCESS`, `EMBEDDED_LEGACY_FORM_RENDERED`, `EMBEDDED_LEGACY_FORM_DISABLE_ON_CLOSE`, `EMBEDDED_LEGACY_FORM_ENABLE_ON_CLOSE`, `EMBEDDED_LEGACY_FORM_ENABLE_HEADER`, `EMBEDDED_LEGACY_FORM_DISABLE_HEADER`, `EMBEDDED_LEGACY_FORM_RENDER_FAILED`, `EMBEDDED_LEGACY_FORM_PENDING_CHANGES`, `EMBEDDED_LEGACY_FORM_SAVE`, `EMBEDDED_LEGACY_FORM_FAILURE`, `EMBEDDED_LEGACY_MINIMIZE_REQUEST`, `EMBEDDED_LEGACY_CHANGE_TO_EDIT_MODE`, `EMBEDDED_LEGACY_FORM_SAVE_START`, `EMBEDDED_LEGACY_FORM_SAVE_END`).
