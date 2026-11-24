@@ -249,7 +249,7 @@ spec:
           env:
             - name: CATALINA_OPTS
               # The extra params (starting with -add-modules) are recommended by Hazelcast for performance
-              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0 --add-modules java.se --add-exports java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.management/sun.management=ALL-UNNAMED --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED -XX:-UseBASE64Intrinsics"
+              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0 --add-modules java.se --add-exports java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.management/sun.management=ALL-UNNAMED --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED"
             - name: SPRING_PROFILES_ACTIVE
               value: "crafter.studio.dbClusterPrimaryReplica"
             - name: POD_NAME
@@ -323,7 +323,7 @@ spec:
               mountPath: /opt/crafter/logs
           env:
             - name: DEPLOYER_JAVA_OPTS
-              value: "-server -Xss1024K -Xmx2G -XX:MaxRAMPercentage=70.0 -XX:-UseBASE64Intrinsics"
+              value: "-server -Xss1024K -Xmx2G -XX:MaxRAMPercentage=70.0"
           resources:
             requests:
               cpu: 1
