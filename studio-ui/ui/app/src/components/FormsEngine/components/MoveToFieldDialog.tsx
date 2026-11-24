@@ -43,6 +43,8 @@ export interface MoveToFieldDialogProps {
 	onAccept?(target: NodeSelectorMoveTarget, targetIndex: number): void;
 }
 
+export type MoveToFieldDialogBodyProps = Omit<MoveToFieldDialogProps, 'open' | 'itemLabel'>;
+
 function targetKey(target: NodeSelectorMoveTarget): string {
 	return `${target.modelId}::${target.fieldId}`;
 }
@@ -62,8 +64,8 @@ function itemPickerLabel(item: NodeSelectorItem): string {
 	return item.value || item.include || String(item.key);
 }
 
-export function MoveToFieldDialogBody(props: MoveToFieldDialogProps) {
-	const { itemLabel, targets, onClose, onAccept } = props;
+export function MoveToFieldDialogBody(props: MoveToFieldDialogBodyProps) {
+	const { targets, onClose, onAccept } = props;
 	const { formatMessage } = useIntl();
 	const destinationLabelId = useId();
 	const enabledTargets = useMemo(() => targets.filter((target) => !target.disabled), [targets]);
@@ -204,7 +206,7 @@ export function MoveToFieldDialog(props: MoveToFieldDialogProps) {
 				title={<FormattedMessage defaultMessage="Move {item} to field" values={{ item: itemLabel }} />}
 				onCloseButtonClick={onClose}
 			/>
-			{open && <MoveToFieldDialogBody {...bodyProps} open={open} itemLabel={itemLabel} onClose={onClose} />}
+			{open && <MoveToFieldDialogBody {...bodyProps} onClose={onClose} />}
 		</Dialog>
 	);
 }
