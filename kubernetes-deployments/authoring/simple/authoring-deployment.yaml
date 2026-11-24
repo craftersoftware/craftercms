@@ -166,6 +166,7 @@ spec:
         # Deployer container
         - name: deployer
           image: craftercms/deployer:4.5.0
+          imagePullPolicy: "Always"
           startupProbe:
             httpGet:
               path: /api/1/monitoring/status?token=defaultManagementToken
