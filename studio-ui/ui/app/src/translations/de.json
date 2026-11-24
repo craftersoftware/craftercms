@@ -1727,5 +1727,7 @@
 	"CsDXpZ": "Pull {name}",
 	"l6B//v": "Push {name}",
 	"/xPSui": "In der aktuellen Ansicht wurden keine Zielbereiche gefunden.",
-	"JpoWiv": "Element {position}"
+	"JpoWiv": "Element {position}",
+	"nGvC9U": "Ungültiges Element",
+	"Qv97pC": "Ungültiges Element{br}{details}"
 }
