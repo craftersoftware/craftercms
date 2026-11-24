@@ -224,7 +224,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 									</IconButton>
 								</Tooltip>
 							</Box>
-							<ListItem>
+							<ListItem component="div">
 								<ListItemIcon>
 									{selectedField && configLookup?.[selectedField.id]?.icon?.id ? (
 										<SystemIcon icon={configLookup[selectedField.id].icon} />
