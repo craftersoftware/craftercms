@@ -383,16 +383,24 @@ function NodeSelector(props: NodeSelectorProps) {
 						}
 					}
 
+					// Read the live field array: a move inside the open form can update this field and shift indices.
+					const fieldAtom = stableForm.atoms?.valueByFieldId?.[field.id];
+					const storedValue = fieldAtom ? store.get(fieldAtom) : null;
+					const currentValue = Array.isArray(storedValue) ? (storedValue as NodeSelectorItem[]) : value;
+					const currentIndex =
+						currentValue[index]?.key === item.key ? index : currentValue.findIndex((entry) => entry.key === item.key);
+					if (currentIndex === -1) return Promise.resolve({ close: true });
+
 					const newItem: NodeSelectorItem = {
-						// Keeps the item's other children and its attributes (e.g. `datasource`).
-						...item,
+						// Keeps the item's other properties (e.g. `datasource`) from the live item.
+						...currentValue[currentIndex],
 						key,
 						value: (values[XmlKeys.internalName] as string | undefined) ?? '',
 						[isEmbedded ? 'component' : 'include']: isEmbedded ? (values as LookupTable<Primitive>) : key,
 						disableFlattening
 					};
-					const nextValue = value.concat();
-					nextValue.splice(index, 1, newItem);
+					const nextValue = currentValue.concat();
+					nextValue.splice(currentIndex, 1, newItem);
 					setValue(nextValue);
 					return Promise.resolve({ close: true });
 				}

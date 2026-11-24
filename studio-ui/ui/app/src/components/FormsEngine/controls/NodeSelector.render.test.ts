@@ -46,6 +46,7 @@ const {
 	updateItems
 } = await import('../lib/formItemTestHarness');
 const { default: NodeSelector } = await import('./NodeSelector');
+const { Provider: JotaiProvider, createStore: createJotaiStore } = await import('jotai');
 
 afterEach(unmountAll);
 
@@ -418,5 +419,59 @@ describe('NodeSelector saved component label', () => {
 		assert.equal(next?.[0].value, '');
 		await opened.onSave({ values: { objectId: 'hero', 'file-name': 'hero.xml', 'internal-name': 'Hero title' } });
 		assert.equal(next?.[0].value, 'Hero title');
+	});
+
+	it('preserves items moved into this field while an embedded child form is open, even when shifted', async () => {
+		const store = createItemsStore({
+			...baseItems(),
+			[formPath]: { ...baseItems()[formPath], stateMap: {} }
+		});
+		const jotaiStore = createJotaiStore();
+		const entry = createEntry(['nodes_o']);
+		const child = { key: 'child-1', value: 'Child', component: { objectId: 'child-1', 'file-name': 'child-1.xml' } };
+		const moved = { key: 'feat-1', value: 'Feature', component: { objectId: 'feat-1', 'file-name': 'feat-1.xml' } };
+		jotaiStore.set(entry.atoms.valueByFieldId.nodes_o as never, [child] as never);
+		let next: Array<{ key: string; value?: string }> | undefined;
+		const host = await mountTree(
+			store,
+			React.createElement(
+				JotaiProvider,
+				{ store: jotaiStore },
+				React.createElement(
+					FormHost,
+					{ entry },
+					React.createElement(NodeSelector as never, {
+						field: fieldFor('nodes_o', 'node-selector'),
+						value: [child],
+						setValue: (value: Array<{ key: string; value?: string }>) => {
+							next = value;
+						},
+						readonly: false,
+						autoFocus: false,
+						contentType: { id: '/component/thing', fields: {} }
+					})
+				)
+			)
+		);
+		await act(async () => {
+			rowLabelled(host, 'Child').click();
+		});
+		// Simulate moving `moved` to index 0 of this same field while `child` is open, shifting `child` to index 1.
+		jotaiStore.set(entry.atoms.valueByFieldId.nodes_o as never, [moved, child] as never);
+
+		const opened = pushFormCalls.at(-1) as {
+			onSave?: (result: { values: Record<string, unknown> }) => Promise<unknown>;
+		};
+		assert.ok(opened?.onSave);
+		await opened.onSave({
+			values: { objectId: 'child-1', 'file-name': 'child-1.xml', 'internal-name': 'Child Updated' }
+		});
+		assert.deepEqual(
+			next?.map((item) => ({ key: item.key, value: item.value })),
+			[
+				{ key: 'feat-1', value: 'Feature' },
+				{ key: 'child-1', value: 'Child Updated' }
+			]
+		);
 	});
 });
