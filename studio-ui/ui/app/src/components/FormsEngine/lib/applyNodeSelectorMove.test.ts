@@ -452,4 +452,68 @@ describe('applyNodeSelectorMove', () => {
 			['a', 'c']
 		);
 	});
+
+	it('keeps the moved item when the source field is an ancestor of the target field', () => {
+		// P.children = [Q, M]; M moves into Q.children. The open P form must show Q with M inside it.
+		const m = embeddedHero('m', 'M');
+		const q = embeddedHero('q', 'Q');
+		const p = embeddedHero('p', 'P', [q, m]);
+		const store = createStore();
+		const rootForm = createFormStackData({
+			itemMeta: { path: '/site/website/index.xml', id: rootModelId } as never,
+			originalValues: { left_o: [p], right_o: [] }
+		});
+		rootForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
+		for (const field of Object.values(pageType.fields)) {
+			const [valueAtom, validationAtom] = createFieldAtoms(field, rootForm.originalValues[field.id], {
+				current: rootForm
+			});
+			rootForm.atoms.valueByFieldId[field.id] = valueAtom;
+			rootForm.atoms.validationByFieldId[field.id] = validationAtom;
+		}
+
+		const parentForm = createFormStackData({
+			itemMeta: { path: '/site/website/index.xml', id: p.key } as never,
+			originalValues: { children_o: [q, m] }
+		});
+		parentForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
+		const childrenField = heroContentType.fields.children_o;
+		const [childrenAtom, childrenValidation] = createFieldAtoms(childrenField, [q, m], { current: parentForm });
+		parentForm.atoms.valueByFieldId.children_o = childrenAtom;
+		parentForm.atoms.validationByFieldId.children_o = childrenValidation;
+
+		const result = applyNodeSelectorMove({
+			store,
+			rootForm,
+			item: m,
+			formsStackData: [rootForm, parentForm],
+			rootModelId,
+			rootContentType: pageType,
+			contentTypesById,
+			source: { modelId: p.key, fieldId: 'children_o', index: 1 },
+			target: { modelId: q.key, fieldId: 'children_o' },
+			targetIndex: 0
+		});
+
+		assert.ok(result);
+		const parentChildren = store.get(parentForm.atoms.valueByFieldId.children_o) as NodeSelectorItem[];
+		assert.deepEqual(
+			parentChildren.map((item) => item.key),
+			['q']
+		);
+		assert.deepEqual(
+			(parentChildren[0].component?.children_o as NodeSelectorItem[]).map((item) => item.key),
+			['m']
+		);
+		const left = store.get(rootForm.atoms.valueByFieldId.left_o) as NodeSelectorItem[];
+		const rootChildren = left[0].component?.children_o as NodeSelectorItem[];
+		assert.deepEqual(
+			rootChildren.map((item) => item.key),
+			['q']
+		);
+		assert.deepEqual(
+			(rootChildren[0].component?.children_o as NodeSelectorItem[]).map((item) => item.key),
+			['m']
+		);
+	});
 });

@@ -161,6 +161,29 @@ function updateModelFieldFromRoot(
 	return updateModelFieldInValues(rootValues, rootContentType, contentTypesById, modelId, fieldId, updater);
 }
 
+/** Current items of `fieldId` on `modelId` within `values`, or null when that model/field is not present. */
+function readFieldItems(
+	values: LookupTable<unknown>,
+	args: ApplyNodeSelectorMoveToValuesArgs,
+	modelId: string,
+	fieldId: string
+): NodeSelectorItem[] | null {
+	let items: NodeSelectorItem[] | null = null;
+	updateModelFieldFromRoot(
+		values,
+		args.rootModelId,
+		args.rootContentType,
+		args.contentTypesById,
+		modelId,
+		fieldId,
+		(current) => {
+			items = current;
+			return current;
+		}
+	);
+	return items;
+}
+
 /**
  * Pure values move: splices `item` out of `source` and into `target` at `targetIndex`.
  * Source and target must be different fields (Move to field never retargets the origin).
@@ -208,12 +231,18 @@ export function applyNodeSelectorMoveToValues(
 	);
 	if (!inserted || !targetItems) return null;
 
+	// The insert is the last write, so `targetItems` is already the final array for the target field.
+	// The source list can be stale: when the source field contains the target (e.g. P.children holds Q,
+	// and the item moves into Q.children), the insert rebuilds the source's parent chain, so re-read it.
+	const sourceAfter = readFieldItems(inserted.values, args, source.modelId, source.fieldId);
+	if (!sourceAfter) return null;
+
 	return {
 		rootValues: inserted.values,
 		changedRootFieldIds: [...new Set([removed.rootFieldId, inserted.rootFieldId])],
 		item,
 		insertedIndex,
-		sourceItems,
+		sourceItems: sourceAfter,
 		targetItems
 	};
 }
