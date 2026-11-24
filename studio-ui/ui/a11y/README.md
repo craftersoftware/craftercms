@@ -194,11 +194,3 @@ scan is never reported against a screen that did not render. `networkidle` is no
 connections open, so it is not a signal that the UI rendered.
 
 The publish dialog test also asserts the dialog's computed accessible name (`Publish`), as a soft assertion.
-
-## Browser setup
-
-Studio's legacy browser check (`templates/web/common/page-fragments/studio-context.ftl`) reads `window.chrome`, which
-Playwright's bundled Chromium doesn't define, and prepends a "browser not supported" banner that Chrome and Firefox
-users don't see. As a Chromium-shell compatibility setup, `fixtures.ts` defines `window.chrome` before any page script
-runs. It disables no axe rule, but it removes that banner from what is scanned. With `A11Y_BROWSER_CHANNEL=chrome`
-the browser defines `window.chrome` itself and the shim does nothing.
