@@ -161,6 +161,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		container: null
 	});
 	const [contentSize, setContentSize] = useState(0);
+	// Width of the Ace editor's vertical scrollbar (0 when hidden or when the OS uses overlay scrollbars).
+	const [editorScrollbarWidth, setEditorScrollbarWidth] = useState(0);
 
 	useMount(() => {
 		if (changesRecoveredOnMount) {
@@ -676,6 +678,13 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 			exec: () => onSave(),
 			readOnly: false
 		});
+		// Ace reserves the scrollbar space only while its vertical scrollbar is shown ($vScroll).
+		const renderer = editor.renderer as any;
+		const updateEditorScrollbarWidth = () =>
+			setEditorScrollbarWidth(renderer.$vScroll ? renderer.scrollBarV.getWidth() : 0);
+		renderer.on('scrollbarVisibilityChanged', updateEditorScrollbarWidth);
+		renderer.on('resize', updateEditorScrollbarWidth);
+		updateEditorScrollbarWidth();
 	};
 
 	return (
@@ -867,8 +876,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						<>
 							<GlobalAppToolbar
 								sxs={{
-									appBar: { paddingRight: '14.4px', overflow: 'visible' },
-									toolbar: { overflow: 'visible', '& > section': { overflow: 'visible' } },
+									appBar: { pr: 0, overflow: 'visible' },
+									toolbar: { pr: '0px !important', overflow: 'visible', '& > section': { overflow: 'visible' } },
 									rightContent: { overflow: 'visible' }
 								}}
 								showHamburgerMenuButton={false}
@@ -886,45 +895,49 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								title={getTranslation(selectedConfigFile.title, translations, formatMessage)}
 								subtitle={getTranslation(selectedConfigFile.description, translations, formatMessage)}
 								rightContent={
-									<Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-										<ButtonGroup variant="outlined" sx={{ marginRight: '15px' }}>
-											<SecondaryButton disabled={encrypting} onClick={onEncryptClick} loading={encrypting}>
-												{formatMessage(translations.encryptMarked)}
+									<>
+										<Box sx={{ display: 'flex', alignItems: 'center', position: 'relative', pr: 2 }}>
+											<ButtonGroup variant="outlined" sx={{ marginRight: '15px' }}>
+												<SecondaryButton disabled={encrypting} onClick={onEncryptClick} loading={encrypting}>
+													{formatMessage(translations.encryptMarked)}
+												</SecondaryButton>
+												<Button
+													size="small"
+													onClick={onEncryptHelpClick}
+													aria-label={formatMessage({
+														id: 'siteConfigurationManagement.encryptionHelp',
+														defaultMessage: 'Encryption help'
+													})}
+												>
+													<HelpOutlineRoundedIcon />
+												</Button>
+											</ButtonGroup>
+											<SecondaryButton onClick={onViewSampleClick}>
+												{showSampleEditor ? (
+													<FormattedMessage id="siteConfigurationManagement.hideSample" defaultMessage="Hide Sample" />
+												) : (
+													<FormattedMessage id="siteConfigurationManagement.viewSample" defaultMessage="View Sample" />
+												)}
 											</SecondaryButton>
-											<Button
-												size="small"
-												onClick={onEncryptHelpClick}
-												aria-label={formatMessage({
-													id: 'siteConfigurationManagement.encryptionHelp',
-													defaultMessage: 'Encryption help'
-												})}
-											>
-												<HelpOutlineRoundedIcon />
-											</Button>
-										</ButtonGroup>
-										<SecondaryButton onClick={onViewSampleClick}>
-											{showSampleEditor ? (
-												<FormattedMessage id="siteConfigurationManagement.hideSample" defaultMessage="Hide Sample" />
-											) : (
-												<FormattedMessage id="siteConfigurationManagement.viewSample" defaultMessage="View Sample" />
-											)}
-										</SecondaryButton>
+										</Box>
 										{isProjectConfigurationXml && (
 											<Paper
 												elevation={0}
 												sx={{
 													position: 'absolute',
-													top: 'calc(100% + 14px)',
-													right: '-11px',
+													top: '100%',
+													right: `${editorScrollbarWidth}px`,
 													zIndex: 2,
 													display: 'flex',
 													alignItems: 'center',
-													py: 2,
+													py: 1,
 													px: 2.5,
 													borderRadius: 0,
 													borderBottomLeftRadius: 4,
 													bgcolor: 'background.paper',
-													boxShadow: 2
+													borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+													borderLeft: (theme) => `1px solid ${theme.palette.divider}`,
+													boxShadow: 'none'
 												}}
 											>
 												{stagingEnabled ? (
@@ -957,7 +970,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 												)}
 											</Paper>
 										)}
-									</Box>
+									</>
 								}
 							/>
 							<Box
