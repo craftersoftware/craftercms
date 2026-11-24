@@ -82,7 +82,7 @@ export function DashletFilter(props: DashletFilterProps) {
 			menuProps={{ sx: { minWidth: 180 } }}
 		>
 			{selectedKeys.includes('all') ? (
-				<FormattedMessage defaultMessage="Show all" />
+				<FormattedMessage defaultMessage="Show All" />
 			) : (
 				<FormattedMessage defaultMessage="Filters active: {count}" values={{ count: selectedKeys.length }} />
 			)}
