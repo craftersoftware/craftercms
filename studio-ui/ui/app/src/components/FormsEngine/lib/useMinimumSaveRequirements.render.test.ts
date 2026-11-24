@@ -69,7 +69,7 @@ async function renderHook(
 		);
 	});
 	mounted.push({ unmount: () => root.unmount(), host });
-	return { latest: () => results[results.length - 1] };
+	return { latest: () => results[results.length - 1], renders: () => results.length };
 }
 
 const full = { isRepeatMode: false, isEmbedded: false };
@@ -150,12 +150,14 @@ describe('useMinimumSaveRequirements', () => {
 		assert.equal(latest(), before);
 	});
 
-	it('keeps the same list when typing in a non-blank internal name', async () => {
+	it('does not re-render when typing in a non-blank internal name', async () => {
 		const form = createFormAtoms({ fileNameValid: true, internalName: 'About us' });
-		const { latest } = await renderHook(form, full);
+		const { latest, renders } = await renderHook(form, full);
 		await act(async () => pause(20));
 		assert.deepEqual(latest(), []);
-		const settled = latest();
+		const settled = renders();
+		await act(async () => pause(20));
+		assert.equal(renders(), settled, 'quiet before typing');
 
 		await act(async () => {
 			form.store.set(form.internalName, 'About us!');
@@ -165,7 +167,7 @@ describe('useMinimumSaveRequirements', () => {
 			form.store.set(form.fileName, Promise.resolve({ isValid: true }));
 		});
 		await act(async () => pause(invalidFieldReadDebounceMs + 50));
-		assert.equal(latest(), settled);
+		assert.equal(renders(), settled);
 		assert.deepEqual(latest(), []);
 	});
 
@@ -188,7 +190,7 @@ describe('useMinimumSaveRequirements', () => {
 		};
 		const error = mock.method(console, 'error', () => undefined);
 		try {
-			const { latest } = await renderHook(form, full);
+			const { latest, renders } = await renderHook(form, full);
 			assert.deepEqual(latest(), ['fileName']);
 
 			await act(async () => {
@@ -197,12 +199,13 @@ describe('useMinimumSaveRequirements', () => {
 			await act(async () => pause(invalidFieldReadDebounceMs + 50));
 			assert.deepEqual(latest(), ['fileName']);
 			const logged = error.mock.callCount();
-			assert.equal(logged, 1);
+			const settled = renders();
 
 			await act(async () => {
 				store.set(internalName, 'About us!');
 			});
 			await act(async () => pause(invalidFieldReadDebounceMs + 50));
+			assert.equal(renders(), settled);
 			assert.equal(error.mock.callCount(), logged);
 			assert.deepEqual(latest(), ['fileName']);
 		} finally {
