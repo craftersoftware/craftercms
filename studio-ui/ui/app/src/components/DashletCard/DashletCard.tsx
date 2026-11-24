@@ -52,6 +52,41 @@ export type DashletCardProps = PropsWithChildren<
 	}
 >;
 
+/**
+ * Whether a title node gives the toggle a content-based accessible name. Numbers (0 included) render as
+ * text. Booleans, null and blank strings render nothing. A host element counts only through its children
+ * or its own label. A component element (e.g. FormattedMessage) is assumed to render text.
+ */
+export function nodeHasName(node: React.ReactNode): boolean {
+	if (typeof node === 'string') {
+		return node.trim() !== '';
+	}
+	if (typeof node === 'number' || typeof node === 'bigint') {
+		return true;
+	}
+	if (node == null || typeof node === 'boolean') {
+		return false;
+	}
+	if (Array.isArray(node)) {
+		return node.some(nodeHasName);
+	}
+	if (React.isValidElement(node)) {
+		const elementProps = (node.props ?? {}) as { children?: React.ReactNode; 'aria-label'?: unknown; alt?: unknown };
+		if (typeof elementProps['aria-label'] === 'string' && elementProps['aria-label'].trim() !== '') {
+			return true;
+		}
+		if (typeof elementProps.alt === 'string' && elementProps.alt.trim() !== '') {
+			return true;
+		}
+		if (elementProps.children !== undefined) {
+			return nodeHasName(elementProps.children);
+		}
+		return typeof node.type !== 'string' && node.type !== React.Fragment;
+	}
+	// Iterables, portals and other renderable values: assume they render content.
+	return true;
+}
+
 export function DashletCard(props: DashletCardProps) {
 	// region Props
 	const {
@@ -81,7 +116,7 @@ export function DashletCard(props: DashletCardProps) {
 	const [disableHeaderToggleRipple, setDisableHeaderToggleRipple] = useState(false);
 	// A visible title is the toggle's accessible name (2.5.3). headerAction alone still renders the header,
 	// and that toggle would otherwise be an empty button.
-	const titleNamesToggle = typeof title === 'string' ? title.trim() !== '' : Boolean(title);
+	const titleNamesToggle = nodeHasName(title);
 	const untitledToggleLabel = formatMessage({ defaultMessage: 'Toggle section' });
 
 	const updateMaximized = () => {

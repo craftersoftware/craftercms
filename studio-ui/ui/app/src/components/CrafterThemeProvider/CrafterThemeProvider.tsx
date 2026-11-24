@@ -77,9 +77,33 @@ function composeStyleOverride<T>(caller: unknown, ours: T): T {
 		)) as T;
 }
 
+/** Emotion's css() result is a plain object, but Emotion reads only its serialized `styles` string. */
+function isSerializedStyles(value: unknown): boolean {
+	return isPlainObject(value) && typeof value.name === 'string' && typeof value.styles === 'string';
+}
+
+/** Drop undefined values (e.g. a colour a plugin did not register) so they do not replace a defined caller value. */
+function omitUndefined(styles: Record<string, unknown>): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(styles)) {
+		if (value !== undefined) {
+			result[key] = isPlainObject(value) ? omitUndefined(value) : value;
+		}
+	}
+	return result;
+}
+
 function mergeStyleResults(callerStyles: unknown, ourStyles: unknown): unknown {
-	if (isPlainObject(callerStyles) && isPlainObject(ourStyles)) {
-		return deepmerge(callerStyles, ourStyles);
+	if (
+		isPlainObject(callerStyles) &&
+		isPlainObject(ourStyles) &&
+		// MUI applies `variants` after the base styles, so a matching caller variant would beat a merged
+		// rule of ours. Serialized Emotion styles ignore keys added to them. Keep both cases as separate
+		// interpolations in caller-then-ours order instead.
+		!('variants' in callerStyles) &&
+		!isSerializedStyles(callerStyles)
+	) {
+		return deepmerge(callerStyles, omitUndefined(ourStyles));
 	}
 	// `&&` overrides return false when the rule does not apply. Keep whichever side has styles.
 	if (callerStyles == null || callerStyles === false) {
@@ -286,7 +310,9 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 					}
 				},
 				// Animations: Force-disable pure CSS transitions and animations.
-				// CssBaseline's styleOverrides may itself be a function, which per-slot lookup cannot see.
+				// CssBaseline has no slots, so its whole styleOverrides value (object or callback) is composed here.
+				// Known limit: for every other component, readStyleSlot only sees a plain-object styleOverrides.
+				// A caller whose styleOverrides is itself a function (not per slot) is replaced by our slots.
 				MuiCssBaseline: {
 					...(!enableAnimations && {
 						styleOverrides: composeStyleOverride(callerComponents?.MuiCssBaseline?.styleOverrides, {

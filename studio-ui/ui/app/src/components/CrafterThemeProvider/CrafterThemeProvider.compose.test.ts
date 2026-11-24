@@ -32,6 +32,8 @@ const { act } = await import('react');
 const { useTheme } = await import('@mui/material/styles');
 const { default: Avatar } = await import('@mui/material/Avatar');
 const { default: ToggleButton } = await import('@mui/material/ToggleButton');
+const { default: CssBaseline } = await import('@mui/material/CssBaseline');
+const { css } = await import('@emotion/react');
 const { default: CrafterThemeProvider } = await import('./CrafterThemeProvider.tsx');
 const { default: palette } = await import('../../styles/palette.ts');
 
@@ -288,5 +290,105 @@ describe('caller style overrides composed with contrast rules', () => {
 		assert.equal(highlight.backgroundColor, palette.blue.highlight);
 		assert.equal(bar.backgroundImage, 'linear-gradient(currentColor, currentColor)');
 		assert.equal(bar.backgroundSize, '3px 100%');
+	});
+	it('keeps the provider colour over a matching caller variant on the selected primary toggle', async () => {
+		const { theme, host } = await renderTheme({
+			components: {
+				MuiToggleButton: {
+					styleOverrides: {
+						root: {
+							letterSpacing: '2px',
+							variants: [{ props: { color: 'primary' }, style: { '&.Mui-selected': { color: 'red' } } }]
+						}
+					}
+				}
+			}
+		});
+		const root = slot(theme, 'MuiToggleButton', 'root') as (props: object) => unknown;
+		const styles = root({ ownerState: { color: 'primary' }, theme });
+		assert.ok(Array.isArray(styles), 'caller variants stay a separate, earlier interpolation');
+		const stay = [...host.querySelectorAll<HTMLElement>('.MuiToggleButton-root')].find(
+			(node) => node.textContent === 'Stay'
+		);
+		assert.ok(stay);
+		assert.equal(window.getComputedStyle(stay).color, 'rgb(0, 64, 221)');
+		assert.equal(window.getComputedStyle(stay).letterSpacing, '2px');
+	});
+
+	it('keeps a defined caller track colour when the switch colour has no palette entry', async () => {
+		const { theme } = await renderTheme({
+			components: {
+				MuiSwitch: {
+					styleOverrides: {
+						root: {
+							'& .MuiSwitch-switchBase.Mui-checked:not(.Mui-disabled) + .MuiSwitch-track': {
+								backgroundColor: 'rebeccapurple'
+							}
+						}
+					}
+				}
+			}
+		});
+		const checkedTrack = '& .MuiSwitch-switchBase.Mui-checked:not(.Mui-disabled) + .MuiSwitch-track';
+		const unregistered = apply(slot(theme, 'MuiSwitch', 'root'), theme, { color: 'brand' });
+		const track = unregistered[checkedTrack] as Record<string, unknown>;
+		assert.equal(track.backgroundColor, 'rebeccapurple');
+		assert.equal(track.opacity, 1);
+
+		const primary = apply(slot(theme, 'MuiSwitch', 'root'), theme, { color: 'primary' });
+		assert.equal((primary[checkedTrack] as Record<string, unknown>).backgroundColor, theme.palette.primary.main);
+		const standard = apply(slot(theme, 'MuiSwitch', 'root'), theme, { color: 'default' });
+		assert.equal((standard[checkedTrack] as Record<string, unknown>).backgroundColor, theme.palette.text.secondary);
+	});
+
+	it('applies the animation rules beside a CssBaseline callback that returns css() output', async () => {
+		const { theme } = await renderTheme(
+			{
+				components: {
+					MuiCssBaseline: {
+						styleOverrides: () => css({ body: { margin: '4px' } })
+					}
+				}
+			},
+			() => {
+				window.localStorage.setItem('username', 'ada');
+				window.localStorage.setItem('craftercms.ada.enableAnimations', 'false');
+			}
+		);
+		const overrides = theme.components?.MuiCssBaseline?.styleOverrides as ((themeArg: Theme) => unknown) | undefined;
+		assert.equal(typeof overrides, 'function');
+		const styles = overrides(theme);
+		assert.ok(Array.isArray(styles), 'serialized styles are composed, not merged into');
+		const [callerStyles, ourStyles] = styles as [{ styles: string }, Record<string, Record<string, unknown>>];
+		assert.match(callerStyles.styles, /margin:\s*4px/);
+		assert.equal(ourStyles['*, *::before, *::after'].animation, 'none !important');
+
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		const root = createRoot(host);
+		await act(async () => {
+			root.render(
+				React.createElement(
+					CrafterThemeProvider,
+					{
+						themeOptions: {
+							components: { MuiCssBaseline: { styleOverrides: () => css({ body: { margin: '4px' } }) } }
+						}
+					},
+					React.createElement(CssBaseline)
+				)
+			);
+		});
+		mounted.push({ unmount: () => root.unmount(), host });
+		assert.equal(window.getComputedStyle(document.body).margin, '4px');
+		const emitted = [...document.querySelectorAll('style')]
+			.flatMap((tag) => {
+				const rules = (tag as HTMLStyleElement).sheet?.cssRules;
+				return rules?.length ? [...rules].map((rule) => rule.cssText) : [tag.textContent ?? ''];
+			})
+			.join('\n')
+			.replace(/\s+/g, '');
+		assert.match(emitted, /animation:none!important/);
+		assert.match(emitted, /transition:none!important/);
 	});
 });

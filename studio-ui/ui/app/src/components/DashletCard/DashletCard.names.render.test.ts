@@ -113,4 +113,40 @@ describe('dashlet header toggle name', () => {
 		assert.equal(button.textContent, 'Activity');
 		assert.equal(button.hasAttribute('aria-label'), false);
 	});
+
+	it('keeps a numeric title, 0 included, as the name', async () => {
+		for (const title of [0, 7]) {
+			const host = await render({ title });
+			const button = toggle(host);
+			assert.ok(button);
+			assert.equal(button.textContent, String(title));
+			assert.equal(button.hasAttribute('aria-label'), false, `title={${title}}`);
+		}
+	});
+
+	it('names the toggle when the title renders no text', async () => {
+		for (const [label, title] of [
+			['true', true],
+			['<span />', React.createElement('span')],
+			['<span>{false}</span>', React.createElement('span', null, false)],
+			['empty fragment', React.createElement(React.Fragment)]
+		] as const) {
+			const host = await render({ title });
+			const button = toggle(host);
+			assert.ok(button, label);
+			assert.equal(button.textContent, '', label);
+			assert.equal(button.getAttribute('aria-label'), 'Toggle section', label);
+		}
+	});
+
+	it('keeps a component title, which renders its own text, as the name', async () => {
+		function Title() {
+			return React.createElement('span', null, 'Activity');
+		}
+		const host = await render({ title: React.createElement(Title) });
+		const button = toggle(host);
+		assert.ok(button);
+		assert.equal(button.textContent, 'Activity');
+		assert.equal(button.hasAttribute('aria-label'), false);
+	});
 });
