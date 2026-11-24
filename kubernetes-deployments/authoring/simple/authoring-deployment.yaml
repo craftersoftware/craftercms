@@ -211,7 +211,7 @@ spec:
         # # Git SSH server container
         # # Uncomment if using Git SSH
         # - name: git-ssh-server
-        #   image: craftercms/git_ssh_server:4.5.0
+        #   image: craftercms/git_ssh_server:4.7.2-SNAPSHOT
         #   imagePullPolicy: "Always"
         #   ports:
         #     - containerPort: 22
@@ -224,7 +224,7 @@ spec:
         # Git HTTPS server container
         # Uncomment if using Git HTTPS
         - name: git-https-server
-          image: craftercms/git_https_server:4.5.0
+          image: craftercms/git_https_server:4.7.2-SNAPSHOT
           imagePullPolicy: "Always"
           ports:
             - containerPort: 443
