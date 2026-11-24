@@ -382,6 +382,7 @@ export function SelectField(props: {
 				}
 			}}
 			selected={selectedField?.id === field.id}
+			aria-pressed={selectedField?.id === field.id}
 		>
 			<ListItemIcon>
 				{configLookup?.[field.id]?.icon?.id ? <SystemIcon icon={configLookup[field.id].icon} /> : <ComponentIcon />}
