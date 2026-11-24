@@ -11,7 +11,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-FROM eclipse-temurin:21-jdk-alpine AS main
+FROM eclipse-temurin:21.0.13.1_2-jdk-alpine AS main
 
 # Install dependencies
 RUN set -eux; \

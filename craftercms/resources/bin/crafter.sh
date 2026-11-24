@@ -17,6 +17,7 @@
 ########################################################################################################################
 ################################################ GLOBALS ###############################################################
 REQUIRED_JAVA_VERSION=21
+MIN_JAVA_VERSION=21.0.13.1
 REQUIRED_GIT_VERSION=2.15.0
 
 ################################################ COMMONS ###############################################################
@@ -56,6 +57,43 @@ function isTailTomcat() {
   return 1
 }
 
+# Return 0 when actual is greater than or equal to minimum.
+# Compare dotted numeric components. A missing component is 0.
+# Ignore a suffix that starts with +, - or _, such as +build, -LTS or _N.
+function javaVersionAtLeast() {
+  local actual minimum actual_part minimum_part
+  actual="${1%%[+_-]*}"
+  minimum="${2%%[+_-]*}"
+
+  while [ -n "$actual" ] || [ -n "$minimum" ]; do
+    actual_part="${actual%%.*}"
+    minimum_part="${minimum%%.*}"
+
+    case "$actual" in
+      *.*) actual="${actual#*.}" ;;
+      *) actual="" ;;
+    esac
+    case "$minimum" in
+      *.*) minimum="${minimum#*.}" ;;
+      *) minimum="" ;;
+    esac
+
+    actual_part="${actual_part%%[!0-9]*}"
+    minimum_part="${minimum_part%%[!0-9]*}"
+    [ -n "$actual_part" ] || actual_part=0
+    [ -n "$minimum_part" ] || minimum_part=0
+
+    if [ "$actual_part" -gt "$minimum_part" ]; then
+      return 0
+    fi
+    if [ "$actual_part" -lt "$minimum_part" ]; then
+      return 1
+    fi
+  done
+
+  return 0
+}
+
 # shellcheck disable=SC2120
 function preFlightCheck() {
   cecho "Preflight check.\n" "info"
@@ -88,6 +126,13 @@ function preFlightCheck() {
 		exit 4
 	fi
 
+	# Older patch builds of the required major still start. Warn, and do not exit.
+	# An empty parse is skipped so the message is not printed with a blank version.
+	full_version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
+	if [[ -n "$full_version" ]] && ! javaVersionAtLeast "$full_version" "$MIN_JAVA_VERSION"; then
+		cecho "The detected JDK version $full_version should be upgraded to >= $MIN_JAVA_VERSION. Older JDK 21 builds have the Base64 intrinsic bug (JDK-8393212), so keep -XX:-UseBASE64Intrinsics until you upgrade.\n" "warning"
+	fi
+
 	# Check if JAVA_HOME is set, and set to the correct Java version
 	if [[ -n "$JAVA_HOME" ]] && [[ -x "$JAVA_HOME/bin/java" ]];  then
 		_java_in_javahome="$JAVA_HOME/bin/java"
@@ -100,6 +145,16 @@ function preFlightCheck() {
 	if [[ ! "$javahome_version" = "$version" ]]; then
 		cecho "The Java version in PATH doesn't match the Java version in JAVA_HOME, this means JAVA_HOME is not pointing to the right Java installation, please set JAVA_HOME to point to the Java version $REQUIRED_JAVA_VERSION and try again, aborting.\n" "error"
 		exit 6
+	fi
+
+	# Same warning for the JAVA_HOME JDK. Do not exit. Skip an empty parse, and
+	# skip when this is the same binary or the same version already checked above.
+	javahome_full_version=$("$_java_in_javahome" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
+	path_java=$(type -p java)
+	if [[ "$path_java" != "$_java_in_javahome" && "$javahome_full_version" != "$full_version" ]]; then
+		if [[ -n "$javahome_full_version" ]] && ! javaVersionAtLeast "$javahome_full_version" "$MIN_JAVA_VERSION"; then
+			cecho "The detected JDK version $javahome_full_version should be upgraded to >= $MIN_JAVA_VERSION. Older JDK 21 builds have the Base64 intrinsic bug (JDK-8393212), so keep -XX:-UseBASE64Intrinsics until you upgrade.\n" "warning"
+		fi
 	fi
 
 	# Check lsof

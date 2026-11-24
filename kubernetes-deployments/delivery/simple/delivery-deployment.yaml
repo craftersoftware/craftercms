@@ -79,7 +79,7 @@ spec:
       # # Uncomment if using the Git SSH server in Authoring
       # initContainers:
       #   - name: ssh-keys-copier
-      #     image: craftercms/delivery_tomcat:4.5.0
+      #     image: craftercms/delivery_tomcat:4.7.2-SNAPSHOT
       #     volumeMounts:
       #       - name: ssh-keys
       #         mountPath: /.ssh
@@ -129,7 +129,7 @@ spec:
               memory: 2.5Gi
         # Tomcat container
         - name: tomcat
-          image: craftercms/delivery_tomcat:4.5.0
+          image: craftercms/delivery_tomcat:4.7.2-SNAPSHOT
           startupProbe:
             httpGet:
               path: /api/1/monitoring/status.json?token=defaultManagementToken
@@ -160,7 +160,7 @@ spec:
               mountPath: /opt/crafter/logs
           env:
             - name: CATALINA_OPTS
-              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0 -XX:-UseBASE64Intrinsics"
+              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0"
           resources:
             requests:
               cpu: 1
@@ -170,7 +170,7 @@ spec:
               memory: 4Gi
         # Deployer container
         - name: deployer
-          image: craftercms/deployer:4.5.0
+          image: craftercms/deployer:4.7.2-SNAPSHOT
           startupProbe:
             httpGet:
               path: /api/1/monitoring/status?token=defaultManagementToken
@@ -206,7 +206,7 @@ spec:
               mountPath: /opt/crafter/logs
           env:
             - name: DEPLOYER_JAVA_OPTS
-              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0 -XX:-UseBASE64Intrinsics"
+              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0"
           resources:
             requests:
               cpu: 500m
