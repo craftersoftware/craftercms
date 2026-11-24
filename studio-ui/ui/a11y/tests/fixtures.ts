@@ -35,12 +35,6 @@ export const test = base.extend<{ authenticated: boolean; allowListCoverage: voi
 	authenticated: [true, { option: true }],
 	context: async ({ context, baseURL }, use) => {
 		await context.addInitScript((user) => {
-			// Chromium-shell compatibility: Studio's legacy browser check (studio-context.ftl) reads `window.chrome`,
-			// which Playwright's bundled Chromium doesn't define, so it would prepend the "browser not supported" banner
-			// that Chrome and Firefox users never see. This removes that banner from the scanned pages; it disables no
-			// axe rule. Branded Chrome (A11Y_BROWSER_CHANNEL=chrome) defines `window.chrome`, so there it is a no-op.
-			if (!('chrome' in window))
-				Object.defineProperty(window, 'chrome', { value: { runtime: {} }, configurable: true });
 			// Deterministic rendering: no animations or transitions while axe measures colors and sizes.
 			window.localStorage.setItem(`craftercms.${user}.enableAnimations`, 'false');
 		}, username);
