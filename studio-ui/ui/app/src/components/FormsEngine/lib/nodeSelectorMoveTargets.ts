@@ -144,7 +144,7 @@ function evaluateTarget(args: {
 	let reason: NodeSelectorMoveTargetReason | undefined;
 	if (isFieldReadOnly(field, formReadonly)) {
 		reason = 'readonly';
-	} else if (!allowDuplicates && items.some((entry, index) => entry.key === itemKey)) {
+	} else if (!allowDuplicates && items.some((entry) => entry.key === itemKey)) {
 		// Source slot is a different field, so any matching key is a real duplicate.
 		reason = 'duplicate';
 	} else if (maxCount != null && currentCount >= maxCount) {
