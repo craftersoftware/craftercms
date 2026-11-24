@@ -78,6 +78,7 @@ import useActiveUser from '../../../hooks/useActiveUser';
 import { areAllPairsEqual, asArray } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
 import { buildContentXml } from './valueSerializers';
+import { isInternalNameFilled } from './minimumSaveRequirements';
 import {
 	createFormVisibilityAtoms,
 	fieldVisibility,
@@ -1002,29 +1003,56 @@ export function commitFormVisibility(
 }
 
 /**
+ * File name a form opens with. {@link setFieldAtoms} and {@link withPathFileName} both use this.
+ * A real path uses the path-derived name. Create (`path === ''`) keeps `value` only when it is the content
+ * type's non-empty default. Any other create name starts blank.
+ */
+export function openedFileName(path: string, value: unknown, defaultValue: unknown): string {
+	if (path === '' && typeof defaultValue === 'string' && defaultValue !== '' && value === defaultValue) {
+		return defaultValue;
+	}
+	return fileNameFromItemPath(path);
+}
+
+/**
  * The values a form opened with, for `originalValues`. Rollback writes them back, so the `file-name` entry is the
  * path-derived name {@link setFieldAtoms} starts the field from, not the XML element. Otherwise rolling back an
  * untouched form would rename the item.
  *
- * Same rule as `setFieldAtoms`: only a form that has an item path is normalized. `path` is `''` for a create form,
- * and `undefined`/`null` for a nested scope such as a repeat item form, whose `file-name` field, if it has one, is its
- * own value and is returned as is. Values with no `file-name` are returned as is too.
+ * Same rule as `setFieldAtoms` ({@link openedFileName}). A real item path uses the path-derived name. Create
+ * (`path === ''`) keeps the file-name only when it equals `fileNameDefault`. `undefined`/`null` is a nested scope
+ * such as a repeat item form and keeps the file-name it was given. Values with no `file-name` are returned as is.
  */
 export function withPathFileName(
 	values: LookupTable<unknown>,
 	atoms: Pick<FormsEngineAtoms, 'fileName'> | null | undefined,
-	path?: string | null
+	path?: string | null,
+	fileNameDefault?: unknown
 ): LookupTable<unknown> {
-	return atoms?.fileName && path != null && XmlKeys.fileName in values
-		? { ...values, [XmlKeys.fileName]: fileNameFromItemPath(path) }
-		: values;
+	if (!atoms?.fileName || path == null || !(XmlKeys.fileName in values)) return values;
+	const current = values[XmlKeys.fileName];
+	const next = openedFileName(path, current, fileNameDefault);
+	return next === current ? values : { ...values, [XmlKeys.fileName]: next };
+}
+
+/**
+ * File name a new item opens with. The content type's file-name default, when it has one.
+ * Pages leave this blank so the author types the URL. Section defaults is readonly and supplies
+ * `crafter-level-descriptor.level`; without it the create form cannot be saved.
+ */
+export function newItemFileName(
+	contentType: { fields?: LookupTable<ContentTypeField> } | null | undefined
+): string | undefined {
+	const value = contentType?.fields?.[XmlKeys.fileName]?.defaultValue;
+	return typeof value === 'string' && value !== '' ? value : undefined;
 }
 
 /**
  * Creates the value and validity atoms for a field and sets them on to the target object.
  *
  * @param itemPath - Full path of the item being edited. Only the `file-name` field reads it, to start its value
- * from the same name {@link createFileNameAtom} derives. Omit it for a form with no path yet (create).
+ * from {@link openedFileName}, the same rule as {@link withPathFileName}. `''` (create) starts blank unless
+ * `value` is the field's default. A missing path keeps `value`.
  **/
 export function setFieldAtoms(
 	stableFormContextRef: RefObject<StableFormContextProps>,
@@ -1084,9 +1112,13 @@ export function setFieldAtoms(
 	// Save writes `<file-name>` / `<folder-name>` from the path (via {@link xmlFileNamesForPath}),
 	// matching FE1, while the form atom keeps the slug. The backend still rewrites both names on a
 	// copy collision.
-	// Only a form with an item path starts here. A nested scope (repeat item) passes none and keeps its value.
-	const initialValue =
-		fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null ? fileNameFromItemPath(itemPath) : value;
+	// A real item path wins, including the home page (blank). Create passes `''`: the stored value is dropped so
+	// the field matches the dedicated file-name atom, which starts blank, except a content-type default
+	// (section defaults uses `crafter-level-descriptor.level`). A repeat item passes no path and keeps `value`.
+	let initialValue = value;
+	if (fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null) {
+		initialValue = openedFileName(itemPath, value, field.defaultValue);
+	}
 	const [valueAtom, validityAtom] = createFieldAtoms(field, initialValue, stableFormContextRef, validatorsData);
 	atomsTarget.valueByFieldId[fieldId] = valueAtom;
 	atomsTarget.validationByFieldId[fieldId] = validityAtom;
@@ -1114,13 +1146,17 @@ export type SystemPropsObject = Pick<
 /** System props written by {@link createObjectWithSystemProps} (excludes optional nav/disabled fields). */
 export type CreatedSystemPropsObject = Omit<
 	SystemPropsObject,
-	XmlKeys.disabled | XmlKeys.placeInNav | XmlKeys.navLabel
->;
+	XmlKeys.disabled | XmlKeys.placeInNav | XmlKeys.navLabel | XmlKeys.internalName
+> &
+	Partial<Pick<SystemPropsObject, XmlKeys.internalName>>;
 
 /**
  * Creates an object with all the base content item system props (objectId, content-type, etc.)
  * Assigns the supplied values if provided.
  * Does not include `disabled`, `placeInNav`, or `navLabel`.
+ * `internal-name` is written when the type defines that field (empty when no value was supplied).
+ * A type without the field gets the element only when a non-blank value was supplied. An empty
+ * name is never invented for that type, and no label is derived from the file name or the type title.
  **/
 export function createObjectWithSystemProps(
 	contentType: ContentType,
@@ -1131,7 +1167,6 @@ export function createObjectWithSystemProps(
 	const contentObject: CreatedSystemPropsObject = {
 		[XmlKeys.modelId]: objectId,
 		[XmlKeys.groupId]: mixin?.[XmlKeys.groupId] ?? createObjectGroupId(objectId),
-		[XmlKeys.internalName]: mixin?.[XmlKeys.internalName] ?? '',
 		[XmlKeys.contentTypeId]: contentType.id,
 		[XmlKeys.displayTemplate]: contentType.displayTemplate ?? '',
 		[XmlKeys.templateNotRequired]: contentType.displayTemplate ? 'false' : 'true',
@@ -1142,6 +1177,12 @@ export function createObjectWithSystemProps(
 		[XmlKeys.dateModifiedDt]: mixin?.[XmlKeys.dateModifiedDt] ?? dateIsoString,
 		[XmlKeys.savedAsDraft]: mixin?.[XmlKeys.savedAsDraft] ?? 'false'
 	};
+	const suppliedName = mixin?.[XmlKeys.internalName];
+	if (contentType.fields?.[XmlKeys.internalName]) {
+		contentObject[XmlKeys.internalName] = suppliedName ?? '';
+	} else if (isInternalNameFilled(suppliedName)) {
+		contentObject[XmlKeys.internalName] = suppliedName as string;
+	}
 	return contentObject;
 }
 
@@ -1153,13 +1194,19 @@ export function complementValuesWithSystemProps(
 	contentType: ContentType,
 	saveAsDraft: boolean
 ): void {
-	const systemProps = createObjectWithSystemProps(contentType, {
+	const definesInternalName = Boolean(contentType.fields?.[XmlKeys.internalName]);
+	const mixin: Partial<SystemPropsObject> = {
 		[XmlKeys.modelId]: id,
-		[XmlKeys.internalName]: values[XmlKeys.internalName] as string,
 		[XmlKeys.dateCreated]: getParsedField(contentObject, XmlKeys.dateCreated) as string,
 		[XmlKeys.dateCreatedDt]: getParsedField(contentObject, XmlKeys.dateCreatedDt) as string,
 		[XmlKeys.savedAsDraft]: saveAsDraft
-	});
+	};
+	// A type that defines the field keeps today's empty default. A type that does not only carries
+	// a name that is already on the values object. Nothing here invents one.
+	if (definesInternalName || isInternalNameFilled(values[XmlKeys.internalName])) {
+		mixin[XmlKeys.internalName] = values[XmlKeys.internalName] as string;
+	}
+	const systemProps = createObjectWithSystemProps(contentType, mixin);
 
 	// Do not overwrite any existing value.
 	preservedElements.forEach((key) => {
@@ -1167,6 +1214,16 @@ export function complementValuesWithSystemProps(
 			values[key] = contentObject[key];
 		}
 	});
+	// The form has no atom for a field the type does not define, so the original element would
+	// otherwise be dropped. Copy it, including an empty element. An absent element stays absent.
+	if (
+		!definesInternalName &&
+		!(XmlKeys.internalName in values) &&
+		contentObject != null &&
+		XmlKeys.internalName in contentObject
+	) {
+		values[XmlKeys.internalName] = contentObject[XmlKeys.internalName];
+	}
 	for (const key in systemProps) {
 		if (!(key in values)) {
 			values[key] = systemProps[key];
