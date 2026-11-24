@@ -219,7 +219,10 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 								}}
 							>
 								<Tooltip title={formatMessage({ defaultMessage: 'Back to control selection' })}>
-									<IconButton onClick={() => setSelectedView(0)}>
+									<IconButton
+										onClick={() => setSelectedView(0)}
+										aria-label={formatMessage({ defaultMessage: 'Back to control selection' })}
+									>
 										<ArrowBackRoundedIcon />
 									</IconButton>
 								</Tooltip>

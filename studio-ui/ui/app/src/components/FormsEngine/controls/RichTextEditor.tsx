@@ -29,7 +29,7 @@ import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { Editor } from '@tinymce/tinymce-react';
 import { TinyMCE } from 'tinymce';
 import { getTinymce } from '@tinymce/tinymce-react/lib/es2015/main/ts/TinyMCE';
-import { getPropertyValue } from '../lib/formUtils';
+import { getNumericValidationValue, getPropertyValue } from '../lib/formUtils';
 import { loadAceEditorAssets } from '../../../utils/system';
 import { FormsEngineDialogContext } from '../lib/formsEngineContext';
 import { getTinyMceInitOptions, type OpenRteDataSourcePicker } from '../lib/rteUtils';
@@ -93,7 +93,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
 	const openDataSourcePicker: OpenRteDataSourcePicker = (actions, context, onResult) => {
 		setDataSourcePicker({ actions, context, onResult });
 	};
-	const maxLength = getPropertyValue(field.properties, 'maxlength') as number;
+	const maxLength = getNumericValidationValue(field.validations, 'maxLength');
 	const dialogContext = useContext(FormsEngineDialogContext);
 	const setDisableEnforceFocus = dialogContext?.setDisableEnforceFocus;
 

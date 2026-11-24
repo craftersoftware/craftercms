@@ -315,13 +315,13 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 		<>
 			{field.type === 'repeat' && Object.keys(field.fields ?? {}).length > 0 && (
 				<Tooltip title={reorderFieldsLabel}>
-					<IconButton onClick={() => setOpenReorderFieldsDialog(true)}>
+					<IconButton onClick={() => setOpenReorderFieldsDialog(true)} aria-label={reorderFieldsLabel}>
 						<MoveDownIcon />
 					</IconButton>
 				</Tooltip>
 			)}
 			<Tooltip title={moveFieldLabel}>
-				<IconButton onClick={() => onOpenMoveFieldDialog()}>
+				<IconButton onClick={() => onOpenMoveFieldDialog()} aria-label={moveFieldLabel}>
 					<DriveFileMoveOutlined />
 				</IconButton>
 			</Tooltip>
@@ -392,7 +392,7 @@ function FieldSwapper(props: FieldFormViewProps): React.JSX.Element {
 					field.id === 'file-name' &&
 					!fieldIdPath?.includes('.') && (
 						<Tooltip title={swapFieldLabel}>
-							<IconButton onClick={() => swapFieldDialogState.onOpen()}>
+							<IconButton onClick={() => swapFieldDialogState.onOpen()} aria-label={swapFieldLabel}>
 								<SwapCallsOutlined />
 							</IconButton>
 						</Tooltip>
@@ -440,13 +440,13 @@ function SectionActions(props: FieldFormViewProps): React.JSX.Element {
 		<>
 			{section.fields?.length > 0 ? (
 				<Tooltip title={reorderSectionFieldsLabel}>
-					<IconButton onClick={() => setOpenReorderFieldsDialog(true)}>
+					<IconButton onClick={() => setOpenReorderFieldsDialog(true)} aria-label={reorderSectionFieldsLabel}>
 						<MoveDownIcon />
 					</IconButton>
 				</Tooltip>
 			) : (
 				<Tooltip title={addFieldLabel}>
-					<IconButton onClick={() => onOpenInsertFieldDialog?.(section.id)}>
+					<IconButton onClick={() => onOpenInsertFieldDialog?.(section.id)} aria-label={addFieldLabel}>
 						<AddCircleOutlineOutlinedIcon />
 					</IconButton>
 				</Tooltip>
@@ -524,7 +524,7 @@ function ContentTypeActions(props: FieldFormViewProps): React.JSX.Element {
 	return (
 		<>
 			<Tooltip title={reorderSectionsLabel}>
-				<IconButton onClick={() => setOpenReorderFieldsDialog(true)}>
+				<IconButton onClick={() => setOpenReorderFieldsDialog(true)} aria-label={reorderSectionsLabel}>
 					<MoveDownIcon />
 				</IconButton>
 			</Tooltip>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -117,6 +117,8 @@ export function RenameItemView(props: RenameItemViewProps) {
 					margin="normal"
 					slotProps={{
 						inputLabel: { shrink: true },
+						// Typing guard only: blocks further input past maxLength. Does not truncate a
+						// controlled value that already exceeds the limit (legacy over-limit names).
 						...(maxLength != null ? { htmlInput: { maxLength } } : {})
 					}}
 					onChange={onInputChanges}
@@ -150,11 +152,6 @@ export function RenameItemView(props: RenameItemViewProps) {
 								<Checkbox
 									checked={confirmBrokenReferences}
 									onChange={() => setConfirmBrokenReferences(!confirmBrokenReferences)}
-									slotProps={{
-										input: {
-											'aria-label': 'controlled'
-										}
-									}}
 								/>
 							}
 							label={

@@ -18,7 +18,7 @@ import OutlinedInput, { OutlinedInputProps } from '@mui/material/OutlinedInput';
 import React, { useId } from 'react';
 import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
-import { getValidationValue, isFieldReadOnly } from '../lib/formUtils';
+import { getNumericValidationValue, isFieldReadOnly } from '../lib/formUtils';
 import { fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
 
 export type TextProps = ControlProps<string>;
@@ -30,7 +30,7 @@ export function Text(props: TextProps) {
 	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, htmlId));
 
 	// region field properties/validations
-	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
+	const maxLength = getNumericValidationValue(field.validations, 'maxLength');
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
 	// endregion
 

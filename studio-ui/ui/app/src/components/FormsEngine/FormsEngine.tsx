@@ -1033,7 +1033,9 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const isStackedForm = stackIndex > 0;
 	const hasStackedForms = !isStackedForm && stackFormCount > 0;
 	const isEmbedded = isEmbeddedForm({ update, create });
-	const isCreateMode = Boolean(create?.path);
+	// Any `create` prop is create mode (including embedded creates). Do not require `create.path`:
+	// nested embeds opened from an unsaved create can briefly lack a path; they still must not use EditModeHeader.
+	const isCreateMode = Boolean(create);
 	const isRepeatMode = Boolean(repeat?.fieldId);
 	const affectedPackages = lockStatus.affectedPackages?.length > 0;
 	const contentTypeFields = contentType.fields;
@@ -1778,21 +1780,25 @@ function FormOrchestrator(props: FormsEngineProps) {
 						<Box sx={[isDialog && { position: 'absolute', top: theme.spacing(1), right: theme.spacing(1) }]}>
 							{props.onMinimize && (
 								<Tooltip title={minimizeLabel}>
-									<IconButton size="small" onClick={props.onMinimize}>
+									<IconButton size="small" onClick={props.onMinimize} aria-label={minimizeLabel}>
 										<MinimizeIconRounded />
 									</IconButton>
 								</Tooltip>
 							)}
 							{(props.onCancelFullScreen || props.onFullScreen) && (
 								<Tooltip title={fullscreenLabel}>
-									<IconButton size="small" onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}>
+									<IconButton
+										size="small"
+										onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}
+										aria-label={fullscreenLabel}
+									>
 										{isFullScreen ? <CloseFullscreenOutlined /> : <MaximiseIcon fontSize="small" />}
 									</IconButton>
 								</Tooltip>
 							)}
 							{handleClose && (
 								<Tooltip title={closeLabel}>
-									<IconButton size="small" onClick={handleClose}>
+									<IconButton size="small" onClick={handleClose} aria-label={closeLabel}>
 										<Close />
 									</IconButton>
 								</Tooltip>
