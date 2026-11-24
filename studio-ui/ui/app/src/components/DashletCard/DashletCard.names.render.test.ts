@@ -149,4 +149,40 @@ describe('dashlet header toggle name', () => {
 		assert.equal(button.textContent, 'Activity');
 		assert.equal(button.hasAttribute('aria-label'), false);
 	});
+	it('names the toggle when a component title renders null', async () => {
+		function Empty() {
+			return null;
+		}
+		const host = await render({ title: React.createElement(Empty) });
+		const button = toggle(host);
+		assert.ok(button);
+		assert.equal(button.textContent, '');
+		assert.equal(button.getAttribute('aria-label'), 'Toggle section');
+	});
+
+	it('follows a component title that loads and clears its own text', async () => {
+		let setText: (text: string | null) => void = () => {};
+		function Loading() {
+			const [text, set] = React.useState<string | null>(null);
+			setText = set;
+			return text === null ? null : React.createElement('span', null, text);
+		}
+		const host = await render({ title: React.createElement(Loading) });
+		const button = toggle(host);
+		assert.ok(button);
+		assert.equal(button.getAttribute('aria-label'), 'Toggle section');
+		await act(async () => setText('Activity'));
+		assert.equal(button.textContent, 'Activity');
+		assert.equal(button.hasAttribute('aria-label'), false);
+		await act(async () => setText(null));
+		assert.equal(button.getAttribute('aria-label'), 'Toggle section');
+	});
+
+	it('renders the header for title={0} without a headerAction', async () => {
+		const host = await render({ title: 0, headerAction: undefined });
+		const button = toggle(host);
+		assert.ok(button, 'header toggle for title 0');
+		assert.equal(button.textContent, '0');
+		assert.equal(button.hasAttribute('aria-label'), false);
+	});
 });

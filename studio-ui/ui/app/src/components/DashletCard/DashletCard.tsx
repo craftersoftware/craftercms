@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { PropsWithChildren, useState } from 'react';
+import React, { PropsWithChildren, useLayoutEffect, useRef, useState } from 'react';
 import { CommonDashletProps, parseDashletContentHeight } from '../SiteDashboard/utils';
 import Card from '@mui/material/Card';
 import CardHeader from '@mui/material/CardHeader';
@@ -55,7 +55,8 @@ export type DashletCardProps = PropsWithChildren<
 /**
  * Whether a title node gives the toggle a content-based accessible name. Numbers (0 included) render as
  * text. Booleans, null and blank strings render nothing. A host element counts only through its children
- * or its own label. A component element (e.g. FormattedMessage) is assumed to render text.
+ * or its own label. A component element (e.g. FormattedMessage) is assumed to render text here; this is
+ * only the first guess, and DashletCard corrects it from the rendered toggle.
  */
 export function nodeHasName(node: React.ReactNode): boolean {
 	if (typeof node === 'string') {
@@ -87,6 +88,17 @@ export function nodeHasName(node: React.ReactNode): boolean {
 	return true;
 }
 
+/**
+ * Whether the rendered toggle has content that names it: text, an image with alt text, or a labelled
+ * descendant. The toggle's own aria-label (the fallback) is not counted.
+ */
+function renderedHasName(button: HTMLElement): boolean {
+	return (
+		(button.textContent ?? '').trim() !== '' ||
+		button.querySelector('img[alt]:not([alt=""]), [aria-label]:not([aria-label=""])') !== null
+	);
+}
+
 export function DashletCard(props: DashletCardProps) {
 	// region Props
 	const {
@@ -106,7 +118,7 @@ export function DashletCard(props: DashletCardProps) {
 	} = props;
 	// endregion
 	const cardHeaderHeight = 62;
-	const renderCardHeader = Boolean(title) || Boolean(headerAction);
+	const renderCardHeader = nodeHasName(title) || Boolean(headerAction);
 	const [isMaximized, setIsMaximized] = useState(false);
 	const dashboardState = useSiteDashboardContext();
 	const [isExpanded, setIsExpanded] = useState(true);
@@ -116,7 +128,33 @@ export function DashletCard(props: DashletCardProps) {
 	const [disableHeaderToggleRipple, setDisableHeaderToggleRipple] = useState(false);
 	// A visible title is the toggle's accessible name (2.5.3). headerAction alone still renders the header,
 	// and that toggle would otherwise be an empty button.
-	const titleNamesToggle = nodeHasName(title);
+	// What a component title renders (null while loading, an empty message) is only known after it renders,
+	// so the element-tree guess is just the initial value and the rendered button decides.
+	const toggleRef = useRef<HTMLButtonElement>(null);
+	const [titleNamesToggle, setTitleNamesToggle] = useState(() => nodeHasName(title));
+	// No deps: re-check after every render of the card (title changes included). React bails out on an
+	// unchanged value, so this does not loop.
+	useLayoutEffect(() => {
+		if (toggleRef.current) {
+			setTitleNamesToggle(renderedHasName(toggleRef.current));
+		}
+	});
+	// A title component can re-render on its own (e.g. once its data loads) without the card re-rendering.
+	useLayoutEffect(() => {
+		const button = toggleRef.current;
+		if (!button || typeof MutationObserver === 'undefined') {
+			return;
+		}
+		const observer = new MutationObserver(() => setTitleNamesToggle(renderedHasName(button)));
+		observer.observe(button, {
+			childList: true,
+			subtree: true,
+			characterData: true,
+			attributes: true,
+			attributeFilter: ['alt', 'aria-label']
+		});
+		return () => observer.disconnect();
+	}, [renderCardHeader, isToggleable]);
 	const untitledToggleLabel = formatMessage({ defaultMessage: 'Toggle section' });
 
 	const updateMaximized = () => {
@@ -165,6 +203,7 @@ export function DashletCard(props: DashletCardProps) {
 							// click anywhere toggles the dashlet, while the header actions are siblings (not descendants) of
 							// the toggle button, which is what keeps interactive controls from nesting.
 							<ButtonBase
+								ref={toggleRef}
 								type="button"
 								disableRipple={disableHeaderToggleRipple}
 								aria-expanded={isExpanded}
