@@ -218,4 +218,42 @@ describe('PickFieldDialogBody', () => {
 
 		assert.deepEqual(inserts, [['input', 0]]);
 	});
+
+	it('shows the control id as secondary text in the insert-after select', async () => {
+		const { host } = await renderBody({ typesCurrentList: [...nonEmptyList, { id: 'c', title: 'Gamma' }] });
+
+		await act(async () => {
+			fieldButton(host).click();
+		});
+
+		const combobox = host.querySelector<HTMLElement>('[role="combobox"]');
+		assert.ok(combobox, 'expected insert-after select');
+		await act(async () => {
+			combobox.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+		});
+
+		const options = [...document.querySelectorAll('[role="option"]')];
+		assert.deepEqual(
+			options.map((option) => option.querySelector('p')?.textContent ?? ''),
+			['a', 'b']
+		);
+	});
+
+	it('links the disabled position group to the hint, and drops the link once an item is selected', async () => {
+		const { host } = await renderBody({ typesCurrentList: nonEmptyList });
+
+		const group = host.querySelector('[role="radiogroup"]');
+		assert.ok(group);
+		const hintId = group.getAttribute('aria-describedby');
+		assert.ok(hintId, 'expected aria-describedby on the disabled radio group');
+		assert.equal(document.getElementById(hintId)?.textContent, 'Select an item to choose its insert position.');
+		assert.equal(host.querySelector<HTMLInputElement>('input[type="radio"][value="first"]')?.disabled, true);
+
+		await act(async () => {
+			fieldButton(host).click();
+		});
+
+		assert.equal(host.querySelector('[role="radiogroup"]')?.hasAttribute('aria-describedby'), false);
+		assert.equal(document.getElementById(hintId), null);
+	});
 });

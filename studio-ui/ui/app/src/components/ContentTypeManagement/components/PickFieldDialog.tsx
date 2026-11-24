@@ -17,7 +17,7 @@
 import { EnhancedDialog, EnhancedDialogProps } from '../../EnhancedDialog';
 import { ContentType, ContentTypeField, DataSource } from '../../../models';
 import { FormattedMessage, useIntl } from 'react-intl';
-import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import React, { ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { applyTranslations, DescriptorContentType, DescriptorField, PartialContentType } from '../utils';
 import { DialogBody } from '../../DialogBody';
 import { SearchBar, SearchBarProps } from '../../SearchBar';
@@ -89,10 +89,12 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 		() =>
 			(typesCurrentList ?? []).map((item) => ({
 				id: item.id,
-				label: item.title ?? item.name ?? item.id
+				label: item.title ?? item.name ?? item.id,
+				secondary: item.id
 			})),
 		[typesCurrentList]
 	);
+	const positionHintId = useId();
 	const showFieldPositionStep = !isMdUp && selectedView === 1;
 
 	// Dialog exit transition keeps the body mounted; ignore further inserts after the first in this open session.
@@ -161,6 +163,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 			disabled={!selectedField}
 			afterSelectLabel={insertAfterSelectLabel}
 			emptyMode="hide"
+			describedById={isMdUp && !selectedField ? positionHintId : undefined}
 		/>
 	);
 
@@ -200,7 +203,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 								}}
 							>
 								{!selectedField && (
-									<Typography variant="body2" color="text.secondary">
+									<Typography id={positionHintId} variant="body2" color="text.secondary">
 										<FormattedMessage defaultMessage="Select an item to choose its insert position." />
 									</Typography>
 								)}

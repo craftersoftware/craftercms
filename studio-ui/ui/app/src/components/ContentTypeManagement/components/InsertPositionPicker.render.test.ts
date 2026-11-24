@@ -29,9 +29,9 @@ const { InsertPositionPicker } = await import('./InsertPositionPicker.tsx');
 const intl = createTestIntl();
 
 const items = [
-	{ id: 'a', label: 'Alpha' },
-	{ id: 'b', label: 'Beta' },
-	{ id: 'c', label: 'Gamma' }
+	{ id: 'a', label: 'Alpha', secondary: 'a' },
+	{ id: 'b', label: 'Beta', secondary: 'b' },
+	{ id: 'c', label: 'Gamma', secondary: 'c' }
 ];
 
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
@@ -57,9 +57,11 @@ async function openSelect(host: HTMLElement) {
 }
 
 async function renderPicker(props: {
-	items?: Array<{ id: string; label: string }>;
+	items?: Array<{ id: string; label: string; secondary?: string }>;
 	value?: number;
 	emptyMode?: 'hide' | 'firstOnly';
+	describedById?: string;
+	disabled?: boolean;
 	onChange?: (position: number) => void;
 }): Promise<{ host: HTMLElement; positions: number[] }> {
 	const positions: number[] = [];
@@ -73,6 +75,8 @@ async function renderPicker(props: {
 			items: props.items ?? items,
 			value,
 			emptyMode: props.emptyMode,
+			describedById: props.describedById,
+			disabled: props.disabled,
 			afterSelectLabel: 'Control to insert after',
 			onChange(next: number) {
 				positions.push(next);
@@ -236,5 +240,45 @@ describe('InsertPositionPicker', () => {
 		assert.equal(host.querySelector('input[type="radio"][value="after"]'), null);
 		assert.equal(host.querySelector('input[type="radio"][value="last"]'), null);
 		assert.equal(host.querySelector('[role="combobox"]'), null);
+	});
+
+	it('renders no secondary text for select options when items omit `secondary`', async () => {
+		const { host } = await renderPicker({
+			items: items.map(({ id, label }) => ({ id, label })),
+			value: items.length
+		});
+
+		await openSelect(host);
+		const options = [...document.querySelectorAll('[role="option"]')];
+		assert.deepEqual(
+			options.map((option) => option.textContent ?? ''),
+			['Alpha', 'Beta']
+		);
+		assert.equal(document.querySelector('[role="option"] p'), null);
+	});
+
+	it('gives each picker a distinct radio group name', async () => {
+		const first = await renderPicker({});
+		const second = await renderPicker({});
+
+		const nameOf = (host: HTMLElement) =>
+			host.querySelector<HTMLInputElement>('input[type="radio"][value="first"]')?.name;
+		const firstName = nameOf(first.host);
+		const secondName = nameOf(second.host);
+		assert.ok(firstName);
+		assert.ok(secondName);
+		assert.notEqual(firstName, secondName);
+		assert.notEqual(firstName, 'insertPosition');
+		for (const radio of first.host.querySelectorAll<HTMLInputElement>('input[type="radio"]')) {
+			assert.equal(radio.name, firstName);
+		}
+	});
+
+	it('links the radio group to `describedById` only when provided', async () => {
+		const described = await renderPicker({ describedById: 'hint-id' });
+		assert.equal(described.host.querySelector('[role="radiogroup"]')?.getAttribute('aria-describedby'), 'hint-id');
+
+		const plain = await renderPicker({});
+		assert.equal(plain.host.querySelector('[role="radiogroup"]')?.hasAttribute('aria-describedby'), false);
 	});
 });
