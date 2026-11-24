@@ -218,75 +218,68 @@ export function applyNodeSelectorMoveToValues(
 	};
 }
 
+/** Value atom for `fieldId` on an open stacked form whose model is `modelId`, if any. */
+function stackedFormFieldAtom(formsStackData: StableFormContextProps[], modelId: string, fieldId: string) {
+	for (const entry of formsStackData) {
+		const entryModelId = entry.itemMeta?.id ?? entry.props?.update?.modelId;
+		if (entryModelId == null || String(entryModelId) !== modelId) continue;
+		return entry.atoms?.valueByFieldId?.[fieldId];
+	}
+}
+
 /**
  * Applies a move to the root form atoms. Does not call `content.moveItem`; persistence waits for
  * the normal form save.
+ *
+ * When a stacked embed form is open, its field atoms can have unsaved items the root embed copy
+ * lacks. Those live lists are merged into the values tree before the splice, then written back
+ * after. Root-only stacks (`formsStackData.length === 1`) skip that path.
  */
 export function applyNodeSelectorMove(args: ApplyNodeSelectorMoveArgs): ApplyNodeSelectorMoveToValuesResult | null {
 	const { store, rootForm, formsStackData, ...valueArgs } = args;
 	const valueAtoms = rootForm.atoms?.valueByFieldId;
 	if (!valueAtoms) return null;
 
+	const sides = [valueArgs.source, valueArgs.target];
+	const stack = formsStackData && formsStackData.length > 1 ? formsStackData : null;
 	let rootValues = extractAtomValues(store, valueAtoms);
-	// Prefer live source/target lists from open stacked forms over stale embeds under the root.
-	if (formsStackData) {
-		for (const { modelId, fieldId } of [
-			{ modelId: valueArgs.source.modelId, fieldId: valueArgs.source.fieldId },
-			{ modelId: valueArgs.target.modelId, fieldId: valueArgs.target.fieldId }
-		]) {
+
+	// Merge live NS lists from open stacked forms into the values tree before splicing.
+	if (stack) {
+		for (const { modelId, fieldId } of sides) {
 			if (modelId === valueArgs.rootModelId) continue;
-			let live: NodeSelectorItem[] | undefined;
-			for (const entry of formsStackData) {
-				const entryModelId = entry.itemMeta?.id ?? entry.props?.update?.modelId;
-				if (entryModelId == null || String(entryModelId) !== modelId) continue;
-				const atom = entry.atoms?.valueByFieldId?.[fieldId];
-				if (atom) live = nodeSelectorItems(store.get(atom));
-			}
-			if (!live) continue;
-			const updated = updateModelFieldFromRoot(
+			const atom = stackedFormFieldAtom(stack, modelId, fieldId);
+			if (!atom) continue;
+			const patched = updateModelFieldFromRoot(
 				rootValues,
 				valueArgs.rootModelId,
 				valueArgs.rootContentType,
 				valueArgs.contentTypesById,
 				modelId,
 				fieldId,
-				() => live
+				() => nodeSelectorItems(store.get(atom))
 			);
-			if (updated) rootValues = updated.values;
+			if (patched) rootValues = patched.values;
 		}
 	}
 
-	const applied = applyNodeSelectorMoveToValues({
-		...valueArgs,
-		rootValues
-	});
+	const applied = applyNodeSelectorMoveToValues({ ...valueArgs, rootValues });
 	if (!applied) return null;
 
-	// Commit the move on the root form atoms (nested embeds live under these root NS fields).
 	for (const fieldId of applied.changedRootFieldIds) {
 		const atom = valueAtoms[fieldId];
 		if (atom) store.set(atom, applied.rootValues[fieldId]);
 	}
 
-	// Source/target may belong to an embedded model that currently has a stacked form open
-	// (e.g. editing Parent P and moving into P.children_o). That form keeps its own field atoms,
-	// separate from the root; without updating them it would show / save-back a stale list.
-	// Root fields are already committed above — do not re-write them from sourceItems/targetItems
-	// (sourceItems is post-remove only; a nested insert into the same root field would be lost).
-	// Skip when formsStackData is omitted (pure unit tests that only assert root atoms).
-	if (formsStackData) {
-		const fieldItems = [
-			{ modelId: valueArgs.source.modelId, fieldId: valueArgs.source.fieldId, items: applied.sourceItems },
-			{ modelId: valueArgs.target.modelId, fieldId: valueArgs.target.fieldId, items: applied.targetItems }
-		];
-		for (const { modelId, fieldId, items } of fieldItems) {
-			if (modelId === valueArgs.rootModelId) continue;
-			for (const entry of formsStackData) {
-				const entryModelId = entry.itemMeta?.id ?? entry.props?.update?.modelId;
-				if (entryModelId == null || String(entryModelId) !== modelId) continue;
-				const atom = entry.atoms?.valueByFieldId?.[fieldId];
-				if (atom) store.set(atom, items);
-			}
+	// Write post-move lists back onto open stacked forms (skip root — already committed above).
+	if (stack) {
+		for (const [side, items] of [
+			[valueArgs.source, applied.sourceItems],
+			[valueArgs.target, applied.targetItems]
+		] as const) {
+			if (side.modelId === valueArgs.rootModelId) continue;
+			const atom = stackedFormFieldAtom(stack, side.modelId, side.fieldId);
+			if (atom) store.set(atom, items);
 		}
 	}
 
