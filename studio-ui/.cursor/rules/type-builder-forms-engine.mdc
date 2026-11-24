@@ -31,7 +31,7 @@ Site sandboxes (source of truth for form-definitions / site config — **not** t
 | editorial  | `$CRAFTER_AUTHORING_HOME/crafter-authoring/data/repos/sites/editorial/sandbox`     |
 | craftercms | `$CRAFTER_AUTHORING_HOME/crafter-authoring/data/repos/sites/craftercmscom/sandbox` |
 
-When diagnosing control/DS behavior, open the live site's `config/studio/content-types/**/form-definition.xml` (and `config/studio/administration/site-config-tools.xml` for DS descriptors). Repo-local sample form-definitions are convenience references only.
+When diagnosing control/DS behavior, open the live site's `config/studio/content-types/**/form-definition.xml`. Repo-local sample form-definitions are convenience references only.
 
 ## After durable findings
 
