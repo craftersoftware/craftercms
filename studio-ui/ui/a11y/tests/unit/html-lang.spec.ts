@@ -23,7 +23,7 @@ const repoRoot = join(__dirname, '../../../../../');
 
 /**
  * Studio templates, Engine templates and the default site, Studio notification mail,
- * and deployer mail. TinyMCE v2 is vendored and out of scope.
+ * and deployer mail.
  */
 const templateRoots = [
 	'studio-ui/templates',
@@ -41,8 +41,7 @@ test('template documents set lang on the html element', () => {
 	for (const root of templateRoots) {
 		const files = readdirSync(join(repoRoot, root), { recursive: true })
 			.map(String)
-			.filter((file) => file.endsWith('.ftl') || file.endsWith('.html'))
-			.filter((file) => !file.split(sep).join('/').includes('tinymce/v2'));
+			.filter((file) => file.endsWith('.ftl') || file.endsWith('.html'));
 		for (const file of files) {
 			const relative = join(root, file);
 			const source = readFileSync(join(repoRoot, relative), 'utf8');
