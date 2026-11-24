@@ -167,7 +167,7 @@ export function MoveToFieldDialogBody(props: MoveToFieldDialogProps) {
 						>
 							{!selectedTarget && (
 								<Typography variant="body2" color="text.secondary">
-									<FormattedMessage defaultMessage="Select an item to choose its insert position." />
+									<FormattedMessage defaultMessage="Select a destination field to choose the insert position." />
 								</Typography>
 							)}
 							<InsertPositionPicker
