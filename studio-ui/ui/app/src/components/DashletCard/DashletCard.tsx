@@ -93,9 +93,12 @@ export function nodeHasName(node: React.ReactNode): boolean {
  * descendant. The toggle's own aria-label (the fallback) is not counted.
  */
 function renderedHasName(button: HTMLElement): boolean {
+	// Content under aria-hidden or hidden is not part of the name.
+	const shown = button.cloneNode(true) as HTMLElement;
+	shown.querySelectorAll('[aria-hidden="true"], [hidden]').forEach((element) => element.remove());
 	return (
-		(button.textContent ?? '').trim() !== '' ||
-		button.querySelector('img[alt]:not([alt=""]), [aria-label]:not([aria-label=""])') !== null
+		(shown.textContent ?? '').trim() !== '' ||
+		shown.querySelector('img[alt]:not([alt=""]), [aria-label]:not([aria-label=""])') !== null
 	);
 }
 
@@ -151,7 +154,7 @@ export function DashletCard(props: DashletCardProps) {
 			subtree: true,
 			characterData: true,
 			attributes: true,
-			attributeFilter: ['alt', 'aria-label']
+			attributeFilter: ['alt', 'aria-label', 'aria-hidden', 'hidden']
 		});
 		return () => observer.disconnect();
 	}, [renderCardHeader, isToggleable]);

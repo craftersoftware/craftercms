@@ -185,4 +185,24 @@ describe('dashlet header toggle name', () => {
 		assert.equal(button.textContent, '0');
 		assert.equal(button.hasAttribute('aria-label'), false);
 	});
+
+	it('names the toggle when the title text is aria-hidden', async () => {
+		const host = await render({ title: React.createElement('span', { 'aria-hidden': 'true' }, 'Activity') });
+		const button = toggle(host);
+		assert.ok(button);
+		assert.equal(button.getAttribute('aria-label'), 'Toggle section');
+	});
+
+	it('follows a title that is hidden and shown again', async () => {
+		const host = await render({ title: React.createElement('span', { id: 'title' }, 'Activity') });
+		const button = toggle(host);
+		assert.ok(button);
+		const title = host.querySelector('#title');
+		assert.ok(title);
+		assert.equal(button.hasAttribute('aria-label'), false);
+		await act(async () => title.setAttribute('aria-hidden', 'true'));
+		assert.equal(button.getAttribute('aria-label'), 'Toggle section');
+		await act(async () => title.removeAttribute('aria-hidden'));
+		assert.equal(button.hasAttribute('aria-label'), false);
+	});
 });
