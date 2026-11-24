@@ -28,8 +28,11 @@ import Box from '@mui/material/Box';
 import { visuallyHidden } from '@mui/utils';
 
 export interface InsertPositionPickerItem {
+	/** Stable identity (React key and select value). Not rendered. */
 	id: string;
 	label: string;
+	/** Optional secondary text rendered under the label. */
+	secondary?: string;
 }
 
 export type InsertPositionPickerEmptyMode = 'hide' | 'firstOnly';
@@ -44,6 +47,8 @@ export interface InsertPositionPickerProps {
 	afterSelectLabel: ReactNode;
 	/** How to render when `items` is empty. Defaults to `hide`. */
 	emptyMode?: InsertPositionPickerEmptyMode;
+	/** Id of an element describing the position radio group (e.g. a hint). */
+	describedById?: string;
 }
 
 type PositionMode = 'first' | 'after' | 'last';
@@ -79,9 +84,10 @@ function PositionOption({
  * The select lists every item except the last; "Insert last" covers that case.
  */
 export function InsertPositionPicker(props: InsertPositionPickerProps) {
-	const { items, value, onChange, disabled = false, afterSelectLabel, emptyMode = 'hide' } = props;
+	const { items, value, onChange, disabled = false, afterSelectLabel, emptyMode = 'hide', describedById } = props;
 	const length = items.length;
 	const groupLabelId = useId();
+	const groupName = useId();
 	const afterRadioId = useId();
 	const afterSelectLabelId = useId();
 
@@ -110,7 +116,8 @@ export function InsertPositionPicker(props: InsertPositionPickerProps) {
 			</FormLabel>
 			<RadioGroup
 				aria-labelledby={groupLabelId}
-				name="insertPosition"
+				aria-describedby={describedById}
+				name={groupName}
 				value={length === 0 ? 'first' : mode}
 				onChange={(_, next) => selectMode(next as PositionMode)}
 				sx={{ gap: 0.5, mt: 0.5, maxWidth: '100%' }}
@@ -147,7 +154,7 @@ export function InsertPositionPicker(props: InsertPositionPickerProps) {
 											<MenuItem key={item.id} value={item.id} onClick={() => onChange(index + 1)}>
 												<ListItemText
 													primary={item.label}
-													secondary={item.id}
+													secondary={item.secondary}
 													slotProps={{ primary: { noWrap: true }, secondary: { noWrap: true } }}
 												/>
 											</MenuItem>
