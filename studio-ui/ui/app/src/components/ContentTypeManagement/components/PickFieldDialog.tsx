@@ -89,7 +89,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 		() =>
 			(typesCurrentList ?? []).map((item) => ({
 				id: item.id,
-				label: item.title ?? item.name ?? item.id
+				label: item.title || item.name || item.id
 			})),
 		[typesCurrentList]
 	);
