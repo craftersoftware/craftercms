@@ -379,3 +379,44 @@ describe('NodeSelector reorder dialog', () => {
 		assert.ok(dialog.querySelector(`button[aria-label="Move up: ${gamma}"]`));
 	});
 });
+
+describe('NodeSelector saved component label', () => {
+	it('stores a blank label when the saved component has no internal-name', async () => {
+		const store = createItemsStore({
+			...baseItems(),
+			[formPath]: { ...baseItems()[formPath], stateMap: {} }
+		});
+		const entry = createEntry(['nodes_o']);
+		let next: Array<{ value?: string }> | undefined;
+		const host = await mountTree(
+			store,
+			React.createElement(
+				FormHost,
+				{ entry },
+				React.createElement(NodeSelector as never, {
+					field: fieldFor('nodes_o', 'node-selector'),
+					value: [{ key: 'hero', value: 'Hero', component: { objectId: 'hero', 'file-name': 'hero.xml' } }],
+					setValue: (value: Array<{ value?: string }>) => {
+						next = value;
+					},
+					readonly: false,
+					autoFocus: false,
+					contentType: { id: '/component/thing', fields: {} }
+				})
+			)
+		);
+		const edit = host.querySelector<HTMLButtonElement>('button[aria-label="Edit Hero"]');
+		assert.ok(edit);
+		await act(async () => {
+			edit.click();
+		});
+		const opened = pushFormCalls.at(-1) as {
+			onSave?: (result: { values: Record<string, unknown> }) => Promise<unknown>;
+		};
+		assert.ok(opened?.onSave);
+		await opened.onSave({ values: { objectId: 'hero', 'file-name': 'hero.xml' } });
+		assert.equal(next?.[0].value, '');
+		await opened.onSave({ values: { objectId: 'hero', 'file-name': 'hero.xml', 'internal-name': 'Hero title' } });
+		assert.equal(next?.[0].value, 'Hero title');
+	});
+});

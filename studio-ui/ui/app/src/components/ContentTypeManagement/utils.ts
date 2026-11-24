@@ -19,6 +19,7 @@ import type {
 	ContentTypeFieldValidation,
 	ContentTypeSection,
 	DataSource,
+	FormDefinitionPlugin,
 	LegacyDataSource,
 	LegacyFormDefinitionField,
 	LegacyFormDefinitionProperty,
@@ -82,6 +83,7 @@ import { XmlKeys } from '../FormsEngine/lib/formConsts';
 import { getPossibleTranslation } from '../../utils/i18n';
 import { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { commonControlFieldsDescriptors, defaultDataSourcesSection } from './descriptors/controls/commonDescriptors';
+import internalNameDescriptor from './descriptors/controls/internalName';
 
 // TODO: assess which of the utils here should go to utils/contentType.ts, or other places (serializers, etc.)
 
@@ -153,6 +155,50 @@ export const systemFieldsTypesMap: Partial<Record<BuiltInControlType, string>> =
 	[XmlKeys['disabled']]: 'checkbox',
 	[XmlKeys['internalName']]: 'input'
 };
+
+/**
+ * Whether the field is the Internal Name system field as Type Builder stores it: the reserved `internal-name` id with
+ * type `input` (see {@link systemFieldsTypesMap}). Type Builder is strict here because it swaps the properties
+ * descriptor and the constraints it keeps. FE2's required rules identify the field by id alone, as FE1 did
+ * (`isInternalNameField` in FormsEngine/lib/minimumSaveRequirements.ts). See craftersoftware/craftercms#9505.
+ */
+export function isInternalNameSystemInput(field: Pick<ContentTypeField, 'id' | 'type'> | null | undefined): boolean {
+	return field?.id === XmlKeys.internalName && field.type === systemFieldsTypesMap[XmlKeys.internalName];
+}
+
+/**
+ * Resolves the properties-form descriptor for an existing field, giving the Internal Name system field its dedicated
+ * descriptor instead of the generic `input` one.
+ *
+ * Internal Name is stored in the content type XML as `<type>input</type>` and that is intentional: every blueprint
+ * stores it that way, and the stored type is what FE1/FE2 use to render it and what Engine/GraphQL and search expect.
+ * Looking the descriptor up by field type alone would therefore hand Internal Name the `input` descriptor, which offers
+ * options (e.g. a `required` toggle) that do not apply to it: the field is always required when the type defines it.
+ * So, when editing an existing field, identity (`id === 'internal-name'` and stored type `input`) rather than type
+ * selects the descriptor. This mirrors what inserting the field already does through {@link systemFieldsTypesMap}.
+ * A field with the `internal-name` id but another type is not the system field, so it keeps its own type's descriptor.
+ *
+ * Alternatives that were considered and rejected: special-casing the Required checkbox in the generic properties form
+ * (leaks field identity into a generic form and leaves the wrong descriptor in place), and migrating content types to a
+ * new `internal-name` stored type through the Upgrade Manager (breaks the compatibility described above).
+ * See craftersoftware/craftercms#9505.
+ *
+ * Call sites keep their own by-type lookup, and with it their own precedence between built-in and plugin descriptors
+ * (it differs between call sites), by passing its result as `descriptorByType`. It is returned for every field that is
+ * not the Internal Name system field.
+ *
+ * @param field The existing field (only `id` and `type` are used).
+ * @param descriptorByType The descriptor the caller's lookup by `field.type` found, if any.
+ */
+export function resolveFieldControlDescriptor(
+	field: Pick<ContentTypeField, 'id' | 'type'>,
+	descriptorByType?: DescriptorContentType | null
+): DescriptorContentType | undefined {
+	if (isInternalNameSystemInput(field)) {
+		return internalNameDescriptor;
+	}
+	return descriptorByType ?? undefined;
+}
 
 // Some system fields have a pre-set id which is not editable.
 export type readOnlyFieldIdsType = 'disabled' | 'file-name' | 'internal-name' | 'placeInNav' | 'navLabel';
@@ -339,11 +385,16 @@ export function reverseTypeFieldValuesObject(
 			for (validationKey in mergedValidations) {
 				// A count-limit constraint is not a runtime validation. Save writes it from minCount.
 				if (countLimitKeys.has(validationKey)) continue;
+				// The maxlength property is mapped from properties to `field.validations` as `maxLength`.
+				const valueKey = validationKey === 'maxLength' ? 'maxlength' : validationKey;
 				validations[validationKey as ValidationKeys] = { ...mergedValidations[validationKey as ValidationKeys] };
+				// Scoped to Internal Name: its descriptor no longer lists `required` (it is always required, see #9505), so
+				// the form has no value for a stored `required`. Keep the stored constraint as is instead of clearing it.
+				// Every other control keeps clearing a constraint that has no form value.
+				if (isInternalNameSystemInput(field) && !(valueKey in values)) continue;
 				validations[validationKey as ValidationKeys].value =
 					// TODO: Should we use upgrade manager to remove from properties and into constraints?
-					// The maxlength property is mapped from properties to `field.validations` as `maxLength`.
-					values[validationKey === 'maxLength' ? 'maxlength' : validationKey];
+					values[valueKey];
 			}
 		} else {
 			// See notes on `contentTypeFieldToXmlNameMap` declaration.
@@ -1207,4 +1258,60 @@ export function getPropertiesAndValidationsFromDescriptor(descriptor: Descriptor
 	});
 
 	return { properties, validations };
+}
+
+export function getNewFieldFromDescriptor(
+	fieldType: string,
+	descriptor: DescriptorContentType,
+	configEntry?: { plugin?: FormDefinitionPlugin; descriptor?: DescriptorContentType }
+): NewContentTypeField {
+	const newField: NewContentTypeField = {
+		NEW: true,
+		id: systemFieldsIdsMap[fieldType] ?? null,
+		name: '',
+		helpText: '',
+		description: '',
+		type: systemFieldsTypesMap[fieldType] ?? fieldType,
+		validations: {},
+		defaultValue: '',
+		properties: {}
+	};
+	if (!descriptor) return newField;
+
+	if (descriptor.id === 'repeat') newField.fields = {};
+	const { properties, validations } = getPropertiesAndValidationsFromDescriptor(descriptor);
+
+	newField.properties = properties;
+	newField.validations = validations;
+	const plugin = extractPluginLocatorFromConfigEntry(configEntry);
+	if (plugin) {
+		Object.assign(newField.properties, { plugin });
+	}
+
+	return newField;
+}
+
+export function extractPluginLocatorFromConfigEntry(
+	configEntry?: { plugin?: FormDefinitionPlugin | Record<string, unknown> } & Record<string, unknown>
+): FormDefinitionPlugin | undefined {
+	if (!configEntry?.plugin || typeof configEntry.plugin !== 'object') return undefined;
+	const raw = configEntry.plugin as Record<string, unknown>;
+	// ui.xml attribute form: <plugin id type name fileName />; form-definition uses pluginId/filename.
+	const type = raw.type;
+	const name = raw.name;
+	const filename = raw.filename ?? raw.fileName ?? raw.file;
+	const pluginId = raw.pluginId ?? raw.id;
+	if (
+		typeof type === 'string' &&
+		typeof name === 'string' &&
+		typeof filename === 'string' &&
+		typeof pluginId === 'string' &&
+		type &&
+		name &&
+		filename &&
+		pluginId
+	) {
+		return { type, name, filename, pluginId };
+	}
+	return undefined;
 }

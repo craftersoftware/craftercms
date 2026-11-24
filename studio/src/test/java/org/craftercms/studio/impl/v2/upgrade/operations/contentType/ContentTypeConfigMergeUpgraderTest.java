@@ -122,4 +122,55 @@ public class ContentTypeConfigMergeUpgraderTest {
 					"The result XML should be equal to the expected XML");
 		}
 	}
+
+	/**
+	 * A {@code noThumbnail} element already stored on the form definition is left as-is.
+	 * The element in {@code config.xml} is not copied over it.
+	 */
+	@Test
+	public void testExistingNoThumbnailIsLeftUntouched() throws Exception {
+		String basePath = "src/test/resources/crafter/studio/upgrade/content-type/5.0/5.0.0.2/";
+		String existingNoThumbnail = "    <noThumbnail>true</noThumbnail>\n";
+		String formXml = IOUtils.toString(new FileInputStream(basePath + "form-definition.xml"), StandardCharsets.UTF_8)
+				.replace("</form>", existingNoThumbnail + "</form>");
+		// config.xml still has <noThumbnail>false</noThumbnail>; the upgraded form must keep the original true value
+		// and must not gain a second copy from config.xml. Copied fields are appended after existing form children.
+		String expectedXml = IOUtils.toString(new FileInputStream(basePath + "expected.xml"), StandardCharsets.UTF_8)
+				.replace("    <previewable>", existingNoThumbnail + "    <previewable>");
+
+		Path configFilePath = getStudioTemporaryFilesRoot().resolve(configFileName);
+		Path formFilePath = createTempFile("form-definition.xml");
+		formFilePath.toFile().deleteOnExit();
+		configFilePath.toFile().deleteOnExit();
+		Files.writeString(formFilePath, formXml);
+		Files.copy(Path.of(basePath + "config.xml"), configFilePath, StandardCopyOption.REPLACE_EXISTING);
+
+		StudioUpgradeContext context = mock(StudioUpgradeContext.class);
+		when(context.getTarget()).thenReturn("test-site");
+		when(context.getRepositoryPath()).thenReturn(Path.of(getStudioTemporaryFilesRoot().toString()));
+		when(context.getFile(getStudioTemporaryFilesRoot().relativize(formFilePath).toString())).thenReturn(formFilePath);
+
+		(doReturn(Stream.of(formFilePath)).when(upgrader)).getPaths(any());
+
+		upgrader.doExecute(context);
+
+		try (InputStream actualIn = new FileInputStream(formFilePath.toFile())) {
+			String actualXml = IOUtils.toString(actualIn, StandardCharsets.UTF_8);
+
+			Diff diff = DiffBuilder
+					.compare(expectedXml)
+					.withTest(actualXml)
+					.ignoreWhitespace()
+					.ignoreComments()
+					.checkForSimilar()
+					.build();
+
+			if (diff.hasDifferences()) {
+				logger.debug(actualXml);
+			}
+
+			assertEquals(0, IterableUtils.size(diff.getDifferences()),
+					"An existing noThumbnail in form-definition.xml should be left untouched");
+		}
+	}
 }

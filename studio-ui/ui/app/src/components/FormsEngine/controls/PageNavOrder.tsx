@@ -52,7 +52,7 @@ import Alert from '@mui/material/Alert';
 import { composePathForType, isFieldReadOnly } from '../lib/formUtils';
 import { getParentPath } from '../../../utils/path';
 import { nou } from '../../../utils/object';
-import { PrimitiveAtom, useAtomValue, useStore } from 'jotai';
+import { atom, PrimitiveAtom, useAtomValue, useStore } from 'jotai';
 import { XmlKeys } from '../lib/formConsts';
 import { useControlAria } from '../components/useControlAria';
 import visuallyHidden from '@mui/utils/visuallyHidden';
@@ -60,6 +60,9 @@ import visuallyHidden from '@mui/utils/visuallyHidden';
 export type PageNavOrderProps = ControlProps<boolean>;
 
 const ORDER_DEFAULT_FIELD_ID = 'orderDefault_f';
+
+/** A page can place itself in nav without defining an internal-name field. `useAtomValue` needs an atom. */
+const emptyInternalNameAtom = atom('');
 
 function PageNavChoices({
 	value,
@@ -132,7 +135,10 @@ export function PageNavOrder(props: PageNavOrderProps) {
 	const formContext = useStableFormContext();
 	const jotaiStore = useStore();
 	const fileName = useAtomValue(formContext.atoms.fileName as PrimitiveAtom<string>);
-	const internalName = useAtomValue(formContext.atoms.valueByFieldId[XmlKeys.internalName] as PrimitiveAtom<string>);
+	const internalName = useAtomValue(
+		(formContext.atoms.valueByFieldId[XmlKeys.internalName] as PrimitiveAtom<string> | undefined) ??
+			emptyInternalNameAtom
+	);
 	// Create mode has no ContentItem yet — compose the eventual path from the create folder + file name.
 	const currentPath = itemPath ?? (fileName ? composePathForType(pathInSite, fileName, contentType) : undefined);
 	const pageLabel = itemLabel || internalName || fileName || currentPath || '';
