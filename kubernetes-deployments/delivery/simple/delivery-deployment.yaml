@@ -182,6 +182,7 @@ spec:
         # Deployer container
         - name: deployer
           image: craftercms/deployer:5.0.0-SNAPSHOT
+          imagePullPolicy: "Always"
           startupProbe:
             httpGet:
               path: /api/1/monitoring/status
