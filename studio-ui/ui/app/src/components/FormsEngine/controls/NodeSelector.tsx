@@ -241,7 +241,12 @@ function NodeSelector(props: NodeSelectorProps) {
 	const { rootRef, remember, announcement } = useReorderFocus(value);
 	const { addButtonRef, fallbackRef, rememberEmpty } = useRestoreFocusWhenEmpty(value);
 	const rowKeys = useOccurrenceKeys(value);
-	const onSortChange = (next: TItem<NodeSelectorItem>[]) => setValue(next.map((item) => item.data));
+	const { closeSnackbar } = useSnackbar();
+	const dismissMoveSnackbar = () => closeSnackbar(MOVE_TO_FIELD_SNACKBAR_KEY);
+	const onSortChange = (next: TItem<NodeSelectorItem>[]) => {
+		dismissMoveSnackbar();
+		setValue(next.map((item) => item.data));
+	};
 	const handleCancelReorder = () => setSortMode(false);
 	const onReorder = () => setSortMode(true);
 	// Only the items this field shows. `value[].key` is looked up on view, and `include` drives the row state and display.
@@ -283,8 +288,6 @@ function NodeSelector(props: NodeSelectorProps) {
 	const [pickerDialogOpen, setPickerDialogOpen] = useState(false);
 	const [createPickerChoice, setCreatePickerChoice] = useState<CreateDataSourcePickerData>(null);
 	const dispatch = useDispatch();
-	const { closeSnackbar } = useSnackbar();
-	const dismissMoveSnackbar = () => closeSnackbar(MOVE_TO_FIELD_SNACKBAR_KEY);
 	const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLButtonElement | null>(null);
 	const [itemMenu, setItemMenu] = useState<{ anchor: HTMLElement; index: number } | null>(null);
 	const [moveDialogIndex, setMoveDialogIndex] = useState<number | null>(null);
@@ -311,6 +314,7 @@ function NodeSelector(props: NodeSelectorProps) {
 		} else {
 			rememberEmpty();
 		}
+		dismissMoveSnackbar();
 		setValue(nextValue);
 	};
 	const handleViewItem = (event: { stopPropagation(): void }, index: number) => {
@@ -469,7 +473,10 @@ function NodeSelector(props: NodeSelectorProps) {
 			value,
 			allowDuplicates
 		);
-		if (newItems.length) setValue(validItems);
+		if (newItems.length) {
+			dismissMoveSnackbar();
+			setValue(validItems);
+		}
 		if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 	};
 	const executeDataSourceOption = (
@@ -514,6 +521,7 @@ function NodeSelector(props: NodeSelectorProps) {
 							value,
 							allowDuplicates
 						);
+						dismissMoveSnackbar();
 						setValue(validItems);
 						if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 					}
@@ -553,6 +561,7 @@ function NodeSelector(props: NodeSelectorProps) {
 							value,
 							allowDuplicates
 						);
+						dismissMoveSnackbar();
 						setValue(validItems);
 						if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 					}
@@ -595,6 +604,7 @@ function NodeSelector(props: NodeSelectorProps) {
 							value,
 							allowDuplicates
 						);
+						dismissMoveSnackbar();
 						setValue(validItems);
 						if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 						return Promise.resolve({ close: true });
@@ -635,6 +645,7 @@ function NodeSelector(props: NodeSelectorProps) {
 								value,
 								allowDuplicates
 							);
+							dismissMoveSnackbar();
 							setValue(validItems);
 							if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 						}
