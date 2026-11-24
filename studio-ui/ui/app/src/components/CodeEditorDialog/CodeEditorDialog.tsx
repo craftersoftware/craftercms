@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 import { useIntl } from 'react-intl';
 import translations from './translations';
 import { CodeEditorDialogContainer } from './CodeEditorDialogContainer';
@@ -37,10 +37,12 @@ export function CodeEditorDialog(props: CodeEditorDialogProps) {
 		...rest
 	} = props;
 	const title = formatMessage(translations.title);
+	const titleId = useId();
 	return (
 		<EnhancedDialog
 			title={title}
 			omitHeader
+			aria-labelledby={titleId}
 			maxWidth={false}
 			slotProps={{
 				paper: {
@@ -60,6 +62,7 @@ export function CodeEditorDialog(props: CodeEditorDialogProps) {
 				path={path}
 				mode={mode}
 				title={title}
+				titleId={titleId}
 				onMinimize={onMinimize}
 				readonly={readonly}
 				contentType={contentType}

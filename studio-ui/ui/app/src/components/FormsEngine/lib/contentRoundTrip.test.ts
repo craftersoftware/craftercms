@@ -36,9 +36,18 @@ const { createStore } = await import('jotai');
 const { getItemDataSourceId, parseLegacyFormDefinition } = await import('../../../services/contentTypes.ts');
 const { deserialize, entityEncodingTagValueProcessor, fromString } = await import('../../../utils/xml.ts');
 const { createParsedValuesObject, deserializeContentDoc } = await import('./valueRetrievers.ts');
+const {
+	complementValuesWithSystemProps,
+	composePathForType,
+	createObjectWithSystemProps,
+	embeddedFileName,
+	extractAtomValues,
+	folderNameElementForXml,
+	getBasePath,
+	setFieldAtoms,
+	xmlFileNamesForPath
+} = await import('./formUtils.tsx');
 const { buildContentXml } = await import('./valueSerializers.ts');
-const { complementValuesWithSystemProps, createObjectWithSystemProps, extractAtomValues, setFieldAtoms } =
-	await import('./formUtils.tsx');
 const { XmlKeys, xmlDataSourceAttribute } = await import('./formConsts.ts');
 const { itemsFromTaxonomyDoc } = await import('../dataSources/modules/simpleTaxonomy.ts');
 const { parseConfiguredListItems } = await import('../dataSources/modules/configuredList.ts');
@@ -66,8 +75,12 @@ function parseType(xml: string) {
 	);
 }
 
-/** Open the item for edit and save it without changes, as FormsEngine and useSaveForm do. */
-function saveWithoutChanges(xml: string, contentTypesById: Record<string, ContentType>): Document {
+/**
+ * Open the item for edit and save it without changes, as FormsEngine and useSaveForm do.
+ * `itemPath` is the repo path when known; without it, embeds pass the stored `<file-name>`
+ * (or `{objectId}.xml` when the element is missing).
+ */
+function saveWithoutChanges(xml: string, contentTypesById: Record<string, ContentType>, itemPath?: string): Document {
 	const contentObject = deserializeContentDoc(fromString(xml));
 	const contentType = contentTypesById[contentObject[XmlKeys.contentTypeId] as string];
 	const atoms = { valueByFieldId: {}, validationByFieldId: {} } as FormsEngineAtoms;
@@ -84,14 +97,23 @@ function saveWithoutChanges(xml: string, contentTypesById: Record<string, Conten
 				atoms,
 				value,
 				undefined,
-				isAdditional
+				isAdditional,
+				itemPath
 			)
 	);
 	const saved = extractAtomValues(createStore(), atoms.valueByFieldId);
-	complementValuesWithSystemProps(values[XmlKeys.modelId] as string, saved, contentObject, contentType, false);
-	const withoutFileName = { ...saved };
-	delete withoutFileName[XmlKeys.fileName];
-	return fromString(buildContentXml(withoutFileName, contentTypesById));
+	const objectId = values[XmlKeys.modelId] as string;
+	complementValuesWithSystemProps(objectId, saved, contentObject, contentType, false);
+	const savedXml = itemPath
+		? buildContentXml({ ...saved, ...xmlFileNamesForPath(itemPath) }, contentTypesById)
+		: (() => {
+				saved[XmlKeys.fileName] = embeddedFileName(
+					objectId,
+					contentObject[XmlKeys.fileName] as string | null | undefined
+				);
+				return buildContentXml(saved, contentTypesById);
+			})();
+	return fromString(savedXml);
 }
 
 /** Element path => text, and element path@attribute => value. Item paths carry their index. */
@@ -108,6 +130,156 @@ function flatten(element: Element, prefix = '', out = new Map<string, string>())
 
 const blueprints = existsSync(blueprintsDir) ? readdirSync(blueprintsDir) : [];
 
+const field = (id: string, type: string, extra = '') =>
+	`<field><type>${type}</type><id>${id}</id><title>${id}</title><properties></properties><constraints></constraints>${extra}</field>`;
+
+describe('xmlFileNamesForPath', () => {
+	it('uses the path basename and page folder slug for pages and components', () => {
+		assert.deepEqual(xmlFileNamesForPath('/site/website/about/index.xml'), {
+			[XmlKeys.fileName]: 'index.xml',
+			[XmlKeys.folderName]: 'about'
+		});
+		assert.deepEqual(xmlFileNamesForPath('/site/components/headers/header.xml'), {
+			[XmlKeys.fileName]: 'header.xml',
+			[XmlKeys.folderName]: ''
+		});
+	});
+});
+
+describe('embeddedFileName', () => {
+	it('keeps the stored name and falls back to {objectId}.xml', () => {
+		assert.equal(embeddedFileName('c646ba89-a4c3-308f-3492-93be61429fec'), 'c646ba89-a4c3-308f-3492-93be61429fec.xml');
+		assert.equal(embeddedFileName('abc'), 'abc.xml');
+		assert.equal(embeddedFileName('abc', 'manual-name.xml'), 'manual-name.xml');
+		assert.equal(embeddedFileName('abc', null), 'abc.xml');
+	});
+});
+
+describe('folderNameElementForXml', () => {
+	it('uses the page folder slug, blank for home, and blank for components', () => {
+		assert.equal(folderNameElementForXml('/site/website/about/index.xml'), 'about');
+		assert.equal(folderNameElementForXml('/site/website/health/index.xml'), 'health');
+		assert.equal(folderNameElementForXml('/site/website/index.xml'), '');
+		assert.equal(folderNameElementForXml('/site/components/headers/header.xml'), '');
+	});
+});
+
+/**
+ * Same XML-building step useSaveForm runs before writeContent / onSave.
+ * Returns repository XML, the values object handed to onSave/the parent, and name elements in that XML.
+ */
+function saveFileNameOutcome(
+	slug: string,
+	contentType: ContentType,
+	target: { path: string } | { embeddedObjectId: string; storedFileName?: string | null }
+) {
+	const values: Record<string, unknown> = {
+		[XmlKeys.contentTypeId]: contentType.id,
+		[XmlKeys.modelId]: '0123abcd-0000-0000-0000-000000000000',
+		[XmlKeys.fileName]: slug,
+		[XmlKeys.folderName]: 'stale-folder',
+		[XmlKeys.internalName]: 'Label'
+	};
+	const types = { [contentType.id]: contentType };
+	const xml =
+		'path' in target
+			? buildContentXml({ ...values, ...xmlFileNamesForPath(target.path) }, types)
+			: (() => {
+					values[XmlKeys.fileName] = embeddedFileName(target.embeddedObjectId, target.storedFileName);
+					return buildContentXml(values, types);
+				})();
+	const root = fromString(xml).documentElement;
+	return {
+		xml,
+		values,
+		xmlFileName: root.querySelector(':scope > file-name')?.textContent,
+		xmlFolderName: root.querySelector(':scope > folder-name')?.textContent
+	};
+}
+
+const pageType = parseType(`<form><title>T</title><content-type>/page/t</content-type><objectType>page</objectType>
+	<properties></properties><sections><section><title>S</title><fields>
+	${field('file-name', 'file-name')}${field('internal-name', 'input')}
+	</fields></section></sections></form>`);
+const componentType = parseType(
+	`<form><title>C</title><content-type>/component/c</content-type><objectType>component</objectType>
+	<properties></properties><sections><section><title>S</title><fields>
+	${field('file-name', 'file-name')}${field('internal-name', 'input')}
+	</fields></section></sections></form>`
+);
+
+describe('useSaveForm file-name (xmlFileNamesForPath / embeddedFileName)', () => {
+	it('create writes the path basename in XML and keeps the UI slug on values for onSave', () => {
+		const path = composePathForType('/site/website/', 'about', pageType);
+		const { xmlFileName, xmlFolderName, values } = saveFileNameOutcome('about', pageType, { path });
+		assert.equal(path, '/site/website/about/index.xml');
+		assert.equal(xmlFileName, 'index.xml');
+		assert.equal(xmlFolderName, 'about');
+		assert.equal(values[XmlKeys.fileName], 'about');
+		assert.equal(values[XmlKeys.folderName], 'stale-folder');
+	});
+
+	it('plain update writes the path basename in XML and keeps the UI slug on values for onSave', () => {
+		const path = '/site/website/about/index.xml';
+		const { xmlFileName, xmlFolderName, values } = saveFileNameOutcome('about', pageType, { path });
+		assert.equal(xmlFileName, 'index.xml');
+		assert.equal(xmlFolderName, 'about');
+		assert.equal(values[XmlKeys.fileName], 'about');
+
+		const componentPath = '/site/components/headers/header.xml';
+		const component = saveFileNameOutcome('header', componentType, { path: componentPath });
+		assert.equal(component.xmlFileName, 'header.xml');
+		assert.equal(component.xmlFolderName, '');
+		assert.equal(component.values[XmlKeys.fileName], 'header');
+	});
+
+	it('rename writes the new path basename and folder-name in XML and keeps the new UI slug on values for onSave', () => {
+		const itemPath = '/site/website/health/index.xml';
+		const path = composePathForType(getBasePath(itemPath, true), 'wellness', pageType);
+		const { xmlFileName, xmlFolderName, values } = saveFileNameOutcome('wellness', pageType, { path });
+		assert.equal(path, '/site/website/wellness/index.xml');
+		assert.equal(xmlFileName, 'index.xml');
+		assert.equal(xmlFolderName, 'wellness');
+		assert.equal(values[XmlKeys.fileName], 'wellness');
+		assert.equal(values[XmlKeys.folderName], 'stale-folder');
+
+		const componentItemPath = '/site/components/headers/header.xml';
+		const componentPath = composePathForType(getBasePath(componentItemPath, false), 'footer', componentType);
+		const component = saveFileNameOutcome('footer', componentType, { path: componentPath });
+		assert.equal(componentPath, '/site/components/headers/footer.xml');
+		assert.equal(component.xmlFileName, 'footer.xml');
+		assert.equal(component.xmlFolderName, '');
+		assert.equal(component.values[XmlKeys.fileName], 'footer');
+	});
+
+	it('embedded with no stored file-name writes {objectId}.xml into both the XML and the values object parents merge', () => {
+		const objectId = 'c646ba89-a4c3-308f-3492-93be61429fec';
+		const { xmlFileName, values } = saveFileNameOutcome('', componentType, { embeddedObjectId: objectId });
+		assert.equal(xmlFileName, `${objectId}.xml`);
+		assert.equal(values[XmlKeys.fileName], `${objectId}.xml`);
+	});
+	it('embedded keeps its stored file-name (stacked: no atom value; root: parent slug in the atom)', () => {
+		const objectId = 'c646ba89-a4c3-308f-3492-93be61429fec';
+		for (const slug of ['', 'about']) {
+			const { xmlFileName, values } = saveFileNameOutcome(slug, componentType, {
+				embeddedObjectId: objectId,
+				storedFileName: 'manual-name.xml'
+			});
+			assert.equal(xmlFileName, 'manual-name.xml', slug);
+			assert.equal(values[XmlKeys.fileName], 'manual-name.xml', slug);
+		}
+	});
+	it('root embedded edit with no stored file-name never writes the parent page slug', () => {
+		const objectId = 'c646ba89-a4c3-308f-3492-93be61429fec';
+		const { xmlFileName, values } = saveFileNameOutcome('about', componentType, {
+			embeddedObjectId: objectId,
+			storedFileName: null
+		});
+		assert.equal(xmlFileName, `${objectId}.xml`);
+		assert.equal(values[XmlKeys.fileName], `${objectId}.xml`);
+	});
+});
+
 describe('no-edit save of blueprint content', { skip: !blueprints.length && 'blueprints not found' }, () => {
 	for (const blueprint of blueprints) {
 		const typesDir = path.join(blueprintsDir, blueprint, 'config/studio/content-types');
@@ -123,9 +295,12 @@ describe('no-edit save of blueprint content', { skip: !blueprints.length && 'blu
 			const xml = readFileSync(file, 'utf8');
 			const doc = fromString(xml);
 			if (!contentTypesById[doc.querySelector(':scope > content-type')?.textContent.trim()]) continue;
-			it(`${blueprint}${file.split('/site')[1]} keeps preserved elements, item attributes and text`, () => {
+			const repoPath = file.replaceAll('\\', '/').split('/site')[1];
+			const itemPath = `/site${repoPath}`;
+			it(`${blueprint}${repoPath} keeps preserved elements, item attributes and text`, () => {
 				const before = flatten(doc.documentElement);
-				const after = flatten(saveWithoutChanges(xml, contentTypesById).documentElement);
+				const savedDoc = saveWithoutChanges(xml, contentTypesById, itemPath);
+				const after = flatten(savedDoc.documentElement);
 				for (const [key, value] of before) {
 					const kept =
 						/\/(objectGroupId|orderDefault_f|placeInNav)$/.test(key) ||
@@ -133,16 +308,27 @@ describe('no-edit save of blueprint content', { skip: !blueprints.length && 'blu
 						/\/item\[\d+\]\/[^/]+$/.test(key);
 					if (kept) assert.equal(after.get(key), value, key);
 				}
-				const root = saveWithoutChanges(xml, contentTypesById).documentElement;
-				const firstObjectId = root.getElementsByTagName(XmlKeys.modelId)[0];
-				assert.equal(firstObjectId?.parentElement, root, 'the root objectId comes before any embedded one');
+				assert.equal(
+					savedDoc.documentElement.querySelector(':scope > file-name')?.textContent,
+					path.basename(file),
+					'root file-name matches the path basename'
+				);
+				assert.equal(
+					savedDoc.documentElement.querySelector(':scope > folder-name')?.textContent,
+					folderNameElementForXml(itemPath),
+					'root folder-name matches the path-derived folder slug'
+				);
+				const firstObjectId = savedDoc.documentElement.getElementsByTagName(XmlKeys.modelId)[0];
+				assert.equal(
+					firstObjectId?.parentElement,
+					savedDoc.documentElement,
+					'the root objectId comes before any embedded one'
+				);
 			});
 		}
 	}
 });
 
-const field = (id: string, type: string, extra = '') =>
-	`<field><type>${type}</type><id>${id}</id><title>${id}</title><properties></properties><constraints></constraints>${extra}</field>`;
 const typedType = parseType(`<form><title>T</title><content-type>/page/t</content-type><objectType>page</objectType>
 	<properties></properties><sections><section><title>S</title><fields>
 	${field('file-name', 'file-name')}${field('internal-name', 'input')}${field('code_s', 'input')}${field('notes_t', 'textarea')}

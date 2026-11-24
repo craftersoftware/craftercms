@@ -7,7 +7,7 @@ stackTrace=""
 paddedErrorMessage=false
 >
 	<!DOCTYPE html>
-	<html class="h-full bg-gray-100 dark:bg-neutral-900">
+	<html lang="en" class="h-full bg-gray-100 dark:bg-neutral-900">
 	<head>
 		<title>${pageTitle}</title>
 		<style>

@@ -438,6 +438,7 @@ export function TokenManagement() {
 											<TableCell align="right" sx={{ width: '150px', padding: '5px 20px' }}>
 												{(token.expiresAt === null || moment(token.expiresAt) > moment()) && (
 													<Tooltip
+														describeChild
 														title={
 															token.enabled ? (
 																<FormattedMessage defaultMessage="Disable" />
@@ -470,7 +471,7 @@ export function TokenManagement() {
 														label: token.label
 													})}
 													icon={DeleteIcon}
-													iconTooltip={<FormattedMessage defaultMessage="Delete" />}
+													iconTooltip={formatMessage({ defaultMessage: 'Delete' })}
 													iconLabel={formatMessage({ defaultMessage: 'Delete {name}' }, { name: token.label })}
 													onConfirm={() => {
 														onDeleteToken(token.id);

@@ -40,6 +40,7 @@ import {
 	countLimitsFromLegacy,
 	getCountLimitStorage,
 	itemCountEditorValue,
+	readNumericLimit,
 	type CountLimits
 } from '../utils/countLimits';
 import { fetchContentItems } from './content';
@@ -487,6 +488,15 @@ function parseLegacyFormDefinitionFields(
 
 		// Item-count limits for every control in countLimitStorage. Other types are unchanged.
 		applyCountLimits(field, legacyField, contentTypeId);
+
+		// Unusable maxlength (non-numeric, negative, or 0) is treated as no limit at runtime.
+		// Warn once at parse time — not in getNumericValidationValue, which controls call every render.
+		const rawMaxLength = field.validations?.maxLength?.value;
+		if (rawMaxLength != null && readNumericLimit(rawMaxLength) == null) {
+			console.warn(
+				`[parseLegacyFormDef] Unusable maxlength "${rawMaxLength}" on content type "${contentTypeId}" field "${field.id}". No length limit is applied.`
+			);
+		}
 
 		currentFieldLookup[fieldId] = field;
 	});

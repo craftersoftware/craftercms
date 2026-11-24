@@ -28,6 +28,13 @@ export const insertInstance = /*#__PURE__*/ createAction('insert_instance');
 export const computedDragEnd = /*#__PURE__*/ createAction('computed_dragend');
 export const computedDragOver = /*#__PURE__*/ createAction<{ record: ElementRecord; event }>('computed_dragover');
 export const iceZoneSelected = /*#__PURE__*/ createAction<{ record: ElementRecord; event }>('ice_zone_selected');
+export const zoneHoveredViaKeyboard = /*#__PURE__*/ createAction<{ record: ElementRecord }>(
+	'zone_hovered_via_keyboard'
+);
+export const zoneHoverClearedViaKeyboard = /*#__PURE__*/ createAction('zone_hover_cleared_via_keyboard');
+export const zoneSelectedViaKeyboard = /*#__PURE__*/ createAction<{ record: ElementRecord }>(
+	'zone_selected_via_keyboard'
+);
 export const editComponentInline = /*#__PURE__*/ createAction('edit_component_inline');
 export const exitComponentInlineEdit = /*#__PURE__*/ createAction<{ path: string; saved: boolean }>(
 	'exit_component_inline_edit'

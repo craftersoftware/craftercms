@@ -19,7 +19,11 @@ package org.craftercms.studio.impl.v2.service.proxy.internal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.craftercms.commons.proxy.ProxyUtils;
+import org.craftercms.commons.rest.ManagementToken;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.service.proxy.ProxyService;
@@ -28,6 +32,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -39,6 +44,7 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 
+import static org.apache.commons.lang3.Strings.CS;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_MANAGEMENT_PREVIEW_PROTECTED_URLS;
 import static org.craftercms.studio.controller.rest.v2.RequestMappingConstants.PROXY_ENGINE;
@@ -53,6 +59,11 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	protected final ServicesConfig servicesConfig;
 
 	protected final RestTemplate restTemplate = new RestTemplate();
+
+	/**
+	 * Used when the engine management token is sent, so a redirect cannot forward the token.
+	 */
+	protected final RestTemplate managementTokenRestTemplate = createManagementTokenRestTemplate();
 
 	@ConstructorProperties({"studioConfiguration", "servicesConfig"})
 	public ProxyServiceInternalImpl(final StudioConfiguration studioConfiguration, final ServicesConfig servicesConfig) {
@@ -72,15 +83,34 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	public ResponseEntity<Object> proxyEngine(final String body, final String siteId,
 						  final HttpServletRequest request) throws URISyntaxException, SiteNotFoundException {
 		URI uri = getProxyRequestUri(siteId, request);
-		HttpEntity<Object> httpEntity = new HttpEntity<>(body, getProxyRequestHeaders(request));
+		HttpHeaders headers = getProxyRequestHeaders(request);
+		boolean sendManagementToken = requiresManagementToken(request);
+		if (sendManagementToken) {
+			headers.set(ManagementToken.HEADER_NAME, getEngineManagementTokenValue());
+		}
+		HttpEntity<Object> httpEntity = new HttpEntity<>(body, headers);
+		RestTemplate template = sendManagementToken ? managementTokenRestTemplate : restTemplate;
 		try {
-			ResponseEntity response = restTemplate.exchange(uri, HttpMethod.valueOf(request.getMethod()), httpEntity, Object.class);
+			ResponseEntity<?> response = template.exchange(uri, HttpMethod.valueOf(request.getMethod()), httpEntity, Object.class);
 			return new ResponseEntity<>(response.getBody(), getProxyResponseHeaders(response), response.getStatusCode());
 		} catch (HttpStatusCodeException e) {
 			return ResponseEntity.status(e.getStatusCode())
 				.headers(e.getResponseHeaders())
 				.body(e.getResponseBodyAsString());
 		}
+	}
+
+	/**
+	 * Stateless client that returns redirect responses instead of following them.
+	 * Cookie management is disabled so this shared client does not retain Engine cookies.
+	 */
+	private static RestTemplate createManagementTokenRestTemplate() {
+		CloseableHttpClient httpClient = HttpClientBuilder.create()
+			.disableRedirectHandling()
+			.disableCookieManagement()
+			.setDefaultRequestConfig(RequestConfig.custom().setRedirectsEnabled(false).build())
+			.build();
+		return new RestTemplate(new HttpComponentsClientHttpRequestFactory(httpClient));
 	}
 
 	/**
@@ -91,8 +121,8 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	 */
 	private String getProxyPath(HttpServletRequest request) {
 		String requestUrl = request.getRequestURI();
-		String proxiedUrl = StringUtils.replace(requestUrl, request.getContextPath(), StringUtils.EMPTY);
-		proxiedUrl = StringUtils.replace(proxiedUrl, PROXY_ENGINE, StringUtils.EMPTY);
+		String proxiedUrl = CS.replace(requestUrl, request.getContextPath(), StringUtils.EMPTY);
+		proxiedUrl = CS.replace(proxiedUrl, PROXY_ENGINE, StringUtils.EMPTY);
 
 		return proxiedUrl;
 	}
@@ -107,16 +137,12 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	 */
 	private URI getProxyRequestUri(String siteId, HttpServletRequest request) throws URISyntaxException, SiteNotFoundException {
 		String proxyPath = getProxyPath(request);
-		List<String> engineProtectedUrls = getEngineProtectedUrls();
-		boolean managementTokenRequired = engineProtectedUrls.contains(proxyPath);
 		URI uri = new URI(getAuthoringUrl(siteId));
 		UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUri(uri)
 			.path(proxyPath)
 			.query(request.getQueryString())
+			.replaceQueryParam(ManagementToken.QUERY_PARAMETER)
 			.replaceQueryParam("site", siteId);
-		if (managementTokenRequired) {
-			uriComponentsBuilder = uriComponentsBuilder.queryParam("token", getEngineManagementTokenValue());
-		}
 		uri = uriComponentsBuilder.build(true).toUri();
 
 		return uri;
@@ -131,10 +157,14 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	private HttpHeaders getProxyRequestHeaders(HttpServletRequest request) {
 		HttpHeaders headers = new HttpHeaders();
 		Enumeration<String> headerNames = request.getHeaderNames();
-		// Add all headers except an ignored list and the cookie header
+		// Skip Host here so the HTTP client sets it from the Engine URL.
+		// Host stays out of ProxyUtils.IGNORE_REQUEST_HEADERS because Engine's proxy filter shares that list.
 		while (headerNames.hasMoreElements()) {
 			String headerName = headerNames.nextElement();
-			if (!ProxyUtils.IGNORE_REQUEST_HEADERS.contains(headerName.toLowerCase()) && !headerName.equalsIgnoreCase(HttpHeaders.COOKIE)) {
+			if (!ProxyUtils.IGNORE_REQUEST_HEADERS.contains(headerName.toLowerCase())
+				&& !headerName.equalsIgnoreCase(HttpHeaders.COOKIE)
+				&& !headerName.equalsIgnoreCase(HttpHeaders.HOST)
+				&& !headerName.equalsIgnoreCase(ManagementToken.HEADER_NAME)) {
 				headers.set(headerName, request.getHeader(headerName));
 			}
 		}
@@ -151,7 +181,7 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	 * @param response the response to Studio
 	 * @return headers object send back to Studio
 	 */
-	private HttpHeaders getProxyResponseHeaders(ResponseEntity response) {
+	private HttpHeaders getProxyResponseHeaders(ResponseEntity<?> response) {
 		HttpHeaders headers = new HttpHeaders();
 		// https://www.rfc-editor.org/rfc/rfc9112#name-transfer-encoding
 		// A sender MUST NOT apply the chunked transfer coding more than once to a message body
@@ -176,6 +206,13 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	 */
 	protected String getEngineManagementTokenValue() {
 		return studioConfiguration.getProperty(CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN);
+	}
+
+	/**
+	 * Preview URLs that receive the engine management token in {@link ManagementToken#HEADER_NAME}.
+	 */
+	protected boolean requiresManagementToken(HttpServletRequest request) {
+		return getEngineProtectedUrls().contains(getProxyPath(request));
 	}
 
 	/**

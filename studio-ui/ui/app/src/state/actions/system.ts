@@ -131,11 +131,11 @@ export const pluginInstalled = /*#__PURE__*/ createAction<MarketplacePlugin>('PL
 
 export const pluginUninstalled = /*#__PURE__*/ createAction<StandardAction>('PLUGIN_UNINSTALLED');
 
-export const contentTypeCreated = /*#__PURE__*/ createAction<StandardAction>('CONTENT_TYPE_CREATED');
+export const contentTypeCreated = /*#__PURE__*/ createAction<{ contentTypeId: string }>('CONTENT_TYPE_CREATED');
 
-export const contentTypeUpdated = /*#__PURE__*/ createAction<StandardAction>('CONTENT_TYPE_UPDATED');
+export const contentTypeUpdated = /*#__PURE__*/ createAction<{ contentTypeId: string }>('CONTENT_TYPE_UPDATED');
 
-export const contentTypeDeleted = /*#__PURE__*/ createAction<StandardAction>('CONTENT_TYPE_DELETED');
+export const contentTypeDeleted = /*#__PURE__*/ createAction<{ contentTypeId: string }>('CONTENT_TYPE_DELETED');
 
 export const storeInitialized = /*#__PURE__*/ createAction<{
 	auth: ObtainAuthTokenResponse;

@@ -15,7 +15,9 @@
  */
 
 import { styled } from '@mui/material/styles';
+import ButtonBase from '@mui/material/ButtonBase';
 import TableRow from '@mui/material/TableRow';
+import { focusRingStyles } from '../../styles/focusRing';
 
 const GlobalAppGridRow = styled(TableRow)(({ theme }) => ({
 	cursor: 'pointer',
@@ -26,6 +28,18 @@ const GlobalAppGridRow = styled(TableRow)(({ theme }) => ({
 		cursor: 'inherit',
 		background: 'none'
 	}
+}));
+
+/**
+ * The keyboard and screen reader control for a clickable row. Place it in the name cell. Its click
+ * bubbles to the row's `onClick`, so it needs no handler of its own.
+ */
+export const GlobalAppGridRowAction = styled(ButtonBase)(({ theme }) => ({
+	display: 'block',
+	width: '100%',
+	font: 'inherit',
+	textAlign: 'inherit',
+	'&:focus-visible': focusRingStyles(theme, { inset: true })
 }));
 
 export default GlobalAppGridRow;

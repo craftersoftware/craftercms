@@ -237,7 +237,7 @@ export function Repeat(props: RepeatProps) {
 				length={count}
 				action={
 					itemScoped ? undefined : (
-						<Tooltip title={addTooltip}>
+						<Tooltip describeChild title={addTooltip}>
 							<span>
 								<IconButton
 									ref={addButtonRef}
@@ -378,7 +378,7 @@ export function Repeat(props: RepeatProps) {
 							})}
 						</List>
 					) : (
-						<Tooltip title={addTooltip}>
+						<Tooltip describeChild title={addTooltip}>
 							<span>
 								<StackedButton
 									onClick={handleAddItem}

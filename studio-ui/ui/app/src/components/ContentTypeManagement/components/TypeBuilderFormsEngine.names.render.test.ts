@@ -77,6 +77,7 @@ describe('Type Builder delete button names', () => {
 		});
 		const labels = labelsOf(host);
 		assert.ok(labels.includes('Delete Title'), labels.join(' | '));
+		assert.ok(labels.includes('Move Title to another section'), labels.join(' | '));
 		assert.equal(labels.includes('Confirm'), false);
 	});
 

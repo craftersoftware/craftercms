@@ -100,8 +100,8 @@ export function BulkCancelPackageDialogContainer(props: BulkCancelPackageDialogC
 										}
 									}}
 								/>
-								<Tooltip title={<FormattedMessage defaultMessage="View Package Details" />}>
-									<IconButton>
+								<Tooltip title={formatMessage({ defaultMessage: 'View Package Details' })}>
+									<IconButton aria-label={formatMessage({ defaultMessage: 'View Package Details' })}>
 										<ChevronRightRoundedIcon />
 									</IconButton>
 								</Tooltip>

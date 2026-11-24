@@ -14,14 +14,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { get, getGlobalHeaders, postJSON } from '../utils/ajax';
+import { get, getGlobalHeaders, post, postJSON } from '../utils/ajax';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { Observable, of, from } from 'rxjs';
 import { User } from '../models/User';
-import { AjaxError } from 'rxjs/ajax';
+import { AjaxError, AjaxResponse } from 'rxjs/ajax';
 import { Credentials } from '../models/Credentials';
 import { Api2ResponseFormat, ApiResponse } from '../models/ApiResponse';
 import { toQueryString } from '../utils/object';
+import { XSRF_TOKEN_HEADER_NAME } from '../utils/constants';
 
 interface FetchSSOLogoutUrlResponse {
 	logoutUrl: string;
@@ -100,15 +101,39 @@ export function validatePasswordResetToken(token: string): Observable<boolean> {
 	);
 }
 
-export type ObtainAuthTokenResponse = { expiresAt: number; token: string };
+export type ObtainAuthTokenResponse = {
+	expiresAt: number;
+	token: string;
+	sessionExpiresAt?: number;
+	canExtendSession?: boolean;
+};
 
+/**
+ * Gets new tokens. `sessionExpiresAt` is the earliest time at which the session may expire (absent if there are no time
+ * limits shorter than 20 hours) and `canExtendSession` tells if staying signed in would move it.
+ **/
 export function obtainAuthToken(): Observable<ObtainAuthTokenResponse> {
-	return get<ObtainAuthTokenResponse>('/studio/refresh.json').pipe(
-		map((response) => {
-			const auth = response?.response;
-			return { token: auth.token, expiresAt: new Date(auth.expiresAt).getTime() };
-		})
+	return get<ObtainAuthTokenResponse>('/studio/refresh.json').pipe(map(toAuthTokenResponse));
+}
+
+/**
+ * Gets new tokens and restarts the time limits of the session. Unlike the token refresh, this is a POST as it changes
+ * state, so it requires the XSRF token.
+ **/
+export function extendSession(xsrfToken: string): Observable<ObtainAuthTokenResponse> {
+	return post<ObtainAuthTokenResponse>('/studio/refresh.json', null, { [XSRF_TOKEN_HEADER_NAME]: xsrfToken }).pipe(
+		map(toAuthTokenResponse)
 	);
+}
+
+function toAuthTokenResponse(response: AjaxResponse<ObtainAuthTokenResponse>): ObtainAuthTokenResponse {
+	const auth = response?.response;
+	return {
+		token: auth.token,
+		expiresAt: new Date(auth.expiresAt).getTime(),
+		sessionExpiresAt: auth.sessionExpiresAt ? new Date(auth.sessionExpiresAt).getTime() : null,
+		canExtendSession: auth.canExtendSession
+	};
 }
 
 export type FetchAuthTypeResponse = 'db' | 'ldap' | 'auth_headers' | 'saml';

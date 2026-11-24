@@ -22,8 +22,19 @@ import { cancelPackages, fetchAffectedPackages } from '../../services/workflow';
 import { IntlShape } from 'react-intl';
 import { createComponentId } from '../../utils/system';
 import { hasApproveAction, hasRejectAction } from '../../utils/content';
+import type { ReactNode } from 'react';
+import { of } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 
-export function showPackageDetails({ pkg, dispatch }: { pkg: PublishPackage; dispatch: Dispatch }) {
+export function showPackageDetails({
+	pkg,
+	dispatch,
+	onSuccess
+}: {
+	pkg: PublishPackage;
+	dispatch: Dispatch;
+	onSuccess?: () => void;
+}) {
 	if (
 		pkg.approvalState === 'SUBMITTED' &&
 		(hasApproveAction(pkg.availableActions) || hasRejectAction(pkg.availableActions))
@@ -37,6 +48,7 @@ export function showPackageDetails({ pkg, dispatch }: { pkg: PublishPackage; dis
 					packageId: pkg.id,
 					onSuccess: () => {
 						dispatch(popDialog({ id: dialogId }));
+						onSuccess?.();
 					}
 				}
 			})
@@ -58,7 +70,8 @@ export function checkAndCancelAffectedPackages({
 	onContinue,
 	onClose,
 	cancelPackagesComment,
-	formatMessage
+	formatMessage,
+	subtitle
 }: {
 	siteId: string;
 	item: ContentItem;
@@ -67,6 +80,7 @@ export function checkAndCancelAffectedPackages({
 	onClose?: () => void;
 	cancelPackagesComment?: string;
 	formatMessage: IntlShape['formatMessage'];
+	subtitle?: ReactNode;
 }) {
 	const cancelPackagesInitialComment =
 		cancelPackagesComment ??
@@ -84,21 +98,30 @@ export function checkAndCancelAffectedPackages({
 						props: {
 							item,
 							cancelPackagesInitialComment,
+							...(subtitle && { subtitle }),
 							onContinue: (cancelPackagesUpdatedComment: string) => {
-								cancelPackages(siteId, {
-									packageIds: affectedPackages.map((p) => p.id),
-									comment: cancelPackagesUpdatedComment
-								}).subscribe({
-									next: () => onContinue(),
-									error: ({ response }) => {
-										dispatch(
-											pushDialog({
-												component: 'craftercms.components.ErrorDialog',
-												props: { error: response?.response }
-											})
-										);
-									}
-								});
+								fetchAffectedPackages(siteId, item.path)
+									.pipe(
+										switchMap((pkgs) =>
+											pkgs?.length
+												? cancelPackages(siteId, {
+														packageIds: pkgs.map((p) => p.id),
+														comment: cancelPackagesUpdatedComment
+													})
+												: of(null)
+										)
+									)
+									.subscribe({
+										next: () => onContinue(),
+										error: ({ response }) => {
+											dispatch(
+												pushDialog({
+													component: 'craftercms.components.ErrorDialog',
+													props: { error: response?.response }
+												})
+											);
+										}
+									});
 							},
 							onClose: () => {
 								dispatch(popDialog({ id: dialogId }));

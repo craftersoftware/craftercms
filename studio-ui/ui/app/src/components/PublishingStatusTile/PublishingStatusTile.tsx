@@ -44,6 +44,7 @@ const PublishingStatusTile = React.forwardRef<HTMLDivElement | HTMLButtonElement
 		return (
 			<Box
 				component={onClick ? 'button' : 'div'}
+				type={onClick ? 'button' : undefined}
 				ref={ref}
 				{...rest}
 				onClick={onClick}

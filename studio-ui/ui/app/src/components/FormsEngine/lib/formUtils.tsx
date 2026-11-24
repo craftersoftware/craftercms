@@ -76,7 +76,7 @@ import type { FormsEngineProps } from '../FormsEngine';
 import usePreviousValue from '../../../hooks/usePreviousValue';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import useActiveUser from '../../../hooks/useActiveUser';
-import { areAllPairsEqual } from '../../../utils/array';
+import { areAllPairsEqual, asArray } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
 import { buildContentXml } from './valueSerializers';
 import {
@@ -103,7 +103,7 @@ import {
 import { createComponentId } from '../../../utils/system';
 import { showErrorDialog } from '../../../state/actions/dialogs';
 import { ensureSingleSlash } from '../../../utils/string';
-import { createObjectGroupId, isPagePath } from '../../../utils/path';
+import { createObjectGroupId, getFileNameFromPath, isPagePath } from '../../../utils/path';
 import { nnou, nou } from '../../../utils/object';
 import {
 	postUnlockKeepalive,
@@ -116,6 +116,35 @@ import {
 } from './unlockOnClose';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
+
+/**
+ * Value written to the `<folder-name>` element on save. Matches FE1 and the backend copy-collision
+ * path: the page folder slug for content-as-folder paths (`about`; home → `''`), empty otherwise.
+ **/
+export function folderNameElementForXml(path: string): string {
+	return isPagePath(path) ? getFileNameValueFromPath(path, true) : '';
+}
+
+/**
+ * Path-derived `<file-name>` / `<folder-name>` for a repository save XML copy. Matches FE1/XB/blueprints:
+ * basename with extension (`index.xml`, `foo.xml`) and the page folder slug (empty for home / non-pages).
+ * Spread onto a copy for `buildContentXml`; leave the form's UI slug on `values`.
+ **/
+export function xmlFileNamesForPath(path: string) {
+	return {
+		[XmlKeys.fileName]: getFileNameFromPath(path),
+		[XmlKeys.folderName]: folderNameElementForXml(path)
+	};
+}
+
+/**
+ * `<file-name>` for an embedded component save. Keeps the stored element (as FE1's auto-filename does)
+ * and falls back to `{objectId}.xml` only when it has none. Callers that merge `values` (e.g. NodeSelector)
+ * assign this onto `values` in place before `buildContentXml`.
+ **/
+export function embeddedFileName(objectId: string, stored?: string | null): string {
+	return stored || `${objectId}.xml`;
+}
 
 /**
  * Returns the scroll container for the form's container.
@@ -1105,10 +1134,11 @@ export function setFieldAtoms(
 	// after a rename done outside the form, or when the element is missing.
 	// `fileNameValidator` validates only the field's own value (#9327 removed `fileName` from the validator
 	// context), so the value must start from the path. Starting from the XML would validate a name that save
-	// never uses.
-	// Decision: the path wins. On edit the form shows and validates the path-derived name. Save leaves `file-name`
-	// out of the XML it builds, so a differing XML element is omitted on the next save. The backend writes it
-	// again only on a copy collision.
+	// never uses for the path.
+	// Decision: the path wins for the form. On edit the form shows and validates the path-derived slug.
+	// Save writes `<file-name>` / `<folder-name>` from the path (via {@link xmlFileNamesForPath}),
+	// matching FE1, while the form atom keeps the slug. The backend still rewrites both names on a
+	// copy collision.
 	// Only a form with an item path starts here. A nested scope (repeat item) passes none and keeps its value.
 	const initialValue =
 		fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null ? fileNameFromItemPath(itemPath) : value;
@@ -1546,6 +1576,35 @@ export function getNodeIndex(element: Element): number {
 	return index;
 }
 
+/**
+ * Resolves the path used as `fullParentPath` for `{parentPath}` / `{parentPath[n]}` macros.
+ * Prefers the live ContentItem path, then the form update path, then `pathInSite`. Nested embedded creates
+ * have neither an item nor an update path; their `pathInSite` is the macro-processed `create.path`, which
+ * the parent form set to its own context path, so it carries the root item's path down the stack.
+ */
+export function getFormContextPath(args: {
+	item?: { path?: string } | null;
+	updatePath?: string | null;
+	pathInSite?: string | null;
+}): string | undefined {
+	return args.item?.path ?? args.updatePath ?? args.pathInSite ?? undefined;
+}
+
+/**
+ * Reads an embedded component out of a parent field value at `index`.
+ * Parent `contentObject` may be XML-deserialized (`{ item: [{ component }] }`) or in-session form
+ * values (a `NodeSelectorItem[]`). Returns undefined when neither shape yields a component.
+ */
+export function embeddedComponentFromParentField(fieldValue: unknown, index: number): LookupTable<unknown> | undefined {
+	// Form values: NodeSelectorItem[]. XML-deserialized: { item } (one object or an array).
+	const items = Array.isArray(fieldValue)
+		? fieldValue
+		: fieldValue && typeof fieldValue === 'object' && 'item' in fieldValue
+			? asArray((fieldValue as { item: unknown }).item)
+			: undefined;
+	return (items?.[index] as { component?: LookupTable<unknown> } | undefined)?.component;
+}
+
 export function prepareEmbeddedItemForm(props: {
 	username: string;
 	contentType: ContentType;
@@ -1643,11 +1702,14 @@ export function prepareEmbeddedItemForm(props: {
 	if (element) {
 		const fieldId = element.parentElement.parentElement.tagName; // <root><fieldId><item><component/></item></fieldId></root>, so (component.parentElement = item).parentElement = fieldId
 		const index = getNodeIndex(element.parentElement); // Get the position of the `item` tag
-		contentObject = (
-			getParsedField(parentStackData.itemMeta.contentObject, fieldId) as {
-				item: Array<{ component: LookupTable<unknown> }>;
-			}
-		).item[index].component;
+
+		//  For in-session parents, contentXml is rebuilt from form values (so the nested modelId is found),
+		//  but contentObject stays form-shaped (NodeSelectorItem[]). embeddedComponentFromParentField is
+		//  used to get the component from the parent field with the correct form, since prepareEmbeddedItemForm
+		// always expects XML shape.
+		contentObject =
+			embeddedComponentFromParentField(getParsedField(parentStackData.itemMeta.contentObject, fieldId), index) ??
+			update.values;
 		contentXml = element.outerHTML;
 	} else {
 		// Created (or edited) in-session; not yet serialized into parent contentXml
@@ -1670,7 +1732,7 @@ export function prepareEmbeddedItemForm(props: {
 	};
 }
 
-export { getPropertyValue, getValidationValue } from './fieldPropertyUtils';
+export { getPropertyValue, getValidationValue, getNumericValidationValue } from './fieldPropertyUtils';
 
 /**
  * Determines if a field is read-only based on the form's read-only state or the field's properties.

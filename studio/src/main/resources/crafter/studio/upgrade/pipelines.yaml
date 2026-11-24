@@ -468,6 +468,8 @@ pipelines:
                 nextVersion: 5.0-t
             -   currentVersion: 4.5.1.2
                 nextVersion: 5.0-t
+            -   currentVersion: 4.5.1.3
+                nextVersion: 5.0-t
             # Entry point for 5.0 upgrade
             -   currentVersion: 5.0-t
                 nextVersion: 5.0-t2
@@ -681,6 +683,11 @@ pipelines:
                             -   src: repo-bootstrap/global/configuration/samples/sample-site-config-tools.xml
                                 dest: /configuration/samples/sample-site-config-tools.xml
                         commitDetails: Remove legacy content-types tool from the site config tools sample
+            -   currentVersion: 5.0.0.27
+                nextVersion: 5.0.0.28
+                operations:
+                    -   type: dbScriptUpgrader
+                        filename: upgrade/5.0.x/5.0.0.27-to-5.0.0.28.sql
 
     # Pipeline to upgrade site repositories
     site:
@@ -943,6 +950,12 @@ configurations:
                         -   type: xsltFileUpgrader
                             template: crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.0.xslt
                             commitDetails: Add FTLH and FTLX to rendering template patterns
+                -   currentVersion: 5.0.0.0
+                    nextVersion: 5.0.0.1
+                    operations:
+                        -   type: xsltFileUpgrader
+                            template: crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.1.xslt
+                            commitDetails: Remove unused site-config elements
 
     permission-mappings-config:
         module: studio
@@ -1458,6 +1471,12 @@ configurations:
                         replacement: "blocks"
                         commitDetails: Update the RTE configuration to work with TinyMCE 7
             -   currentVersion: 4.2.0.3
+                nextVersion: 5.0-t
+            -   currentVersion: 4.5.0.0
+                nextVersion: 5.0-t
+            # Entry point for 5.0 upgrade. The i18n transform runs once. An element that already
+            # has an id is left unchanged, even when its text is the stock English string.
+            -   currentVersion: 5.0-t
                 nextVersion: 5.0.0.0
                 operations:
                     -   type: xsltFileUpgrader

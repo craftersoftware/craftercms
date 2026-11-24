@@ -184,13 +184,12 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 				>
 					<Paper className={classes?.paper} sx={sx.paper}>
 						<div style={{ display: 'flex', alignItems: 'center' }}>
-							{/* The icon components are typed against the app build's Theme. The guest program augments a second copy. */}
 							{isLockedItem || isStale ? (
-								<LockedStateIcon sx={sx.icon as React.ComponentProps<typeof LockedStateIcon>['sx']} />
+								<LockedStateIcon sx={sx.icon} />
 							) : inherited ? (
-								<LevelDescriptorIcon sx={sx.icon as React.ComponentProps<typeof LevelDescriptorIcon>['sx']} />
+								<LevelDescriptorIcon sx={sx.icon} />
 							) : (
-								<FieldIcon sx={sx.icon as React.ComponentProps<typeof FieldIcon>['sx']} />
+								<FieldIcon sx={sx.icon} />
 							)}
 							<UltraStyledTypography title={label} noWrap sx={{ color: (sx?.paper as SystemCssProperties).color }}>
 								{label}

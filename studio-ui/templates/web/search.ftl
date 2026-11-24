@@ -18,7 +18,7 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<title>${contentModel['internal-name']} - ${contentModel['common-title']!''}</title>
 

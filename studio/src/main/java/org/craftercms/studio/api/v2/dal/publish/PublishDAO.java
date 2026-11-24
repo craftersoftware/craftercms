@@ -71,6 +71,7 @@ public interface PublishDAO {
 	String INCLUDE_CHILDREN = "includeChildren";
 	String SUBMITTER = "submitter";
 	String REVIEWER = "reviewer";
+	String USER_REQUESTED = "userRequested";
 
 	String PUBLISH_PACKAGE_STATE = "packageState";
 	String IS_SCHEDULED_BIT = "isScheduledBit";
@@ -459,20 +460,23 @@ public interface PublishDAO {
 	 * @return the user requested paths by action
 	 */
 	default Map<Boolean, List<String>> getUserRequestedPathMap(String siteId, long packageId) {
-		return getUserRequestedPaths(siteId, packageId).stream()
+		return getPublishPackagePaths(siteId, packageId, true).stream()
 			.collect(groupingBy(pp -> pp.getAction() == PublishItem.Action.DELETE,
 				HashMap::new,
 				Collectors.mapping(PathActionPair::getPath, Collectors.toList())));
 	}
 
 	/**
-	 * Get the {@link PathActionPair} items for the given package user-requested items
+	 * Get the {@link PathActionPair} items for the given package
 	 *
-	 * @param siteId    the site id
-	 * @param packageId the package id
-	 * @return the user requested action-path pairs
+	 * @param siteId        the site id
+	 * @param packageId     the package id
+	 * @param userRequested true to get user requested paths only, false to get
+	 *                      non-user requested paths only, null to get all paths
+	 * @return the action-path pairs for the package
 	 */
-	Collection<PathActionPair> getUserRequestedPaths(@Param(SITE_ID) String siteId, @Param(PACKAGE_ID) long packageId);
+	Collection<PathActionPair> getPublishPackagePaths(@Param(SITE_ID) String siteId, @Param(PACKAGE_ID) long packageId,
+			@Param(USER_REQUESTED) Boolean userRequested);
 
 	/**
 	 * Get the paginated list of publish items (with metadata) for the given package
