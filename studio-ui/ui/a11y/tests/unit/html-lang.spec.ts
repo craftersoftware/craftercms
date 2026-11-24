@@ -20,7 +20,6 @@ import { join, sep } from 'node:path';
 import { ruleTickets } from '../allow-list';
 
 const repoRoot = join(__dirname, '../../../../../');
-const templatesRoot = join(repoRoot, 'studio-ui/templates/web');
 
 /**
  * Studio templates, Engine templates and the default site, Studio notification mail,
