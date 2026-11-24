@@ -180,7 +180,7 @@ export function applyNodeSelectorMoveToValues(
 		source.modelId,
 		source.fieldId,
 		(items) => {
-			if (source.index < 0 || source.index >= items.length) return items;
+			if (items[source.index]?.key !== item.key) return items;
 			const next = items.slice();
 			next.splice(source.index, 1);
 			sourceItems = next;
