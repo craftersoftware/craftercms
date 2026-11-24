@@ -826,7 +826,7 @@ function NodeSelector(props: NodeSelectorProps) {
 			showSystemNotification({
 				message: formatMessage(
 					{ defaultMessage: 'Moved {item} to {target}' },
-					{ item: moveDialogItem.value, target: target.labelPath }
+					{ item: getItemLabel(moveDialogItem), target: target.labelPath }
 				),
 				options: {
 					key: MOVE_TO_FIELD_SNACKBAR_KEY,
