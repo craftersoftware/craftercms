@@ -102,6 +102,51 @@ describe('repeat count-limit round trip', () => {
 		);
 	});
 
+	// Given a repeat with a blank or "0" required constraint, save still strips it. The blank-or-0 keep rule is only for count limits (#9318).
+	it('strips a blank or zero required constraint from a repeat', () => {
+		for (const requiredValue of ['', '0'] as const) {
+			const parsed = parseLegacyFormDefinition({
+				'content-type': '/component/social-media-widget',
+				title: 'Social',
+				description: '',
+				objectType: 'component',
+				sections: {
+					section: {
+						title: 'Main',
+						description: '',
+						defaultOpen: 'true',
+						fields: {
+							field: {
+								id: 'accounts_o',
+								title: 'Accounts',
+								description: '',
+								type: 'repeat',
+								minOccurs: '0',
+								maxOccurs: '*',
+								constraints: { constraint: { name: 'required', value: requiredValue, type: 'boolean' } },
+								properties: {
+									property: [property('minOccurs', '0'), property('maxOccurs', '*')]
+								},
+								fields: { field: { id: 'title_s', title: 'Title', description: '', type: 'input' } }
+							}
+						}
+					}
+				}
+			} as never);
+
+			const xml = prepareSerializeToXmlTypeObject(parsed);
+			const section = Array.isArray(xml.sections.section) ? xml.sections.section[0] : xml.sections.section;
+			const field = Array.isArray(section.fields.field) ? section.fields.field[0] : section.fields.field;
+			const constraints = field.constraints?.constraint;
+			const constraintList = constraints == null ? [] : Array.isArray(constraints) ? constraints : [constraints];
+			assert.equal(
+				constraintList.some((item) => item.name === 'required'),
+				false,
+				`required=${JSON.stringify(requiredValue)} should be stripped`
+			);
+		}
+	});
+
 	// Given a repeat with no stored limits, save writes the TB1 defaults: min '0' (int) and max '*' (string), as element and property.
 	it('writes TB1 defaults when the repeat limits are blank', () => {
 		const parsed = parseLegacyFormDefinition({
