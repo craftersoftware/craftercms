@@ -90,6 +90,7 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 	);
 	const siteId = useActiveSiteId();
 	const contentTypesById = useContentTypes();
+	const controls = useSelection((state) => state.uiConfig.controls);
 	const isCompareDataReady = useMemo(() => {
 		if (preFetchedContent) {
 			// Check that selectionContent is complete and synced with prefetchedContent
@@ -176,11 +177,25 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 				} else {
 					setSelectionContent({
 						a: {
-							content: parseContentXML(fromString(contentA as string), selectedA.path, contentTypesById, {}),
+							content: parseContentXML(
+								fromString(contentA as string),
+								selectedA.path,
+								contentTypesById,
+								{},
+								undefined,
+								controls
+							),
 							xml: contentA as string
 						},
 						b: {
-							content: parseContentXML(fromString(contentB as string), selectedB.path, contentTypesById, {}),
+							content: parseContentXML(
+								fromString(contentB as string),
+								selectedB.path,
+								contentTypesById,
+								{},
+								undefined,
+								controls
+							),
 							xml: contentB as string
 						}
 					});
@@ -188,7 +203,7 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 			});
 			return () => subscription.unsubscribe();
 		}
-	}, [preFetchedContent, selectedA, selectedB, siteId, setSelectionContent, contentTypesById, isAsset]);
+	}, [preFetchedContent, selectedA, selectedB, siteId, setSelectionContent, contentTypesById, controls, isAsset]);
 
 	useEffect(() => {
 		if (contentTypeFields?.length && !fieldIdsWithChanges.includes(selectedFieldRef.current?.id)) {

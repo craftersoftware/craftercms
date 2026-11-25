@@ -14,6 +14,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import LookupTable from '../models/LookupTable';
+import { ContentTypeField } from '../models/ContentType';
+
+/** Control descriptors that may declare `metadata.additionalFields` (built-ins and ui.xml plugins). */
+export type AdditionalFieldsControlLookup = LookupTable<{
+	metadata?: { additionalFields?: readonly string[] | null };
+}>;
+
 /** Replaces every `{id}` in an additionalFields template with the parent field id. Text without `{id}` is kept verbatim. */
 export function processAdditionalFieldMacro(parentFieldId: string, fieldId: string): string {
 	return fieldId.replaceAll('{id}', parentFieldId);
@@ -50,4 +58,26 @@ export function mergeAdditionalFieldIds(
 	}
 	if (missingAdditionalFields.length === 0) return [...persistedAdditionalFields];
 	return [...persistedAdditionalFields, ...missingAdditionalFields];
+}
+
+/**
+ * True when `tagName` is a companion of a sibling field (not a content-type field itself).
+ * Checks persisted `field.additionalFields`, then expands control-descriptor templates when
+ * `controls` is provided. Also accepts legacy `{id}_tz` when a sibling `{id}` exists so date-time
+ * stays quiet before UI config loads.
+ */
+export function isCompanionFieldTag(
+	tagName: string,
+	fields: LookupTable<ContentTypeField> | undefined,
+	controls?: AdditionalFieldsControlLookup | null
+): boolean {
+	if (!fields) return false;
+	for (const field of Object.values(fields)) {
+		if (field.additionalFields?.includes(tagName)) return true;
+		const templates = controls?.[field.type]?.metadata?.additionalFields;
+		if (templates?.length && expandAdditionalFieldTemplates(field.id, templates).includes(tagName)) {
+			return true;
+		}
+	}
+	return tagName.endsWith('_tz') && Boolean(fields[tagName.replace(/_tz$/, '')]);
 }

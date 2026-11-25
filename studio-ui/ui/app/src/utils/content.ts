@@ -87,6 +87,7 @@ import { nanoid } from 'nanoid';
 import { createComponentId, showContentFormAction } from './system';
 import { popCodeEditorDialog } from '../state/actions/dialogs';
 import { ImageRestrictions } from '../components/ImageEditorDialog/types';
+import { AdditionalFieldsControlLookup, isCompanionFieldTag } from './additionalFields';
 
 export function isEditableAsset(path: string) {
 	return (
@@ -245,7 +246,8 @@ export function parseContentXML(
 	path: string = null,
 	contentTypesLookup: LookupTable<ContentType>,
 	instanceLookup: LookupTable<ContentInstance>,
-	unflattenedPaths?: LookupTable<ContentInstance>
+	unflattenedPaths?: LookupTable<ContentInstance>,
+	controls?: AdditionalFieldsControlLookup
 ): ContentInstance {
 	let id = nnou(doc) ? getInnerHtml(doc.querySelector(':scope > objectId')) : null;
 	if (id === null && !/^[a-f\d]{4}(?:[a-f\d]{4}-){4}[a-f\d]{12}$/i.test((id = fileNameFromPath(path)))) {
@@ -296,14 +298,9 @@ export function parseContentXML(
 				const contentTypeFields = contentTypesLookup[sourceContentTypeId ?? contentTypeId]?.fields;
 				const field = contentTypeFields?.[tagName];
 				if (!field) {
-					// Props listed on a control's `additionalFields` (e.g. `{id}_tz`, `{id}_bk`) are not content-type fields.
-					const isAdditionalField = Object.values(contentTypeFields ?? {}).some((contentTypeField) =>
-						contentTypeField.additionalFields?.includes(tagName)
-					);
-					// Also accept `{id}_tz` when that list is missing or not merged yet.
-					const isTimezoneField =
-						!isAdditionalField && tagName.endsWith('_tz') && Boolean(contentTypeFields?.[tagName.replace(/_tz$/, '')]);
-					if (!isAdditionalField && !isTimezoneField) {
+					// Companions (e.g. `{id}_tz`, `{id}_bk`) are not content-type fields. Prefer persisted
+					// additionalFields, then control-descriptor patterns when `controls` is provided.
+					if (!isCompanionFieldTag(tagName, contentTypeFields, controls)) {
 						console.error(
 							`[parseContentXML] Field "${tagName}" was not found on "${
 								sourceContentTypeId ?? contentTypeId
@@ -316,7 +313,8 @@ export function parseContentXML(
 					field,
 					contentTypesLookup,
 					instanceLookup,
-					unflattenedPaths
+					unflattenedPaths,
+					controls
 				);
 			}
 		});
@@ -336,7 +334,8 @@ export function parseElementByContentType(
 	field: ContentTypeField,
 	contentTypesLookup: LookupTable<ContentType>,
 	instanceLookup: LookupTable<ContentInstance>,
-	unflattenedPaths?: LookupTable<ContentInstance>
+	unflattenedPaths?: LookupTable<ContentInstance>,
+	controls?: AdditionalFieldsControlLookup
 ) {
 	if (!field) {
 		return getInnerHtml(element) ?? '';
@@ -359,7 +358,8 @@ export function parseElementByContentType(
 						field.fields[fieldTagName],
 						contentTypesLookup,
 						instanceLookup,
-						unflattenedPaths
+						unflattenedPaths,
+						controls
 					);
 				});
 				array.push(repeatItem);
@@ -401,7 +401,8 @@ export function parseElementByContentType(
 								path,
 								contentTypesLookup,
 								instanceLookup,
-								unflattenedPaths
+								unflattenedPaths,
+								controls
 							);
 							array.push(instance);
 						}

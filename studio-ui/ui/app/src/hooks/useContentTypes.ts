@@ -21,20 +21,18 @@ import { useActiveSiteId } from './useActiveSiteId';
 import { useSelection } from './useSelection';
 import { useEffect } from 'react';
 import { fetchContentTypes } from '../state/actions/preview';
-import { contentTypesForParse } from '../utils/contentType';
 
 export function useContentTypes(): LookupTable<ContentType> {
 	const dispatch = useDispatch();
 	const site = useActiveSiteId();
 	const { byId, isFetching } = useSelection((state) => state.contentTypes);
-	const contentTypes = useSelection((state) => contentTypesForParse(state.contentTypes.byId, state.uiConfig));
 	useEffect(() => {
 		if (!byId && site && isFetching === null) {
 			dispatch(fetchContentTypes());
 		}
 	}, [dispatch, site, byId, isFetching]);
 
-	return contentTypes;
+	return byId;
 }
 
 export default useContentTypes;

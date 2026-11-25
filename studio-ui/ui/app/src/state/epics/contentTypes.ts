@@ -41,7 +41,6 @@ import {
 	fetchContentTypes as fetchContentTypesService
 } from '../../services/contentTypes';
 import { CrafterCMSEpic } from '../store';
-import { contentTypesForParse } from '../../utils/contentType';
 
 export default [
 	// region fetchContentTypes
@@ -83,8 +82,9 @@ export default [
 					state.preview.components.contentTypeFilter === 'compatible'
 						? allowedContentTypes
 						: state.preview.components.contentTypeFilter,
-					contentTypesForParse(state.contentTypes.byId, state.uiConfig),
-					state.preview.components.query
+					state.contentTypes.byId,
+					state.preview.components.query,
+					state.uiConfig.controls
 				).pipe(map(fetchComponentsByContentTypeComplete), catchAjaxError(fetchComponentsByContentTypeFailed));
 			})
 		),

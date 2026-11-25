@@ -20,6 +20,7 @@ import React, { createContext, useEffect, useMemo, useRef, useState } from 'reac
 import { fetchContentByCommitId } from '../../services/content';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import { useContentTypes } from '../../hooks/useContentTypes';
+import useSelection from '../../hooks/useSelection';
 import { getContentInstanceValueFromProp, parseContentXML } from '../../utils/content';
 import { fromString } from '../../utils/xml';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
@@ -55,6 +56,7 @@ export function ViewVersionDialogContainer(props: ViewVersionDialogContainerProp
 	const [xml, setXml] = useState<string>(preFetchedData?.xml);
 	const siteId = useActiveSiteId();
 	const contentTypesById = useContentTypes();
+	const controls = useSelection((state) => state.uiConfig.controls);
 	const { formatMessage } = useIntl();
 	const contentTypeFields: ContentTypeField[] = useMemo(() => {
 		return content && (preFetchedData?.fields || contentTypesById?.[content.craftercms.contentTypeId].fields)
@@ -85,11 +87,13 @@ export function ViewVersionDialogContainer(props: ViewVersionDialogContainerProp
 	useEffect(() => {
 		if (version) {
 			fetchContentByCommitId(siteId, version.path, version.versionNumber).subscribe((content) => {
-				setContent(parseContentXML(fromString(content as string), version.path, contentTypesById, {}));
+				setContent(
+					parseContentXML(fromString(content as string), version.path, contentTypesById, {}, undefined, controls)
+				);
 				setXml(content as string);
 			});
 		}
-	}, [version, siteId, contentTypesById]);
+	}, [version, siteId, contentTypesById, controls]);
 
 	useEffect(() => {
 		if (contentTypeFields?.length) {

@@ -48,6 +48,7 @@ import { GetChildrenResponse } from '../models/GetChildrenResponse';
 import { GetItemWithChildrenResponse } from '../models/GetItemWithChildrenResponse';
 import { FetchItemsByPathOptions } from '../models/FetchItemsByPath';
 import { v4 as uuid } from 'uuid';
+import { AdditionalFieldsControlLookup } from '../utils/additionalFields';
 import FetchItemsByPathArray from '../models/FetchItemsByPathArray';
 import { isMediaContent, isTextContent } from '../components/PathNavigator/utils';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
@@ -101,12 +102,13 @@ export function fetchContentItem(
 export function fetchContentInstanceLookup(
 	site: string,
 	path: string,
-	contentTypesLookup: LookupTable<ContentType>
+	contentTypesLookup: LookupTable<ContentType>,
+	controls?: AdditionalFieldsControlLookup
 ): Observable<LookupTable<ContentInstance>> {
 	return fetchContentDOM(site, path).pipe(
 		map((doc) => {
 			const lookup = {};
-			parseContentXML(doc, path, contentTypesLookup, lookup);
+			parseContentXML(doc, path, contentTypesLookup, lookup, undefined, controls);
 			return lookup;
 		})
 	);
@@ -115,9 +117,12 @@ export function fetchContentInstanceLookup(
 export function fetchContentInstance(
 	site: string,
 	path: string,
-	contentTypesLookup: LookupTable<ContentType>
+	contentTypesLookup: LookupTable<ContentType>,
+	controls?: AdditionalFieldsControlLookup
 ): Observable<ContentInstance> {
-	return fetchContentDOM(site, path).pipe(map((doc) => parseContentXML(doc, path, contentTypesLookup, {})));
+	return fetchContentDOM(site, path).pipe(
+		map((doc) => parseContentXML(doc, path, contentTypesLookup, {}, undefined, controls))
+	);
 }
 
 export type WriteContentResponse = Api2ResponseFormat<{
@@ -168,7 +173,8 @@ export function fetchContentInstanceDescriptor(
 	site: string,
 	path: string,
 	options?: Partial<GetDescriptorOptions>,
-	contentTypeLookup?: LookupTable<ContentType>
+	contentTypeLookup?: LookupTable<ContentType>,
+	controls?: AdditionalFieldsControlLookup
 ): Observable<{
 	model: ContentInstance;
 	modelLookup: LookupTable<ContentInstance>;
@@ -188,7 +194,7 @@ export function fetchContentInstanceDescriptor(
 			fetchDescriptorDOM(site, path, options).pipe(
 				map((doc) => {
 					const modelLookup = {};
-					const model = parseContentXML(doc, path, contentTypeLookup, modelLookup, unflattenedPaths);
+					const model = parseContentXML(doc, path, contentTypeLookup, modelLookup, unflattenedPaths, controls);
 					return { model, modelLookup, unflattenedPaths };
 				})
 			)
@@ -806,19 +812,22 @@ export function fetchItemsByContentType(
 	site: string,
 	contentType: string,
 	contentTypesLookup: LookupTable<ContentType>,
-	options?: ComponentsContentTypeParams
+	options?: ComponentsContentTypeParams,
+	controls?: AdditionalFieldsControlLookup
 ): Observable<ContentInstancePage>;
 export function fetchItemsByContentType(
 	site: string,
 	contentTypes: string[],
 	contentTypesLookup: LookupTable<ContentType>,
-	options?: ComponentsContentTypeParams
+	options?: ComponentsContentTypeParams,
+	controls?: AdditionalFieldsControlLookup
 ): Observable<ContentInstancePage>;
 export function fetchItemsByContentType(
 	site: string,
 	contentTypes: string[] | string,
 	contentTypesLookup: LookupTable<ContentType>,
-	options?: ComponentsContentTypeParams
+	options?: ComponentsContentTypeParams,
+	controls?: AdditionalFieldsControlLookup
 ): Observable<ContentInstancePage> {
 	// If content types is null|undefined or if is empty (array or string), return empty values as there's no need to
 	// make a request.
@@ -851,7 +860,7 @@ export function fetchItemsByContentType(
 				paths.length
 					? forkJoin(
 							paths.reduce((array, path) => {
-								array.push(fetchContentInstance(site, path, contentTypesLookup));
+								array.push(fetchContentInstance(site, path, contentTypesLookup, controls));
 								return array;
 							}, []) as Array<Observable<ContentInstance>>
 						)

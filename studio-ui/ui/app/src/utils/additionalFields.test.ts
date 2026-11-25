@@ -29,7 +29,7 @@ const { buildContentTypeXml, prepareSerializeToXmlTypeObject } =
 	await import('../components/ContentTypeManagement/utils.ts');
 const { deserialize, entityEncodingTagValueProcessor, fromString } = await import('./xml.ts');
 const { parseContentXML } = await import('./content.ts');
-const { addConfiguredAdditionalFields, contentTypesForParse } = await import('./contentType.ts');
+const { isCompanionFieldTag, mergeAdditionalFieldIds } = await import('./additionalFields.ts');
 
 function namedList<T>(value: T | T[] | null | undefined): T[] {
 	if (value == null) return [];
@@ -368,196 +368,62 @@ const articleWithoutPersistedAdditionalFields = {
 	}
 };
 
-describe('addConfiguredAdditionalFields', () => {
+describe('mergeAdditionalFieldIds', () => {
 	it('expands control-descriptor macros onto fields that lack persisted additionalFields', () => {
-		const contentTypes = {
-			'/page/article': {
-				id: '/page/article',
-				fields: {
-					publishDate_dt: {
-						id: 'publishDate_dt',
-						name: 'Publish Date',
-						type: 'date-time',
-						validations: {},
-						properties: {},
-						defaultValue: ''
-					}
-				}
-			}
-		};
-		const merged = addConfiguredAdditionalFields(contentTypes as never, {
-			'date-time': { metadata: { additionalFields: ['{id}_tz'] } }
-		});
-		assert.deepEqual(merged['/page/article'].fields.publishDate_dt.additionalFields, ['publishDate_dt_tz']);
+		assert.deepEqual(mergeAdditionalFieldIds('publishDate_dt', undefined, ['{id}_tz']), ['publishDate_dt_tz']);
 	});
 
 	it('keeps existing persisted ids and does not duplicate an expanded descriptor id', () => {
-		const title = {
-			id: 'title_s',
-			name: 'Title',
-			type: 'backup-control',
-			validations: {},
-			properties: {},
-			defaultValue: '',
-			additionalFields: ['title_s_bk', 'title_s_alt']
-		};
-		const contentTypes = {
-			'/page/article': {
-				id: '/page/article',
-				fields: { title_s: title }
-			}
-		};
-		const merged = addConfiguredAdditionalFields(contentTypes as never, pluginControls);
-		assert.equal(merged, contentTypes);
-		assert.equal(merged['/page/article'].fields.title_s, title);
-		assert.deepEqual(title.additionalFields, ['title_s_bk', 'title_s_alt']);
-	});
-
-	it('keeps a conflicting persisted id and backfills only the expanded id that is missing', () => {
-		const contentTypes = {
-			'/page/article': {
-				id: '/page/article',
-				fields: {
-					title_s: {
-						id: 'title_s',
-						name: 'Title',
-						type: 'backup-control',
-						validations: {},
-						properties: {},
-						defaultValue: '',
-						additionalFields: ['title_s_custom', 'title_s_bk']
-					}
-				}
-			}
-		};
-		const merged = addConfiguredAdditionalFields(contentTypes as never, {
-			'backup-control': { metadata: { additionalFields: ['{id}_bk', '{id}_alt'] } }
-		});
-		assert.deepEqual(merged['/page/article'].fields.title_s.additionalFields, [
-			'title_s_custom',
+		assert.deepEqual(mergeAdditionalFieldIds('title_s', ['title_s_bk', 'title_s_alt'], ['{id}_bk']), [
 			'title_s_bk',
 			'title_s_alt'
 		]);
 	});
 
-	it('recurses into repeat-group children so nested fields get the same descriptor backfill', () => {
-		const contentTypes = {
-			'/page/article': {
-				id: '/page/article',
-				fields: {
-					title_s: {
-						id: 'title_s',
-						name: 'Title',
-						type: 'backup-control',
-						validations: {},
-						properties: {},
-						defaultValue: ''
-					},
-					items_o: {
-						id: 'items_o',
-						name: 'Items',
-						type: 'repeat',
-						validations: {},
-						properties: {},
-						defaultValue: '',
-						fields: {
-							note_s: {
-								id: 'note_s',
-								name: 'Note',
-								type: 'backup-control',
-								validations: {},
-								properties: {},
-								defaultValue: ''
-							},
-							expires_dt: {
-								id: 'expires_dt',
-								name: 'Expires',
-								type: 'date-time',
-								validations: {},
-								properties: {},
-								defaultValue: ''
-							}
-						}
-					}
-				}
-			}
-		};
-		const merged = addConfiguredAdditionalFields(contentTypes as never, {
-			'backup-control': { metadata: { additionalFields: ['{id}_bk'] } },
-			'date-time': { metadata: { additionalFields: ['{id}_tz'] } }
-		});
-		assert.deepEqual(merged['/page/article'].fields.title_s.additionalFields, ['title_s_bk']);
-		assert.deepEqual(merged['/page/article'].fields.items_o.fields.note_s.additionalFields, ['note_s_bk']);
-		assert.deepEqual(merged['/page/article'].fields.items_o.fields.expires_dt.additionalFields, ['expires_dt_tz']);
-		// Repeat itself has no descriptor companions; only its children change.
-		assert.equal(merged['/page/article'].fields.items_o.additionalFields, undefined);
-	});
-});
-
-describe('contentTypesForParse lookup', () => {
-	const path = '/site/website/articles/index.xml';
-	const companionXml = '<title_s>Hello</title_s><title_s_bk>Backup</title_s_bk>';
-
-	it('returns the store lookup until UI config has loaded, then backfills', () => {
-		const byId = { '/page/article': articleWithoutPersistedAdditionalFields } as never;
-		assert.equal(contentTypesForParse(byId, { isFetching: null, controls: pluginControls }), byId);
-		assert.equal(contentTypesForParse(byId, { isFetching: true, controls: pluginControls }), byId);
-		const merged = contentTypesForParse(byId, { isFetching: false, controls: pluginControls });
-		assert.deepEqual(merged['/page/article'].fields.title_s.additionalFields, ['title_s_bk']);
-	});
-
-	it('returns the same reference for identical byId and controls, and a new one when controls change', () => {
-		const byId = { '/page/article': articleWithoutPersistedAdditionalFields } as never;
-		const controls = { 'backup-control': { metadata: { additionalFields: ['{id}_bk'] } } };
-		const first = contentTypesForParse(byId, { isFetching: false, controls });
-		const second = contentTypesForParse(byId, { isFetching: false, controls });
-		assert.equal(first, second);
-		const changedControls = { 'backup-control': { metadata: { additionalFields: ['{id}_bk', '{id}_alt'] } } };
-		const third = contentTypesForParse(byId, { isFetching: false, controls: changedControls });
-		assert.notEqual(first, third);
-		assert.deepEqual(third['/page/article'].fields.title_s.additionalFields, ['title_s_bk', 'title_s_alt']);
-	});
-
-	it('keeps the last merged result while UI config is refetching', () => {
-		const byId = { '/page/article': articleWithoutPersistedAdditionalFields } as never;
-		const controls = { 'backup-control': { metadata: { additionalFields: ['{id}_bk'] } } };
-		const merged = contentTypesForParse(byId, { isFetching: false, controls });
-		assert.equal(contentTypesForParse(byId, { isFetching: true, controls }), merged);
-		assert.equal(contentTypesForParse(byId, { isFetching: null, controls }), merged);
-	});
-
-	it('supplied lookup: merge from controls quiets plugin companions on old form defs', () => {
-		const supplied = { '/page/article': articleWithoutPersistedAdditionalFields };
-		const merged = addConfiguredAdditionalFields(supplied as never, pluginControls);
-		const messages = captureConsoleErrors(() => {
-			parseContentXML(contentDoc(companionXml), path, merged as never, {});
-		});
-		assert.equal(
-			messages.some((message) => message.includes('title_s_bk') && message.includes('was not found')),
-			false
+	it('keeps a conflicting persisted id and backfills only the expanded id that is missing', () => {
+		assert.deepEqual(
+			mergeAdditionalFieldIds('title_s', ['title_s_custom', 'title_s_bk'], ['{id}_bk', '{id}_alt']),
+			['title_s_custom', 'title_s_bk', 'title_s_alt']
 		);
-		assert.deepEqual(merged['/page/article'].fields.title_s.additionalFields, ['title_s_bk']);
 	});
 });
 
-describe('Preview additionalFields loading race', () => {
+describe('isCompanionFieldTag', () => {
+	it('recognizes persisted additionalFields and descriptor companions', () => {
+		const fields = articleWithoutPersistedAdditionalFields.fields as never;
+		assert.equal(isCompanionFieldTag('title_s_bk', fields), false);
+		assert.equal(isCompanionFieldTag('title_s_bk', fields, pluginControls), true);
+		assert.equal(
+			isCompanionFieldTag('title_s_bk', {
+				title_s: { ...fields.title_s, additionalFields: ['title_s_bk'] }
+			} as never),
+			true
+		);
+	});
+
+	it('accepts legacy _tz when a sibling field exists, even without controls', () => {
+		const fields = articleWithoutPersistedAdditionalFields.fields as never;
+		assert.equal(isCompanionFieldTag('publishDate_dt_tz', fields), true);
+		assert.equal(isCompanionFieldTag('stale_prop', fields), false);
+	});
+});
+
+describe('parseContentXML companion detection via controls', () => {
 	const path = '/site/website/articles/index.xml';
 	const companionXml = '<title_s>Hello</title_s><title_s_bk>Backup</title_s_bk>';
+	const lookup = { '/page/article': articleWithoutPersistedAdditionalFields };
 
-	it('unmerged lookup (content types before UI config) logs; merged re-parse stays quiet', () => {
-		const unmerged = { '/page/article': articleWithoutPersistedAdditionalFields };
+	it('logs a plugin companion when controls are absent; stays quiet when controls are passed', () => {
 		const before = captureConsoleErrors(() => {
-			parseContentXML(contentDoc(companionXml), path, unmerged as never, {});
+			parseContentXML(contentDoc(companionXml), path, lookup as never, {});
 		});
 		assert.equal(
 			before.some((message) => message.includes('title_s_bk') && message.includes('was not found')),
 			true
 		);
 
-		// Preview doesn't wait on UI config for this log; parses made after useContentTypes merges stay quiet.
-		const merged = addConfiguredAdditionalFields(unmerged as never, pluginControls);
 		const after = captureConsoleErrors(() => {
-			parseContentXML(contentDoc(companionXml), path, merged as never, {});
+			parseContentXML(contentDoc(companionXml), path, lookup as never, {}, undefined, pluginControls);
 		});
 		assert.equal(
 			after.some((message) => message.includes('title_s_bk') && message.includes('was not found')),
@@ -565,19 +431,42 @@ describe('Preview additionalFields loading race', () => {
 		);
 	});
 
-	it('does not require UI config merge for legacy _tz (hardcoded fallback covers cold start)', () => {
+	it('does not require controls for legacy _tz (hardcoded sibling fallback)', () => {
 		const messages = captureConsoleErrors(() => {
 			parseContentXML(
 				contentDoc(
 					'<publishDate_dt>2024-01-01T00:00:00.000Z</publishDate_dt><publishDate_dt_tz>UTC</publishDate_dt_tz>'
 				),
 				path,
-				{ '/page/article': articleWithoutPersistedAdditionalFields } as never,
+				lookup as never,
 				{}
 			);
 		});
 		assert.equal(
 			messages.some((message) => message.includes('publishDate_dt_tz') && message.includes('was not found')),
+			false
+		);
+	});
+
+	it('quiets a plugin companion inside a content type that only declares the parent field', () => {
+		const messages = captureConsoleErrors(() => {
+			parseContentXML(
+				contentDoc(companionXml),
+				path,
+				{
+					'/page/article': {
+						fields: {
+							title_s: { id: 'title_s', type: 'backup-control' }
+						}
+					}
+				} as never,
+				{},
+				undefined,
+				pluginControls
+			);
+		});
+		assert.equal(
+			messages.some((message) => message.includes('title_s_bk') && message.includes('was not found')),
 			false
 		);
 	});
