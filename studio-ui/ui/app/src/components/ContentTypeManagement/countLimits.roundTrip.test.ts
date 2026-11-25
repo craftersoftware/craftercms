@@ -279,7 +279,6 @@ describe('checkbox group minSize round trip', () => {
 		} as never);
 		assert.equal(parsed.fields.topics_o.rawConstraints?.find((item) => item.name === 'minSize')?.type, 'number');
 
-		// assert that `number -> int` happens both when there's an edition of the value and when there's no change.
 		for (const [edit, expected] of [
 			[undefined, 2],
 			[5, 5]
