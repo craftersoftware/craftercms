@@ -1250,22 +1250,16 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const parentInvalid = useInvalidFieldIds(parentEntry, undefined);
 	// What the save refuses to write without. A selected-fields item form saves through its parent,
 	// so it reports the parent's requirements, by the parent's own mode.
-	const localMinimum = useMinimumSaveRequirements(
-		atoms,
-		{
-			isRepeatMode,
-			isEmbedded,
-			hasInternalNameField: contentTypeDefinesInternalName(contentType)
-		}
-	);
-	const parentMinimum = useMinimumSaveRequirements(
-		itemMode === 'selected' ? parentAtoms : null,
-		{
-			isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
-			isEmbedded: isEmbeddedForm(parentEntry?.props ?? {}),
-			hasInternalNameField: contentTypeDefinesInternalName(parentEntry?.itemMeta.contentType)
-		}
-	);
+	const localMinimum = useMinimumSaveRequirements(atoms, {
+		isRepeatMode,
+		isEmbedded,
+		hasInternalNameField: contentTypeDefinesInternalName(contentType)
+	});
+	const parentMinimum = useMinimumSaveRequirements(itemMode === 'selected' ? parentAtoms : null, {
+		isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
+		isEmbedded: isEmbeddedForm(parentEntry?.props ?? {}),
+		hasInternalNameField: contentTypeDefinesInternalName(parentEntry?.itemMeta.contentType)
+	});
 	// region Workflow item updates
 	useAffectedPackagesRefetch(siteId, itemPath, (affectedPackages) =>
 		// Merge into the live lock record so a rename's path is not dropped.
