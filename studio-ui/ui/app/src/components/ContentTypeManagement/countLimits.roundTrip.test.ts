@@ -253,7 +253,7 @@ describe('checkbox group minSize round trip', () => {
 		);
 	});
 
-	// Given a legacy TB2 minSize stored as type number, editing the value writes type int (#9318 / #9288 AC6).
+	// Given a legacy TB2 minSize stored as type number, saving the type writes type int, whether minSize was edited or not (#9318 / #9288 AC6).
 	it('heals a legacy number type to int when the type is saved, edited or not', () => {
 		const parsed = parseLegacyFormDefinition({
 			'content-type': '/page/article',
