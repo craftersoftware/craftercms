@@ -422,10 +422,10 @@ describe('NodeSelector saved component label', () => {
 				})
 			)
 		);
-		const edit = host.querySelector<HTMLButtonElement>('button[aria-label="Edit Hero"]');
-		assert.ok(edit);
+		const row = rowLabelled(host, 'Hero');
+		assert.ok(row);
 		await act(async () => {
-			edit.click();
+			row.click();
 		});
 		const opened = pushFormCalls.at(-1) as {
 			onSave?: (result: { values: Record<string, unknown> }) => Promise<unknown>;
