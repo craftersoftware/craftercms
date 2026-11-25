@@ -799,6 +799,14 @@ function updatedConstraintType(raw: { type?: string }, update: { type?: string; 
 	return update.type || raw.type;
 }
 
+/** Count-limit constraints always write the storage `constraintType` (checkbox minSize → int). */
+function countLimitConstraintType(storage: ReturnType<typeof getCountLimitStorage>, name: string): string | undefined {
+	for (const bound of [storage?.min, storage?.max]) {
+		if (bound?.name === name && bound.constraintType) return bound.constraintType;
+	}
+	return undefined;
+}
+
 function valueFitsStoredType(storedType: string, value: unknown): boolean {
 	if (storedType === 'string') return true;
 	if (storedType === 'boolean') {
@@ -962,7 +970,13 @@ function convertFieldStructToXmlStruct(field: ContentTypeField): Required<Legacy
 		if (update && isClearedConstraintValue(update.value)) continue;
 		seenConstraintNames.add(raw.name);
 		constraintList.push(
-			update ? { ...raw, value: update.value, type: updatedConstraintType(raw, update) } : { ...raw }
+			update
+				? {
+						...raw,
+						value: update.value,
+						type: countLimitConstraintType(countStorage, raw.name) ?? updatedConstraintType(raw, update)
+					}
+				: { ...raw }
 		);
 	}
 	for (const constraint of handledConstraints) {
