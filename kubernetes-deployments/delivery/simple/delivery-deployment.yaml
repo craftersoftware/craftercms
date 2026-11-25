@@ -96,7 +96,7 @@ spec:
       containers:
         # OpenSearch container
         - name: opensearch
-          image: opensearchproject/opensearch:3.3.2
+          image: opensearchproject/opensearch:3.9.0
           readinessProbe:
             httpGet:
               path: /_cluster/health?wait_for_status=yellow
