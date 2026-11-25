@@ -56,7 +56,7 @@ export function ViewVersionDialogContainer(props: ViewVersionDialogContainerProp
 	const [xml, setXml] = useState<string>(preFetchedData?.xml);
 	const siteId = useActiveSiteId();
 	const contentTypesById = useContentTypes();
-	const controls = useSelection((state) => state.uiConfig.controls);
+	const controls = useSelection((state) => state.uiConfig?.controls);
 	const { formatMessage } = useIntl();
 	const contentTypeFields: ContentTypeField[] = useMemo(() => {
 		return content && (preFetchedData?.fields || contentTypesById?.[content.craftercms.contentTypeId].fields)

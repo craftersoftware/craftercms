@@ -133,7 +133,7 @@ export function PreviewSearchPanel() {
 	});
 	const dispatch = useDispatch();
 	const editMode = useSelection((state) => state.preview.editMode);
-	const controls = useSelection((state) => state.uiConfig.controls);
+	const controls = useSelection((state) => state.uiConfig?.controls);
 	const allowedTypesData = useSelection((state) => state.preview.guest?.allowedContentTypes);
 	const contentTypesUpdated = useSelection((state) => state.preview.guest?.contentTypesUpdated);
 	const awaitingGuestCheckIn = nou(allowedTypesData);

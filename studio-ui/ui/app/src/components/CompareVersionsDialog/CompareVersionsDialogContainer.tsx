@@ -90,7 +90,7 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 	);
 	const siteId = useActiveSiteId();
 	const contentTypesById = useContentTypes();
-	const controls = useSelection((state) => state.uiConfig.controls);
+	const controls = useSelection((state) => state.uiConfig?.controls);
 	const isCompareDataReady = useMemo(() => {
 		if (preFetchedContent) {
 			// Check that selectionContent is complete and synced with prefetchedContent
