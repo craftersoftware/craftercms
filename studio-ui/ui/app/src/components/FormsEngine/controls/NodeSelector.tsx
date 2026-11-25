@@ -129,6 +129,7 @@ import {
 	showAlert
 } from '../lib/formUtils';
 import {
+	documentFormStack,
 	embeddedItemContentTypeId,
 	enumerateNodeSelectorMoveTargets,
 	type NodeSelectorMoveTarget
@@ -801,7 +802,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	/** List of possible destinations for the move dialog. Calculated when moveDialogItem and index are present. */
 	const moveDialogTargets = useMemo(() => {
 		if (moveDialogItem == null || moveDialogIndex == null) return [];
-		const rootForm = formsStackData[0];
+		const rootForm = documentFormStack(formsStackData, stableForm)[0];
 		const rootAtoms = rootForm?.atoms?.valueByFieldId;
 		const rootContentType = rootForm?.itemMeta?.contentType;
 		const rootModelId = rootForm?.itemMeta?.id;
@@ -819,12 +820,24 @@ function NodeSelector(props: NodeSelectorProps) {
 			contentTypesById: contentTypes,
 			formReadonly: readonly
 		});
-	}, [moveDialogItem, moveDialogIndex, formsStackData, itemsByPath, id, field.id, store, contentTypes, readonly]);
+	}, [
+		moveDialogItem,
+		moveDialogIndex,
+		formsStackData,
+		stableForm,
+		itemsByPath,
+		id,
+		field.id,
+		store,
+		contentTypes,
+		readonly
+	]);
 	const closeMoveDialog = () => setMoveDialogIndex(null);
 	const moveUndoRefs = useUpdateRefs({ formsStackData, contentTypes, store, closeSnackbar });
 	const handleMoveToField = (target: NodeSelectorMoveTarget, targetIndex: number) => {
 		if (moveDialogIndex == null || !moveDialogItem || !contentTypes) return;
-		const rootForm = formsStackData[0];
+		const documentStack = documentFormStack(formsStackData, stableForm);
+		const rootForm = documentStack[0];
 		const rootModelId = rootForm?.itemMeta?.id;
 		const rootContentType = rootForm?.itemMeta?.contentType;
 		if (!rootForm || !rootModelId || !rootContentType) return;
@@ -833,7 +846,7 @@ function NodeSelector(props: NodeSelectorProps) {
 			store,
 			rootForm,
 			item: moveDialogItem,
-			formsStackData,
+			formsStackData: documentStack,
 			rootModelId,
 			rootContentType,
 			contentTypesById: contentTypes,
@@ -874,7 +887,8 @@ function NodeSelector(props: NodeSelectorProps) {
 									store: latestStore,
 									closeSnackbar: close
 								} = moveUndoRefs.current;
-								const latestRootForm = latestStack[0];
+								const latestDocumentStack = documentFormStack(latestStack, stableForm);
+								const latestRootForm = latestDocumentStack[0];
 								const latestRootModelId = latestRootForm?.itemMeta?.id;
 								const latestRootContentType = latestRootForm?.itemMeta?.contentType;
 								if (!latestRootForm || !latestRootModelId || !latestRootContentType || !latestContentTypes) {
@@ -898,7 +912,7 @@ function NodeSelector(props: NodeSelectorProps) {
 									store: latestStore,
 									rootForm: latestRootForm,
 									item: currentItem,
-									formsStackData: latestStack,
+									formsStackData: latestDocumentStack,
 									rootModelId: latestRootModelId,
 									rootContentType: latestRootContentType,
 									contentTypesById: latestContentTypes,

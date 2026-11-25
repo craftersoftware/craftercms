@@ -20,8 +20,24 @@ import { asArray } from '../../../utils/array';
 import { countLimitValue } from '../../../utils/countLimits';
 import { isTypeAcceptedAsByField } from '../../../utils/contentType';
 import { XmlKeys } from './formConsts';
-import { isFieldReadOnly } from './formUtils';
+import { isEmbeddedForm, isFieldReadOnly } from './formUtils';
+import type { StableFormContextProps } from './formsEngineContext';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
+
+/**
+ * The stack from `form`'s document root to the top. An embedded form is part of its parent's document, but a shared
+ * item is its own document, so the root is the nearest non-embedded entry at or below `form`. Empty when `form` is not
+ * on the stack.
+ */
+export function documentFormStack(
+	formsStackData: StableFormContextProps[],
+	form: StableFormContextProps
+): StableFormContextProps[] {
+	let start = formsStackData.lastIndexOf(form);
+	if (start === -1) return [];
+	while (start > 0 && isEmbeddedForm(formsStackData[start].props)) start--;
+	return formsStackData.slice(start);
+}
 
 /** Why a type-compatible destination cannot accept the move right now. */
 export type NodeSelectorMoveTargetReason = 'maxCount' | 'duplicate' | 'readonly';

@@ -21,8 +21,12 @@ import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 
-const { collectEmbeddedSelfAndDescendantIds, embeddedItemContentTypeId, enumerateNodeSelectorMoveTargets } =
-	await import('./nodeSelectorMoveTargets.ts');
+const {
+	collectEmbeddedSelfAndDescendantIds,
+	documentFormStack,
+	embeddedItemContentTypeId,
+	enumerateNodeSelectorMoveTargets
+} = await import('./nodeSelectorMoveTargets.ts');
 
 function nsField(
 	id: string,
@@ -263,5 +267,30 @@ describe('enumerateNodeSelectorMoveTargets', () => {
 			targets.some((target) => target.fieldId === 'footer_o'),
 			false
 		);
+	});
+});
+
+describe('documentFormStack', () => {
+	// page > embedded A > shared S > embedded X. Embedded forms belong to their parent's document; a shared item does not.
+	const page = { props: { update: { path: '/site/website/index.xml' } } };
+	const embeddedA = { props: { update: { path: '/site/website/index.xml', modelId: 'a' } } };
+	const shared = { props: { update: { path: '/site/components/s.xml' } } };
+	const embeddedX = { props: { update: { path: '/site/components/s.xml', modelId: 'x' } } };
+	const stack = [page, embeddedA, shared, embeddedX] as never[];
+
+	it('starts at the nearest shared (non-embedded) form below an embedded one', () => {
+		assert.deepEqual(documentFormStack(stack, embeddedX as never), [shared, embeddedX]);
+	});
+
+	it('starts at the shared form itself when it owns the field', () => {
+		assert.deepEqual(documentFormStack(stack, shared as never), [shared, embeddedX]);
+	});
+
+	it('walks past embedded forms up to the page', () => {
+		assert.deepEqual(documentFormStack(stack, embeddedA as never), [page, embeddedA, shared, embeddedX]);
+	});
+
+	it('is empty when the form is not on the stack', () => {
+		assert.deepEqual(documentFormStack(stack, { props: {} } as never), []);
 	});
 });
