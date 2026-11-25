@@ -8309,7 +8309,10 @@ paths:
             summary: Approve request publish submission
             description: |
                     Module: Studio <br>
-                    Required permission "publish_review"
+                    Required permission "publish_review" <br>
+                    Returns 404 with ApiResponse code 7007 when a package ID does not exist. If peer review is enabled for
+                    the site, package IDs are checked before any permission check. Otherwise they are checked after the
+                    "publish_review" permission check, so a 403 from that check takes precedence.
             operationId: workflowApprove
             parameters:
                 -   name: siteId
@@ -8367,7 +8370,7 @@ paths:
                 '403':
                     $ref: '#/components/responses/Forbidden'
                 '404':
-                    $ref: '#/components/responses/NotFound'
+                    $ref: '#/components/responses/PublishPackageNotFound'
                 '409':
                     $ref: '#/components/responses/InvalidPackageState'
                 '500':
