@@ -360,13 +360,6 @@ public class Publisher implements ApplicationEventPublisherAware {
 	}
 
 	/**
-	 * Reset packages left PROCESSING by an interrupted publish so the scheduler can pick them up again.
-	 */
-	public void resetProcessingPackages() {
-		publishDao.resetProcessingPackages(READY.value, PROCESSING.value);
-	}
-
-	/**
 	 * Copy the live blob-store assets onto the staging branch before this package publishes. The copy is skipped
 	 * once {@code staging_blobs_copied} is set. Every package retries it while the flag is false, and nothing is
 	 * published until it succeeds. A failure, including a partial copy, leaves the flag false and fails both targets.
