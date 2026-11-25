@@ -471,6 +471,38 @@ describe('parseContentXML companion detection via controls', () => {
 			false
 		);
 	});
+
+	it('passes controls down to embedded components in a node-selector', () => {
+		const messages = captureConsoleErrors(() => {
+			parseContentXML(
+				contentDoc(`<components_o item-list="true">
+		<item inline="true">
+			<key>11111111-2222-3333-4444-555555555555</key>
+			<value>Card</value>
+			<component>
+				<objectId>11111111-2222-3333-4444-555555555555</objectId>
+				<content-type>/component/card</content-type>
+				<internal-name>Card</internal-name>
+				<title_s>Hello</title_s>
+				<title_s_bk>Backup</title_s_bk>
+			</component>
+		</item>
+	</components_o>`),
+				path,
+				{
+					'/page/article': { fields: { components_o: { id: 'components_o', type: 'node-selector' } } },
+					'/component/card': { fields: { title_s: { id: 'title_s', type: 'backup-control' } } }
+				} as never,
+				{},
+				undefined,
+				pluginControls
+			);
+		});
+		assert.equal(
+			messages.some((message) => message.includes('title_s_bk') && message.includes('was not found')),
+			false
+		);
+	});
 });
 
 describe('parseContentXML additionalFields skip logic', () => {
