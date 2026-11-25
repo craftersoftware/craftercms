@@ -86,6 +86,14 @@ export function load(url, context, nextLoad) {
 	if (url.startsWith('data:')) {
 		return { format: 'module', source: 'export default {};', shortCircuit: true };
 	}
+	// Node requires an import attribute for JSON. The app imports locale files the way Vite allows.
+	if (url.includes('/ui/app/src/') && url.endsWith('.json')) {
+		return {
+			format: 'module',
+			source: `export default ${readFileSync(fileURLToPath(url), 'utf8')}`,
+			shortCircuit: true
+		};
+	}
 	const isAppSource = url.includes('/ui/app/src/') && (url.endsWith('.ts') || url.endsWith('.tsx'));
 	if (!isAppSource) return nextLoad(url, context);
 	const filename = fileURLToPath(url);
@@ -109,7 +117,11 @@ export function load(url, context, nextLoad) {
 		target: 'es2022',
 		sourcefile: filename,
 		sourcemap: assignsMessageIds ? 'inline' : false,
-		jsx: 'automatic'
+		jsx: 'automatic',
+		// Vite injects this. Node has no import.meta.env, and a few modules read it while loading.
+		define: {
+			'import.meta.env': JSON.stringify({ DEV: true, PROD: false, MODE: 'test', BASE_URL: '/' })
+		}
 	});
 	return { format: 'module', source: result.code, shortCircuit: true };
 }

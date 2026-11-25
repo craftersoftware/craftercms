@@ -180,15 +180,18 @@ function CopyableValue({ value, children }: { value: string; children: ReactNode
 	);
 }
 
-export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
+export function EditModeHeader({ isEmbedded, titleId }: { isEmbedded: boolean; titleId?: string }) {
 	const { atoms } = useContext(StableFormContext);
 	const item = useFormItem();
 	const store = useJotaiStore();
 	const readonly = useAtomValue(atoms.readonly);
 	const isLargeContainer = useAtomValue(atoms.isLargeContainer);
+	const internalNameAtom = atoms.valueByFieldId[XmlKeys.internalName];
 	const itemLabel = isEmbedded
-		? (getFieldAtomValue(atoms.valueByFieldId[XmlKeys.internalName], store) as string)
-		: item.label;
+		? item && internalNameAtom
+			? (getFieldAtomValue(internalNameAtom, store) as string)
+			: ''
+		: (item?.label ?? '');
 	const typeIconItem: Pick<ContentItem, 'systemType' | 'mimeType'> = isEmbedded
 		? { systemType: 'component', mimeType: 'application/xml' }
 		: item;
@@ -211,6 +214,7 @@ export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
 				{isLargeContainer && <CollapseToCButton />}
 				<ItemTypeIcon item={typeIconItem} sx={{ color: 'info.main', flexShrink: 0 }} />
 				<Typography
+					id={titleId}
 					title={itemLabel}
 					sx={{
 						flex: '0 1 auto',
@@ -223,7 +227,7 @@ export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
 				>
 					{itemLabel}
 				</Typography>
-				{item.savedAsDraft && <DraftChip />}
+				{item?.savedAsDraft && <DraftChip />}
 				{readonly && (
 					<Chip
 						sx={{ [`.${chipClasses.label}`]: { display: 'flex', alignItems: 'center' }, flexShrink: 0 }}
@@ -250,15 +254,17 @@ export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
 							minWidth: 0
 						}}
 					>
-						<CopyableValue value={item.path}>
-							<Box
-								component="span"
-								dir="ltr"
-								sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', minWidth: 0 }}
-							>
-								{item.path}
-							</Box>
-						</CopyableValue>
+						{item?.path && (
+							<CopyableValue value={item.path}>
+								<Box
+									component="span"
+									dir="ltr"
+									sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', minWidth: 0 }}
+								>
+									{item.path}
+								</Box>
+							</CopyableValue>
+						)}
 					</Typography>
 				</Box>
 			</Box>
@@ -311,6 +317,8 @@ export function EditModeMetadata() {
 	const item = useFormItem();
 	const localeConf = useLocale();
 	const { formatMessage } = useIntl();
+	// A new embedded component has no content item yet. The dates and state belong to a stored item.
+	if (!item) return null;
 	const formattedCreator = prettyPrintPerson(item.creator);
 	const formattedCreationDate = new Intl.DateTimeFormat(localeConf.localeCode, {
 		dateStyle: 'short'

@@ -207,23 +207,27 @@ export function FormHost(props: {
 	itemKey?: string | null;
 	sourceMap?: Record<string, string>;
 	counts?: Record<string, number>;
+	/** A create form has no stored item. The host still renders, so children can see that missing item. */
+	create?: boolean;
 	children: React.ReactNode;
 }) {
-	const { entry, itemKey = formPath, sourceMap = null, counts } = props;
+	const { entry, itemKey = formPath, sourceMap = null, counts, create = false } = props;
 	const entryRef = React.useRef(entry);
 	const [ready, setReady] = React.useState(true);
 	if (counts) {
 		counts.host = (counts.host ?? 0) + 1;
 		if (!ready) counts.notReady = (counts.notReady ?? 0) + 1;
 	}
-	const hasLiveItem = useFormItemGate({ itemKey, create: false, repeat: false, setReady });
+	const hasLiveItem = useFormItemGate({ itemKey, create, repeat: false, setReady });
 	// The prep effect makes the form ready again once the item it needs is stored.
 	React.useEffect(() => {
 		if (hasLiveItem) setReady(true);
 	}, [hasLiveItem]);
 	useFormEntryProvisioning(entryRef, { itemKey, siteId, formsApi: stableGlobal.api });
 	const itemMeta = React.useMemo(() => ({ ...entry.itemMeta, sourceMap }), [entry, sourceMap]);
-	if (!ready || !hasLiveItem) return React.createElement('p', { 'data-testid': 'not-ready' }, 'Please wait');
+	// Create has no content item yet. Other forms wait until the item is stored.
+	if (!create && (!ready || !hasLiveItem))
+		return React.createElement('p', { 'data-testid': 'not-ready' }, 'Please wait');
 	return React.createElement(
 		StableGlobalContext.Provider,
 		{ value: stableGlobal as never },

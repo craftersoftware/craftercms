@@ -55,9 +55,9 @@ export ENGINE_URL=${ENGINE_URL:="http://$TOMCAT_HOST:$TOMCAT_HTTP_PORT"}
 export STUDIO_URL=${STUDIO_URL:="http://localhost:8080/studio"}
 
 # -------------------- Java opts --------------------
-export OPENSEARCH_JAVA_OPTS=${OPENSEARCH_JAVA_OPTS:="-server -Xss1024K -Xms1G -Xmx1G -Dlog4j2.formatMsgNoLookups=true"}
-export DEPLOYER_JAVA_OPTS=${DEPLOYER_JAVA_OPTS:="-server -Xss1024K -Xmx1G -Dlog4j2.formatMsgNoLookups=true"}
-export CATALINA_OPTS=${CATALINA_OPTS:="-server -Xss1024K -Xms1G -Xmx2G -Dlog4j2.formatMsgNoLookups=true"}
+export OPENSEARCH_JAVA_OPTS=${OPENSEARCH_JAVA_OPTS:="-server -Xss1024K -Xms1G -Xmx1G -Dlog4j2.formatMsgNoLookups=true -XX:-UseBASE64Intrinsics"}
+export DEPLOYER_JAVA_OPTS=${DEPLOYER_JAVA_OPTS:="-server -Xss1024K -Xmx1G -Dlog4j2.formatMsgNoLookups=true -XX:-UseBASE64Intrinsics"}
+export CATALINA_OPTS=${CATALINA_OPTS:="-server -Xss1024K -Xms1G -Xmx2G -Dlog4j2.formatMsgNoLookups=true -XX:-UseBASE64Intrinsics"}
 
 # -------------------- OpenSearch variables --------------------
 export OPENSEARCH_JAVA_HOME=${OPENSEARCH_JAVA_HOME:=$JAVA_HOME}
@@ -88,7 +88,10 @@ export CATALINA_TMPDIR=${CATALINA_TMPDIR:="$CRAFTER_TEMP_DIR/tomcat"}
 export GIT_CONFIG_NOSYSTEM=${GIT_CONFIG_NOSYSTEM:="true"}
 
 # -------------------- Management tokens ----------------
-# Please update this per installation and provide these tokens to the status monitors.
+# Send these values in the X-Crafter-Management-Token header.
+# Engine and Deployer management APIs still accept ?token=.
+# Deployer /api/1/target/* accepts the header only.
+# Please update these per installation and provide them to the status monitors.
 export ENGINE_MANAGEMENT_TOKEN=${ENGINE_MANAGEMENT_TOKEN:="defaultManagementToken"}
 export DEPLOYER_MANAGEMENT_TOKEN=${DEPLOYER_MANAGEMENT_TOKEN:="defaultManagementToken"}
 # Token sent to Studio when listing sites. Must match STUDIO_SITE_MANAGEMENT_TOKEN on authoring.

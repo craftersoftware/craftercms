@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License version 3 as published by
+  ~ the Free Software Foundation.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<!-- site-config.xml
+
+    This contains the primary site configuration.
+
+-->
+<site-config>
+	<version>4.2.0.0</version>
+	<wem-project>{siteName}</wem-project>
+	<display-name>{siteName}</display-name>
+
+	<!-- Site URLs. Default to http://localhost:8080 if blank -->
+	<site-urls>
+		<authoring-url></authoring-url>
+		<staging-url></staging-url>
+		<live-url></live-url>
+	</site-urls>
+
+	<locale>
+		<!--
+		BCP 47 language tag (e.g. en-US) or unicode extension (e.g. "en-US-u-ca-buddhist").
+		Leave empty for using the user's browser locale (i.e. dates/times will be displayed in each users's system locale).
+		Specifying a locale code will apply those localization settings to *all* users regardless of their system settings
+		or location. For example, if "en-US", is specified, all users will see dates as month/day/year instead of day/month/year
+		regardless of their system (i.e. OS) locale preference.
+		-->
+		<localeCode/>
+		<!--
+		Use `dateTimeFormatOptions` to customize how dates & times get displayed on Studio UI.
+		For full list of options and docs, visit: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat
+		-->
+		<dateTimeFormatOptions>
+			<!--
+			Specifying a time zone (i.e. `timeZone` element) will express dates/times across the UI in the time zone you specify
+			here. Leaving it unspecified, will display dates/times to each user in their own system time zone.
+			-->
+			<!--<timeZone>EST5EDT</timeZone>-->
+			<day>numeric</day>
+			<month>numeric</month>
+			<year>numeric</year>
+			<hour>numeric</hour>
+			<minute>numeric</minute>
+			<!--
+			Set `hour12` to "false" to show times in 24 hour format.
+			-->
+			<hour12>true</hour12>
+		</dateTimeFormatOptions>
+	</locale>
+
+	<!--
+	Specifies the regular expression patterns to match content type field
+	names that require CDATA escaping.
+	-->
+	<cdata-escaped-field-patterns>
+		<pattern>(_html|_t|_s|_smv|_mvs)$</pattern>
+		<pattern>internal-name</pattern>
+	</cdata-escaped-field-patterns>
+
+	<published-repository>
+		<enable-staging-environment>false</enable-staging-environment>
+	</published-repository>
+
+	<publishing>
+		<comments>
+			<!-- Global setting would apply to all -->
+			<required>false</required>
+			<!-- Additional (also optional) specific overrides -->
+			<!-- <delete-required/> -->
+			<!-- <bulk-publish-required/> -->
+			<!-- <publish-by-commit-required/> -->
+			<!-- <publish-required/> -->
+			<!-- <publish-everything-required/> -->
+		</comments>
+	</publishing>
+
+	<form-engine>
+		<field-name-postfix>true</field-name-postfix>
+		<ignore-postfix-fields>
+			<field>internal-name</field>
+			<field>file-name</field>
+			<field>placeInNav</field>
+			<field>scripts</field>
+			<field>mime-type</field>
+			<field>force-https</field>
+			<field>navLabel</field>
+			<field>expired</field>
+			<field>key</field>
+			<field>value</field>
+			<field>items</field>
+			<field>redirect-url</field>
+			<field>authorizedRoles</field>
+			<field>role</field>
+			<field>disabled</field>
+		</ignore-postfix-fields>
+	</form-engine>
+
+	<!--
+	    Pattern that Studio will use to load plugin from the site repository
+	    Required placeholders: ${type}, ${name}
+	 -->
+	<plugin-folder-pattern>/config/studio/plugins/${type}/${name}</plugin-folder-pattern>
+
+	<!--
+	    Prevent deleting, renaming or cutting root folders of sidebar
+	-->
+	<protected-folders-patterns>
+		<pattern>^/([^ !$`&amp;*()/+]|(\\[ !$`&amp;*()+]))+$</pattern>
+	</protected-folders-patterns>
+
+	<repository rootPrefix="/site">
+
+		<!-- default inheritance file name -->
+		<level-descriptor>crafter-level-descriptor.level.xml</level-descriptor>
+
+		<!-- The section below classifies items into folders for two dashboard widgets:
+		- Items Waiting For Approval
+		- Approved Scheduled Items
+
+		Items that match the paths specified will be grouped together in the dashboard widget
+		-->
+		<folders>
+			<folder name="Pages" path="/website" read-direct-children="false" attach-root-prefix="true"/>
+			<folder name="Components" path="/components" read-direct-children="false" attach-root-prefix="true"/>
+			<folder name="Taxonomy" path="/taxonomy" read-direct-children="false" attach-root-prefix="true"/>
+			<folder name="Assets" path="/static-assets" read-direct-children="false" attach-root-prefix="false"/>
+			<folder name="Templates" path="/templates" read-direct-children="false" attach-root-prefix="false"/>
+			<folder name="Scripts" path="/scripts" read-direct-children="false" attach-root-prefix="false"/>
+		</folders>
+
+		<!-- Item Patterns -->
+		<patterns>
+			<!-- The section below helps determine the type of content based on regex. This shows up in two places:
+			- The activity audit log.
+			- The UI icon used for the item
+			-->
+
+			<pattern-group name="page">
+				<pattern>/site/website/([^&lt;]+)\.xml</pattern>
+			</pattern-group>
+
+			<pattern-group name="component">
+				<pattern>/site/components/([^&lt;]+)\.xml</pattern>
+				<pattern>/site/system/page-components/([^&lt;]+)\.xml</pattern>
+				<pattern>/site/component-bindings/([^&lt;]+)\.xml</pattern>
+				<pattern>/site/indexes/([^&lt;]+)\.xml</pattern>
+				<pattern>/site/resources/([^&lt;]+)\.xml</pattern>
+			</pattern-group>
+
+			<pattern-group name="asset">
+				<pattern>/static-assets/([^&lt;"']+)</pattern>
+			</pattern-group>
+
+			<pattern-group name="rendering-template">
+				<pattern>/templates/([^&lt;"]+)\.ftl</pattern>
+				<pattern>/templates/([^&lt;"]+)\.ftlh</pattern>
+				<pattern>/templates/([^&lt;"]+)\.ftlx</pattern>
+			</pattern-group>
+
+			<pattern-group name="scripts">
+				<pattern>/scripts/([^&lt;"]+)\.groovy</pattern>
+			</pattern-group>
+
+			<pattern-group name="config">
+				<pattern>/config/(?!studio/content-types/)([^&lt;"']+)\.xml</pattern>
+			</pattern-group>
+
+			<!-- The section below enumerates the mime-types we can preview -->
+			<pattern-group name="previewable-mimetypes">
+				<pattern>image/(.*)</pattern>
+				<pattern>application/pdf</pattern>
+				<pattern>video/(.*)</pattern>
+				<pattern>application/msword</pattern>
+				<pattern>application/vnd.openxmlformats-officedocument.wordprocessingml.document</pattern>
+				<pattern>application/vnd.ms-excel</pattern>
+				<pattern>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</pattern>
+				<pattern>application/vnd.ms-powerpoint</pattern>
+			</pattern-group>
+		</patterns>
+
+		<!-- The patterns below identify what is allowed to show up in the Dashboard widgets -->
+		<display-in-widget-patterns>
+			<display-in-widget-pattern>.*</display-in-widget-pattern>
+		</display-in-widget-patterns>
+	</repository>
+	<contentMonitoring>
+		<monitor>
+			<name>Content Expiring Tomorrow</name>
+			<query>expired_dt:[now+1d/d TO now+2d/d]</query>
+			<paths>
+				<path>
+					<name>All Site</name>
+					<pattern>/site/.*</pattern>
+					<emailTemplate>contentExpiringSoon</emailTemplate>
+					<emails>admin@example.com</emails>
+					<locale>en</locale>
+				</path>
+			</paths>
+		</monitor>
+		<monitor>
+			<name>Content Expiring In One Week</name>
+			<query>expired_dt:[now+7d/d TO now+8d/d]</query>
+			<paths>
+				<path>
+					<name>All Site</name>
+					<pattern>/site/.*</pattern>
+					<emailTemplate>contentExpiringSoon</emailTemplate>
+					<emails>admin@example.com</emails>
+					<locale>en</locale>
+				</path>
+			</paths>
+		</monitor>
+		<monitor>
+			<name>Content Expiring In One Month</name>
+			<query>expired_dt:[now+30d/d TO now+32d/d]</query>
+			<paths>
+				<path>
+					<name>All Site</name>
+					<pattern>/site/.*</pattern>
+					<emailTemplate>contentExpiringSoon</emailTemplate>
+					<emails>admin@example.com</emails>
+					<locale>en</locale>
+				</path>
+			</paths>
+		</monitor>
+		<monitor>
+			<name>Content Expiring In Two Months</name>
+			<query>expired_dt:[now+60d/d TO now+62d/d]</query>
+			<paths>
+				<path>
+					<name>All Site</name>
+					<pattern>/site/.*</pattern>
+					<emailTemplate>contentExpiringSoon</emailTemplate>
+					<emails>admin@example.com</emails>
+					<locale>en</locale>
+				</path>
+			</paths>
+		</monitor>
+	</contentMonitoring>
+</site-config>

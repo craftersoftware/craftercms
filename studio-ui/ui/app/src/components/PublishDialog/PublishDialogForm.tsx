@@ -333,6 +333,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 						>
 							{publishingTargets.map((target) => (
 								<Tooltip
+									describeChild
 									placement="bottom-start"
 									title={
 										isPromote && target.name === 'staging' ? (

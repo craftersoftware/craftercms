@@ -36,6 +36,7 @@ import { renderErrorState } from '../ErrorState/util';
 import { Pagination } from '../Pagination';
 import Box from '@mui/material/Box';
 import { PartialSxRecord } from '../../models';
+import { getNestedHeadingComponent, NavigatorTitleComponent, useNavigatorTitleComponent } from './navigatorHeading';
 
 export type PathNavigatorUIClassKey =
 	'root' | 'body' | 'searchRoot' | 'breadcrumbsRoot' | 'breadcrumbsSearch' | 'paginationRoot';
@@ -60,6 +61,8 @@ export interface PathNavigatorUIProps {
 	 * Widget's top title/label
 	 **/
 	title: ReactNode;
+	/** Heading element for `title`. Defaults to h2, or to the parent navigator-heading context. */
+	titleComponent?: NavigatorTitleComponent;
 	/**
 	 * Widget's search keyword
 	 **/
@@ -137,6 +140,7 @@ export function PathNavigatorUI(props: PathNavigatorUIProps) {
 		icon,
 		container,
 		title,
+		titleComponent: titleComponentProp,
 		onChangeCollapsed,
 		onHeaderButtonClick,
 		onCurrentParentMenu,
@@ -154,6 +158,7 @@ export function PathNavigatorUI(props: PathNavigatorUIProps) {
 		sxs
 	} = props;
 	// endregion
+	const titleComponent = useNavigatorTitleComponent(titleComponentProp);
 	const items = state.itemsInPath?.flatMap((path) => lookupItemByPath(path, itemsByPath) ?? []) ?? [];
 	const levelDescriptor = itemsByPath[state.levelDescriptor];
 	return (
@@ -162,6 +167,10 @@ export function PathNavigatorUI(props: PathNavigatorUIProps) {
 			disableGutters
 			elevation={0}
 			slotProps={{
+				// Keep MUI's styled heading (it resets the user-agent heading font and margin) and only
+				// change the element, so the title is a heading without the taller raw-heading layout.
+				// h2 under the page h1; a parent that is already an h2 supplies h3.
+				heading: { component: titleComponent },
 				transition: {
 					unmountOnExit: true
 				}
@@ -201,6 +210,7 @@ export function PathNavigatorUI(props: PathNavigatorUIProps) {
 			>
 				{state.isRootPathMissing ? (
 					<ErrorState
+						titleComponent={getNestedHeadingComponent(titleComponent)}
 						sxs={{ image: { display: 'none' } }}
 						title={
 							<FormattedMessage

@@ -37,6 +37,7 @@ import { useFieldDataSources } from '../dataSources/useFieldDataSources';
 import useContentTypes from '../../../hooks/useContentTypes';
 import { useDispatch } from 'react-redux';
 import { processPathMacros } from '../../../utils/path';
+import { getFormContextPath } from './formUtils';
 
 export interface ControlWrapperProps {
 	field: ContentTypeField;
@@ -144,7 +145,11 @@ export function ResolvedControlRenderer({
 			return processPathMacros({
 				path,
 				objectId: itemMeta?.id,
-				fullParentPath: item?.path ?? itemMeta?.pathInSite
+				fullParentPath: getFormContextPath({
+					item,
+					updatePath: stableForm?.props?.update?.path,
+					pathInSite: itemMeta?.pathInSite
+				})
 			});
 		},
 		[stableForm]

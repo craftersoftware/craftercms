@@ -92,6 +92,7 @@ export function TransferList(props: TransferListProps) {
 				{!disabled && (
 					<>
 						<Tooltip
+							describeChild
 							title={
 								disableAdd ? (
 									<FormattedMessage
@@ -115,6 +116,7 @@ export function TransferList(props: TransferListProps) {
 							</span>
 						</Tooltip>
 						<Tooltip
+							describeChild
 							title={
 								disableRemove ? (
 									<FormattedMessage

@@ -23,7 +23,7 @@ import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 
-const { React, createItemsStore, baseItems, mountTree, unmountAll } =
+const { React, createItemsStore, baseItems, mountTree, unmountAll, act } =
 	await import('../../FormsEngine/lib/formItemTestHarness');
 const { RepoGridUI } = await import('./RepoGridUI.tsx');
 
@@ -56,5 +56,92 @@ describe('RepoGridUI row button names', () => {
 		}
 		assert.equal(labels.includes('Pull'), false);
 		assert.equal(labels.includes('Push'), false);
+	});
+
+	it('keeps the repository in the Delete name while the tooltip is open', async () => {
+		const host = await mountTree(
+			createItemsStore(baseItems()),
+			React.createElement(RepoGridUI, {
+				repositories,
+				disableActions: false,
+				onDeleteRemote() {},
+				onPullClick() {},
+				onPushClick() {}
+			} as never)
+		);
+		const deleteButton = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label]')).find(
+			(button) => button.getAttribute('aria-label') === 'Delete origin'
+		);
+		assert.ok(deleteButton, 'no Delete button named for the repository');
+		await act(async () => {
+			deleteButton.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
+		assert.equal(deleteButton.getAttribute('aria-label'), 'Delete origin');
+		// A React element title points aria-labelledby at the tooltip, which replaces the button's own name.
+		assert.equal(deleteButton.getAttribute('aria-labelledby'), null);
+	});
+
+	it('keeps the repository in the Pull name and leaves the wrapper unnamed while the tooltip is open', async () => {
+		const host = await mountTree(
+			createItemsStore(baseItems()),
+			React.createElement(RepoGridUI, {
+				repositories,
+				disableActions: false,
+				onDeleteRemote() {},
+				onPullClick() {},
+				onPushClick() {}
+			} as never)
+		);
+		const pull = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label]')).find(
+			(button) => button.getAttribute('aria-label') === 'Pull origin'
+		);
+		assert.ok(pull, 'no Pull button named for the repository');
+		const span = pull.parentElement;
+		assert.equal(span?.tagName, 'SPAN');
+		await act(async () => {
+			span.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
+		assert.equal(pull.getAttribute('aria-label'), 'Pull origin');
+		assert.equal(pull.getAttribute('aria-labelledby'), null);
+		assert.equal(span.getAttribute('aria-label'), null);
+		assert.equal(span.getAttribute('aria-labelledby'), null);
+	});
+
+	it('keeps the repository in the Push name and leaves the wrapper unnamed while the tooltip is open', async () => {
+		const host = await mountTree(
+			createItemsStore(baseItems()),
+			React.createElement(RepoGridUI, {
+				repositories,
+				disableActions: false,
+				onDeleteRemote() {},
+				onPullClick() {},
+				onPushClick() {}
+			} as never)
+		);
+		const push = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label]')).find(
+			(button) => button.getAttribute('aria-label') === 'Push origin'
+		);
+		assert.ok(push, 'no Push button named for the repository');
+		const span = push.parentElement;
+		assert.equal(span?.tagName, 'SPAN');
+		await act(async () => {
+			span.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
+		assert.equal(push.getAttribute('aria-label'), 'Push origin');
+		assert.equal(push.getAttribute('aria-labelledby'), null);
+		assert.equal(span.getAttribute('aria-label'), null);
+		assert.equal(span.getAttribute('aria-labelledby'), null);
 	});
 });

@@ -24,18 +24,22 @@ const {
 	firstBlockingFieldId,
 	minimumRequirementsCopy,
 	minimumRequirementsNotice,
+	isBlankCreateFileName,
 	missingMinimumSaveRequirements,
 	readMissingMinimumSaveRequirements,
+	embeddedMinimumSaveAlert,
+	fullFormMinimumSaveAlert,
 	saveButtonTip,
 	validationAlertVariant
 } = await import('./minimumSaveRequirements.ts');
+const { checkMinimumSaveRequirementsFulfilled } = await import('./validators.ts');
 
 const valid = { isValid: true, messages: [] };
 const invalid = { isValid: false, messages: [] };
 
 describe('minimum save requirements', () => {
 	it('needs a valid file name and an internal name on a full form', () => {
-		const base = { isRepeatMode: false, isEmbedded: false };
+		const base = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: true };
 		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: 'Home' }), []);
 		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: false, internalName: 'Home' }), [
 			'fileName'
@@ -50,16 +54,45 @@ describe('minimum save requirements', () => {
 	});
 
 	it('needs only the internal name on an embedded form, stacked or not', () => {
-		const base = { isRepeatMode: false, isEmbedded: true };
+		const base = { isRepeatMode: false, isEmbedded: true, hasInternalNameField: true };
 		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: false, internalName: 'Card' }), []);
 		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: false, internalName: '' }), [
 			'internalName'
 		]);
 	});
 
+	it('does not require an internal name when the type has no such field', () => {
+		const base = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: false as const };
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: undefined }), []);
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: '' }), []);
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: '   ' }), []);
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: 'Home' }), []);
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: false, internalName: undefined }), [
+			'fileName'
+		]);
+		assert.deepEqual(
+			missingMinimumSaveRequirements({ ...base, isEmbedded: true, fileNameValid: false, internalName: '' }),
+			[]
+		);
+	});
+
+	it('still requires a non-blank internal name when the field exists', () => {
+		const base = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: true as const };
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: '' }), [
+			'internalName'
+		]);
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: 'Home' }), []);
+	});
+
 	it('needs nothing on a repeat item, which commits in memory', () => {
 		assert.deepEqual(
-			missingMinimumSaveRequirements({ isRepeatMode: true, isEmbedded: false, fileNameValid: false, internalName: '' }),
+			missingMinimumSaveRequirements({
+				isRepeatMode: true,
+				isEmbedded: false,
+				fileNameValid: false,
+				internalName: '',
+				hasInternalNameField: true
+			}),
 			[]
 		);
 	});
@@ -72,7 +105,7 @@ describe('minimum save requirements', () => {
 			validationByFieldId: { 'file-name': fileName },
 			valueByFieldId: { 'internal-name': internalName }
 		} as never;
-		const full = { isRepeatMode: false, isEmbedded: false };
+		const full = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: true };
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), ['fileName', 'internalName']);
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, { ...full, isEmbedded: true }), [
 			'internalName'
@@ -83,6 +116,47 @@ describe('minimum save requirements', () => {
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, null, full), []);
 	});
 
+	it('does not require internal-name when the type has no such field', async () => {
+		const store = createStore();
+		const full = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: false };
+		const validFileOnly = {
+			validationByFieldId: { 'file-name': atom(Promise.resolve(valid)) },
+			valueByFieldId: {}
+		} as never;
+		assert.deepEqual(await readMissingMinimumSaveRequirements(store, validFileOnly, full), []);
+		const neither = { validationByFieldId: {}, valueByFieldId: {} } as never;
+		assert.deepEqual(await readMissingMinimumSaveRequirements(store, neither, full), []);
+		const invalidFileOnly = {
+			validationByFieldId: { 'file-name': atom(Promise.resolve(invalid)) },
+			valueByFieldId: {}
+		} as never;
+		assert.deepEqual(await readMissingMinimumSaveRequirements(store, invalidFileOnly, full), ['fileName']);
+		assert.deepEqual(
+			await readMissingMinimumSaveRequirements(store, invalidFileOnly, {
+				isRepeatMode: false,
+				isEmbedded: true,
+				hasInternalNameField: false
+			}),
+			[]
+		);
+	});
+
+	it('requires internal-name when the type defines it and the form has no atom', async () => {
+		const store = createStore();
+		const atoms = {
+			validationByFieldId: { 'file-name': atom(Promise.resolve(valid)) },
+			valueByFieldId: {}
+		} as never;
+		assert.deepEqual(
+			await readMissingMinimumSaveRequirements(store, atoms, {
+				isRepeatMode: false,
+				isEmbedded: false,
+				hasInternalNameField: true
+			}),
+			['internalName']
+		);
+	});
+
 	it('follows a file name that becomes valid', async () => {
 		const store = createStore();
 		const name = atom('');
@@ -90,7 +164,7 @@ describe('minimum save requirements', () => {
 			validationByFieldId: { 'file-name': atom(async (get) => (get(name) ? valid : invalid)) },
 			valueByFieldId: { 'internal-name': atom<unknown>('Home') }
 		} as never;
-		const full = { isRepeatMode: false, isEmbedded: false };
+		const full = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: true };
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), ['fileName']);
 		store.set(name, 'home');
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), []);
@@ -149,6 +223,82 @@ describe('alert variant', () => {
 
 	it('is absent for a clean form', () => {
 		assert.equal(validationAlertVariant({ missing: [], errorCount: 0 }), null);
+	});
+});
+
+const { createIntl } = await import('react-intl');
+const saveIntl = createIntl({ locale: 'en', onError: () => undefined });
+const formatSaveAlert = (descriptor: { defaultMessage: string }, values?: Record<string, string | undefined>) =>
+	saveIntl.formatMessage(descriptor, values);
+
+describe('save guard and alert when fields are absent', () => {
+	const validFile = Promise.resolve({ isValid: true, messages: [] });
+	const invalidFile = Promise.resolve({ isValid: false, messages: [] });
+
+	it('passes when the type has neither a file name nor an internal name', async () => {
+		assert.equal(await checkMinimumSaveRequirementsFulfilled(undefined, {}, false), true);
+		assert.equal(embeddedMinimumSaveAlert(formatSaveAlert, undefined, undefined, false), null);
+		assert.equal(
+			fullFormMinimumSaveAlert(formatSaveAlert, undefined, {
+				fileNameValid: true,
+				internalName: undefined,
+				hasInternalNameField: false
+			}),
+			null
+		);
+	});
+
+	it('blocks an invalid file name and names that field', async () => {
+		assert.equal(await checkMinimumSaveRequirementsFulfilled(invalidFile, {}, false), false);
+		assert.equal(
+			fullFormMinimumSaveAlert(
+				formatSaveAlert,
+				{ 'file-name': { name: 'Page URL' } },
+				{
+					fileNameValid: false,
+					internalName: undefined,
+					hasInternalNameField: false
+				}
+			),
+			'Page URL is required to save content.'
+		);
+	});
+
+	it('refuses a blank file name on a non-embedded create before a path is built', () => {
+		assert.equal(isBlankCreateFileName({ isCreateMode: true, isEmbedded: false, fileName: '' }), true);
+		assert.equal(isBlankCreateFileName({ isCreateMode: true, isEmbedded: false, fileName: '   ' }), true);
+		assert.equal(isBlankCreateFileName({ isCreateMode: true, isEmbedded: false, fileName: undefined }), true);
+		assert.equal(isBlankCreateFileName({ isCreateMode: true, isEmbedded: false, fileName: 'about' }), false);
+		assert.equal(isBlankCreateFileName({ isCreateMode: true, isEmbedded: true, fileName: '' }), false);
+		assert.equal(isBlankCreateFileName({ isCreateMode: false, isEmbedded: false, fileName: '' }), false);
+		assert.equal(
+			fullFormMinimumSaveAlert(
+				formatSaveAlert,
+				{ 'file-name': { name: 'Page URL' } },
+				{ fileNameValid: false, internalName: 'Home', hasInternalNameField: true }
+			),
+			'Page URL is required to save content.'
+		);
+	});
+
+	it('blocks a blank internal name when the field exists', async () => {
+		assert.equal(await checkMinimumSaveRequirementsFulfilled(validFile, { 'internal-name': '  ' }, true), false);
+		assert.equal(
+			embeddedMinimumSaveAlert(formatSaveAlert, { 'internal-name': { name: 'Internal Name' } }, '', true),
+			'Internal Name is required to save content.'
+		);
+		assert.equal(
+			fullFormMinimumSaveAlert(
+				formatSaveAlert,
+				{ 'internal-name': { name: 'Internal Name' } },
+				{
+					fileNameValid: true,
+					internalName: '',
+					hasInternalNameField: true
+				}
+			),
+			'Internal Name is required to save content.'
+		);
 	});
 });
 

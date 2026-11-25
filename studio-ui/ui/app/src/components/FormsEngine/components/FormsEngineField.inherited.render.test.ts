@@ -36,6 +36,7 @@ const {
 	sourcePath,
 	unmountAll
 } = await import('../lib/formItemTestHarness');
+const { act } = await import('react');
 const { Provider: JotaiProvider, createStore } = await import('jotai');
 const { FormsEngineField } = await import('./FormsEngineField.tsx');
 
@@ -74,5 +75,36 @@ describe('FormsEngineField inherited value Edit button', () => {
 		const { [sourcePath]: _omitted, ...items } = baseItems();
 		const labels = labelsOf(await render(items));
 		assert.ok(labels.includes(`Edit ${sourcePath}`), labels.join(' | '));
+	});
+});
+
+describe('FormsEngineField help text', () => {
+	it('is a static note, not an alert, once opened from the help button', async () => {
+		const host = await mountTree(
+			createItemsStore(baseItems()),
+			React.createElement(
+				JotaiProvider,
+				{ store: createStore() },
+				React.createElement(
+					FormHost,
+					{ entry: createEntry(['title_s']), sourceMap: null },
+					React.createElement(FormsEngineField, {
+						field: { ...fieldFor('title_s'), helpText: '<p>Pick a title</p>' },
+						isValid: true
+					})
+				)
+			)
+		);
+		await settle();
+		const button = host.querySelector<HTMLButtonElement>('button[aria-label="Help for Label of title_s"]');
+		assert.ok(button, 'the help button is missing');
+		await act(async () => {
+			button.click();
+		});
+		await settle();
+		const help = host.querySelector('section');
+		assert.ok(help?.textContent?.includes('Pick a title'), 'the help text is not shown');
+		assert.equal(help.closest('.MuiAlert-root')?.getAttribute('role'), 'note');
+		assert.equal(host.querySelectorAll('[role="alert"]').length, 0);
 	});
 });

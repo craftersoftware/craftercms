@@ -48,8 +48,9 @@ export function ActionsBar(props: ActionsBarProps) {
 	const { tools, currentMode, setMode: setEditorMode, onRotate, onFlip } = props;
 	const { formatMessage } = useIntl();
 
-	// MUI's `Tooltip` only copies its `title` onto the button as an `aria-label` when the title
-	// is a plain string so these need to stay `formatMessage` instead of `<FormattedMessage />`
+	// MUI's Tooltip copies a string title onto the button as its aria-label, so these stay
+	// formatMessage strings instead of <FormattedMessage />. The explicit aria-label is a guard
+	// for a non-string title.
 	const cropLabel = formatMessage({ defaultMessage: 'Crop' });
 	const rotateLeftLabel = formatMessage({ defaultMessage: 'Rotate left' });
 	const rotateRightLabel = formatMessage({ defaultMessage: 'Rotate right' });
@@ -75,6 +76,7 @@ export function ActionsBar(props: ActionsBarProps) {
 						color={currentMode === 'crop' ? 'primary' : 'default'}
 						aria-pressed={currentMode === 'crop'}
 						onClick={() => setEditorMode(currentMode !== 'crop' ? 'crop' : null)}
+						aria-label={cropLabel}
 					>
 						<CropIcon />
 					</IconButton>
@@ -86,12 +88,12 @@ export function ActionsBar(props: ActionsBarProps) {
 						<Divider orientation="vertical" flexItem sx={{ height: 30, alignSelf: 'center' }} />
 					)}
 					<Tooltip title={rotateLeftLabel}>
-						<IconButton onClick={() => onRotate(-90)}>
+						<IconButton onClick={() => onRotate(-90)} aria-label={rotateLeftLabel}>
 							<RotateLeftIcon />
 						</IconButton>
 					</Tooltip>
 					<Tooltip title={rotateRightLabel}>
-						<IconButton onClick={() => onRotate(90)}>
+						<IconButton onClick={() => onRotate(90)} aria-label={rotateRightLabel}>
 							<RotateRightIcon />
 						</IconButton>
 					</Tooltip>
@@ -100,12 +102,12 @@ export function ActionsBar(props: ActionsBarProps) {
 			{shouldRenderFlip(tools) && (
 				<>
 					<Tooltip title={flipHorizontalLabel}>
-						<IconButton onClick={() => onFlip(true, false)}>
+						<IconButton onClick={() => onFlip(true, false)} aria-label={flipHorizontalLabel}>
 							<FlipIcon />
 						</IconButton>
 					</Tooltip>
 					<Tooltip title={flipVerticalLabel}>
-						<IconButton onClick={() => onFlip(false, true)}>
+						<IconButton onClick={() => onFlip(false, true)} aria-label={flipVerticalLabel}>
 							<FlipIcon sx={{ transform: 'rotate(90deg)' }} />
 						</IconButton>
 					</Tooltip>
@@ -121,6 +123,7 @@ export function ActionsBar(props: ActionsBarProps) {
 							color={currentMode === 'saturation' ? 'primary' : 'default'}
 							aria-pressed={currentMode === 'saturation'}
 							onClick={() => setEditorMode(currentMode !== 'saturation' ? 'saturation' : null)}
+							aria-label={saturationLabel}
 						>
 							<SaturationIcon />
 						</IconButton>
@@ -130,6 +133,7 @@ export function ActionsBar(props: ActionsBarProps) {
 							color={currentMode === 'brightness' ? 'primary' : 'default'}
 							aria-pressed={currentMode === 'brightness'}
 							onClick={() => setEditorMode(currentMode !== 'brightness' ? 'brightness' : null)}
+							aria-label={brightnessLabel}
 						>
 							<BrightnessIcon />
 						</IconButton>
@@ -139,6 +143,7 @@ export function ActionsBar(props: ActionsBarProps) {
 							color={currentMode === 'contrast' ? 'primary' : 'default'}
 							aria-pressed={currentMode === 'contrast'}
 							onClick={() => setEditorMode(currentMode !== 'contrast' ? 'contrast' : null)}
+							aria-label={contrastLabel}
 						>
 							<ContrastIcon />
 						</IconButton>

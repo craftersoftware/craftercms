@@ -92,6 +92,7 @@ import { ViewPackagesDialogProps } from '../ViewPackagesDialog';
 import {
 	buildSectionExpandedStateAtoms,
 	createFileNameAtom,
+	newItemFileName,
 	commitFormVisibility,
 	createFormsEngineAtoms,
 	extractAtomValues,
@@ -197,6 +198,7 @@ import { useInvalidFieldIds } from './lib/useInvalidFieldIds';
 import { useMinimumSaveRequirements } from './lib/useMinimumSaveRequirements';
 import {
 	blockingFieldName,
+	contentTypeDefinesInternalName,
 	firstBlockingFieldId,
 	minimumRequirementsNotice,
 	validationAlertVariant
@@ -212,6 +214,8 @@ export interface BaseProps extends Partial<UpdateModeProps & RepeatModeProps & C
 	readonly?: boolean;
 	/** Whether the form is rendered in a dialog. Causes various layout adjustments. **/
 	isDialog?: boolean;
+	/** Id for the root form's visible title, so the dialog that hosts the form can be named by it. */
+	titleId?: string;
 	onClose?: EnhancedDialogProps['onClose'];
 	/** Closes a stacked form after its own save. Does not restore selected-fields edits. */
 	onCommittedClose?(): void;
@@ -294,7 +298,7 @@ function FormGuard(props: FormsEngineProps) {
 		if (typeof e !== 'symbol') {
 			console.error(e);
 		}
-		return <FormPrepError error={e} />;
+		return <FormPrepError error={e} titleId={props.titleId} />;
 	}
 	return createElement(GlobalFormsState, props);
 }
@@ -391,6 +395,8 @@ function FormBootstrap(props: FormsEngineProps) {
 		return { ...rest, update: { path: savedCreatePath } };
 	}, [props, savedCreatePath]);
 	const { create, update, repeat, readonly: readonlyProp, stackIndex = 0, isDialog } = effectiveProps;
+	// Only the root form's title can name the dialog, so a stacked form's loading and error states do not get the id.
+	const titleId = stackIndex === 0 ? effectiveProps.titleId : undefined;
 	const siteId = useActiveSiteId();
 	const dispatch = useDispatch();
 	const contentTypesById = useContentTypes();
@@ -528,11 +534,13 @@ function FormBootstrap(props: FormsEngineProps) {
 			pluginPreloadFailures: ControlPluginPreloadFailure[] = []
 		) => {
 			stableFormContextRef.current.atoms = atoms;
-			// A repeat item form is a nested scope: it passes no path, like `setFieldAtoms`. A create form has none yet: `''`.
+			// A repeat item form is a nested scope: it passes no path, like `setFieldAtoms`. A create form passes `''`
+			// and the type's file-name default, so only that default is kept.
 			stableFormContextRef.current.originalValues = withPathFileName(
 				values,
 				atoms,
-				isChildForm && repeat?.fieldId ? undefined : (itemMeta.path ?? '')
+				isChildForm && repeat?.fieldId ? undefined : (itemMeta.path ?? ''),
+				newItemFileName(itemMeta.contentType)
 			);
 			stableFormContextRef.current.itemMeta = itemMeta;
 			stableFormContextRef.current.affectedPluginControlFields = (() => {
@@ -751,7 +759,7 @@ function FormBootstrap(props: FormsEngineProps) {
 					lockResult: lockResultAtom,
 					readonly: atom(false),
 					expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-					fileName: createFileNameAtom('', stableFormContextRef),
+					fileName: createFileNameAtom('', stableFormContextRef, newItemFileName(contentType)),
 					// Default version comment for new content.
 					versionComment: atom(generateDefaultCreationComment('', formatMessage))
 				},
@@ -941,7 +949,7 @@ function FormBootstrap(props: FormsEngineProps) {
 	]);
 
 	if (prepError) {
-		return <FormPrepError error={prepError} />;
+		return <FormPrepError error={prepError} titleId={titleId} />;
 	} else if (
 		ready &&
 		hasFormAtoms(stableFormContextRef.current) &&
@@ -968,6 +976,7 @@ function FormBootstrap(props: FormsEngineProps) {
 		return (
 			<LoadingState
 				sx={{ height: getTargetHeight(isDialog, isFullScreen, theme) }}
+				titleId={titleId}
 				title={<FormattedMessage defaultMessage="Please wait" />}
 				subtitle={<FormattedMessage defaultMessage="Gathering content information" />}
 			/>
@@ -990,6 +999,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 		onClose: onCloseProp
 	} = props;
 	// endregion
+	// Stacked forms are drawn over the root form, so only the root form's title can name the dialog.
+	const titleId = stackIndex === 0 ? props.titleId : undefined;
 
 	const theme = useTheme();
 	const { formatMessage } = useIntl();
@@ -1026,7 +1037,9 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const isStackedForm = stackIndex > 0;
 	const hasStackedForms = !isStackedForm && stackFormCount > 0;
 	const isEmbedded = isEmbeddedForm({ update, create });
-	const isCreateMode = Boolean(create?.path);
+	// Any `create` prop is create mode (including embedded creates). Do not require `create.path`:
+	// nested embeds opened from an unsaved create can briefly lack a path; they still must not use EditModeHeader.
+	const isCreateMode = Boolean(create);
 	const isRepeatMode = Boolean(repeat?.fieldId);
 	const affectedPackages = lockStatus.affectedPackages?.length > 0;
 	const contentTypeFields = contentType.fields;
@@ -1247,12 +1260,21 @@ function FormOrchestrator(props: FormsEngineProps) {
 	);
 	// What the save refuses to write without. A selected-fields item form saves through its parent,
 	// so it reports the parent's requirements, by the parent's own mode.
-	const localMinimum = useMinimumSaveRequirements(atoms, { isRepeatMode, isEmbedded }, fieldUpdates$);
+	const localMinimum = useMinimumSaveRequirements(
+		atoms,
+		{
+			isRepeatMode,
+			isEmbedded,
+			hasInternalNameField: contentTypeDefinesInternalName(contentType)
+		},
+		fieldUpdates$
+	);
 	const parentMinimum = useMinimumSaveRequirements(
 		itemMode === 'selected' ? parentAtoms : null,
 		{
 			isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
-			isEmbedded: isEmbeddedForm(parentEntry?.props ?? {})
+			isEmbedded: isEmbeddedForm(parentEntry?.props ?? {}),
+			hasInternalNameField: contentTypeDefinesInternalName(parentEntry?.itemMeta.contentType)
 		},
 		parentEntry?.fieldUpdates$
 	);
@@ -1771,21 +1793,25 @@ function FormOrchestrator(props: FormsEngineProps) {
 						<Box sx={[isDialog && { position: 'absolute', top: theme.spacing(1), right: theme.spacing(1) }]}>
 							{props.onMinimize && (
 								<Tooltip title={minimizeLabel}>
-									<IconButton size="small" onClick={props.onMinimize}>
+									<IconButton size="small" onClick={props.onMinimize} aria-label={minimizeLabel}>
 										<MinimizeIconRounded />
 									</IconButton>
 								</Tooltip>
 							)}
 							{(props.onCancelFullScreen || props.onFullScreen) && (
 								<Tooltip title={fullscreenLabel}>
-									<IconButton size="small" onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}>
+									<IconButton
+										size="small"
+										onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}
+										aria-label={fullscreenLabel}
+									>
 										{isFullScreen ? <CloseFullscreenOutlined /> : <MaximiseIcon fontSize="small" />}
 									</IconButton>
 								</Tooltip>
 							)}
 							{handleClose && (
 								<Tooltip title={closeLabel}>
-									<IconButton size="small" onClick={handleClose}>
+									<IconButton size="small" onClick={handleClose} aria-label={closeLabel}>
 										<Close />
 									</IconButton>
 								</Tooltip>
@@ -1793,11 +1819,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Box>
 					</Box>
 					{isRepeatMode ? (
-						<RepeatModeHeader repeat={repeat} />
+						<RepeatModeHeader repeat={repeat} titleId={titleId} />
 					) : isCreateMode ? (
-						<CreateModeHeader path={Boolean(create?.path) ? pathInSite : undefined} />
+						<CreateModeHeader path={Boolean(create?.path) ? pathInSite : undefined} titleId={titleId} />
 					) : (
-						<EditModeHeader isEmbedded={isEmbedded} />
+						<EditModeHeader isEmbedded={isEmbedded} titleId={titleId} />
 					)}
 				</Box>
 			}

@@ -258,7 +258,7 @@ export function ImagePicker(props: ImagePickerProps) {
 										</>
 									)}
 									<Box>
-										<Tooltip title={<FormattedMessage defaultMessage="Replace" />}>
+										<Tooltip title={formatMessage({ defaultMessage: 'Replace' })}>
 											<IconButton
 												size="small"
 												disabled={readonly || !actionsReady}
@@ -269,22 +269,29 @@ export function ImagePicker(props: ImagePickerProps) {
 														setAddMenuOpen(true);
 													}
 												}}
+												aria-label={formatMessage({ defaultMessage: 'Replace' })}
 											>
 												<EditOutlined />
 											</IconButton>
 										</Tooltip>
-										<Tooltip title={<FormattedMessage defaultMessage="Download" />}>
+										<Tooltip title={formatMessage({ defaultMessage: 'Download' })}>
 											<IconButton
 												size="small"
 												onClick={() => {
 													if (value) downloadMedia(guestBase, value);
 												}}
+												aria-label={formatMessage({ defaultMessage: 'Download' })}
 											>
 												<DownloadOutlined />
 											</IconButton>
 										</Tooltip>
-										<Tooltip title={<FormattedMessage defaultMessage="Delete" />}>
-											<IconButton size="small" onClick={handleRemoveImage} disabled={readonly}>
+										<Tooltip title={formatMessage({ defaultMessage: 'Delete' })}>
+											<IconButton
+												size="small"
+												onClick={handleRemoveImage}
+												disabled={readonly}
+												aria-label={formatMessage({ defaultMessage: 'Delete' })}
+											>
 												<DeleteOutlined />
 											</IconButton>
 										</Tooltip>

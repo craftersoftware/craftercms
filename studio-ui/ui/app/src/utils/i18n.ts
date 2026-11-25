@@ -58,13 +58,6 @@ export function getStoredLanguage(username?: string): string {
 	);
 }
 
-if (getCurrentLocale() !== 'en') {
-	createIntlInstance(getCurrentLocale()).then((newIntl) => {
-		intl = newIntl;
-		intl$$.next(newIntl);
-	});
-}
-
 async function fetchLocale(locale: string, imports: ImportsLookup): Promise<LookupTable<string>> {
 	const importFn = imports[locale];
 	if (!importFn) {
@@ -97,11 +90,26 @@ export async function createIntlInstance(
 	);
 }
 
+/**
+ * Stored ids may use underscores or any case (es_es). Lookups use a canonical BCP 47 tag (es-ES).
+ * An invalid id keeps the underscore swap. Returning "en" would store that plugin map in the English catalog.
+ * The document lang falls back to "en" on its own, in studio-context.ftl.
+ */
+export function toLanguageTag(id: string): string {
+	const replaced = id.replace(/_/g, '-');
+	try {
+		return Intl.getCanonicalLocales(replaced)[0] ?? replaced;
+	} catch {
+		return replaced;
+	}
+}
+
 export function augmentTranslations(translations: { [localeCode: string]: object }): void {
 	if (translations) {
-		let currentLocale = intl.locale;
+		let currentLocale = toLanguageTag(intl.locale);
 		let currentLocaleChanged = false;
-		Object.entries(translations).forEach(([localeCode, translations]) => {
+		Object.entries(translations).forEach(([rawCode, translations]) => {
+			const localeCode = toLanguageTag(rawCode);
 			currentTranslations[localeCode] = { ...currentTranslations[localeCode], ...translations };
 			currentLocale === localeCode && (currentLocaleChanged = true);
 		});
@@ -173,12 +181,19 @@ if (typeof document !== 'undefined') {
 	document.addEventListener(
 		'setlocale',
 		async (e) => {
-			if (e.detail && e.detail !== intl.locale) {
-				intl = await createIntlInstance(e.detail);
-				document.documentElement.setAttribute('lang', e.detail);
+			const locale = e.detail ? toLanguageTag(e.detail) : e.detail;
+			if (locale && locale !== intl.locale) {
+				intl = await createIntlInstance(locale);
+				document.documentElement.setAttribute('lang', locale);
 				intl$$.next(intl);
 			}
 		},
 		false
 	);
+
+	// FreeMarker shells start at lang="en". A stored locale updates `lang` through this listener.
+	const initialLocale = toLanguageTag(getCurrentLocale());
+	if (initialLocale && initialLocale !== intl.locale) {
+		dispatchLanguageChange(initialLocale);
+	}
 }

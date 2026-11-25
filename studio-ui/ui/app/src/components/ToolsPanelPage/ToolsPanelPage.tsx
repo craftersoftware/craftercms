@@ -24,6 +24,7 @@ import { useActiveSiteId } from '../../hooks/useActiveSiteId';
 import { useActiveUser } from '../../hooks/useActiveUser';
 import { usePossibleTranslation } from '../../hooks/usePossibleTranslation';
 import ToolsPanelTarget from '../../models/ToolsPanelTarget';
+import { NavigatorTitleComponentContext } from '../PathNavigator/navigatorHeading';
 
 export interface ToolsPanelPageDescriptor {
 	title: string;
@@ -42,7 +43,10 @@ export function ToolsPanelPage(props: ToolsPanelPageProps) {
 	const pop = () => dispatch(popPage());
 	return (
 		<ToolPanel title={usePossibleTranslation(props.title)} onBack={pop}>
-			{renderWidgets(props.widgets, { userRoles: rolesBySite[site] })}
+			{/* PanelHeader is an h2. Navigators rendered in the page are sections of it. */}
+			<NavigatorTitleComponentContext.Provider value="h3">
+				{renderWidgets(props.widgets, { userRoles: rolesBySite[site] })}
+			</NavigatorTitleComponentContext.Provider>
 		</ToolPanel>
 	);
 }

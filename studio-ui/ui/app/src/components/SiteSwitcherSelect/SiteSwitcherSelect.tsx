@@ -45,6 +45,7 @@ function SiteSwitcherSelect(props: SiteSwitcherSelectProps) {
 	const dispatch = useDispatch();
 	const checkMinimized = useMinimizedDialogWarning();
 	const { formatMessage } = useIntl();
+	const siteLabel = formatMessage({ defaultMessage: 'Select site' });
 
 	const onSiteChange = ({ target: { value } }) => {
 		if (!isBlank(value) && site !== value && !checkMinimized()) {
@@ -89,7 +90,23 @@ function SiteSwitcherSelect(props: SiteSwitcherSelectProps) {
 			onChange={onSiteChange}
 			slotProps={{
 				input: {
-					'aria-label': formatMessage({ defaultMessage: 'Select site' })
+					'aria-label': siteLabel
+				}
+			}}
+			MenuProps={{
+				...rest.MenuProps,
+				slotProps: {
+					...rest.MenuProps?.slotProps,
+					// The open listbox is named only through labelId. This select has none, so the same name goes on the list.
+					// A function list slot is resolved the way MUI would, then the name is applied last.
+					list: (ownerState) => {
+						const callerList = rest.MenuProps?.slotProps?.list;
+						return {
+							...(typeof callerList === 'function' ? callerList(ownerState) : callerList),
+							'aria-label': siteLabel,
+							'aria-labelledby': undefined
+						};
+					}
 				}
 			}}
 		>

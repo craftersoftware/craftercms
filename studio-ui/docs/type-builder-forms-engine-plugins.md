@@ -38,7 +38,7 @@ installed site:
   /config/studio/static-assets/plugins/<plugin-id-path>/...
 ```
 
-Plugins can also deliver content types and therefore type-local files such as `form-definition.xml`, `config.xml`, `controller.groovy`, thumbnails, and potentially `form-controller.js`.
+Plugins can also deliver content types and therefore type-local files such as `form-definition.xml`, `controller.groovy`, thumbnails, and potentially `form-controller.js`. Do not ship a type-local `config.xml`: since 5.0.0.2 nothing reads it, so anything put there is silently ignored. Former `config.xml` settings (`paths`, `previewable`, `delete-dependencies`, `copy-dependencies`, `allowed-roles`, …) go in `form-definition.xml` (see [type-builder-forms-engine.md §3](type-builder-forms-engine.md#form-definitionxml)).
 
 The `installation` block performs declarative XML auto-wiring. Important fields:
 

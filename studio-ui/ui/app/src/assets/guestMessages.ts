@@ -118,9 +118,17 @@ export const guestMessages = defineMessages({
 		defaultMessage:
 			'An automatic reload was performed because the item was changed in the background. Please try again.'
 	},
+	currentContentChangedByAnotherUser: {
+		id: 'previewConcierge.currentContentChangedByAnotherUser',
+		defaultMessage: '{name} has changed the current page. Reload?'
+	},
 	contentWasChangedByAnotherUser: {
 		id: 'previewConcierge.contentWasChangedByAnotherUser',
-		defaultMessage: '{name} has changed the current page. Reload?'
+		defaultMessage: '{name} has changed {label} ({contentType}). Reload?'
+	},
+	contentPathWasChangedByAnotherUser: {
+		id: 'previewConcierge.contentPathWasChangedByAnotherUser',
+		defaultMessage: '{name} updated content used on this page. Reload?'
 	},
 	contentWasLockedByAnotherUser: {
 		id: 'previewConcierge.contentWasLockedByAnotherUser',

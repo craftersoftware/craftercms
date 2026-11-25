@@ -33,19 +33,23 @@ import { watchInvalidFieldUpdates } from './useInvalidFieldIds';
  */
 export function useMinimumSaveRequirements(
 	atoms: FormsEngineAtoms | null | undefined,
-	flags: { isRepeatMode: boolean; isEmbedded: boolean },
+	flags: { isRepeatMode: boolean; isEmbedded: boolean; hasInternalNameField: boolean },
 	fieldUpdates$: Observable<FieldUpdate> | null | undefined
 ): MinimumSaveRequirement[] {
 	const jotai = useJotaiStore();
 	const [missing, setMissing] = useState<MinimumSaveRequirement[]>([]);
-	const { isRepeatMode, isEmbedded } = flags;
+	const { isRepeatMode, isEmbedded, hasInternalNameField } = flags;
 	useEffect(() => {
 		let disposed = false;
 		let latest = 0;
 		const read = async () => {
 			const seq = ++latest;
 			try {
-				const next = await readMissingMinimumSaveRequirements(jotai, atoms, { isRepeatMode, isEmbedded });
+				const next = await readMissingMinimumSaveRequirements(jotai, atoms, {
+					isRepeatMode,
+					isEmbedded,
+					hasInternalNameField
+				});
 				if (settleInvalidFieldRead({ disposed, seq, latest, rejected: false }) !== 'apply') return;
 				setMissing((current) => (sameMinimumSaveRequirements(current, next) ? current : next));
 			} catch (error) {
@@ -60,6 +64,6 @@ export function useMinimumSaveRequirements(
 			disposed = true;
 			subscription?.unsubscribe();
 		};
-	}, [atoms, fieldUpdates$, isEmbedded, isRepeatMode, jotai]);
+	}, [atoms, fieldUpdates$, hasInternalNameField, isEmbedded, isRepeatMode, jotai]);
 	return missing;
 }
