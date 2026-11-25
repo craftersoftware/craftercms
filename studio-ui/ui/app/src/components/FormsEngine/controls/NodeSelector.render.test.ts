@@ -47,6 +47,7 @@ const {
 } = await import('../lib/formItemTestHarness');
 const { default: NodeSelector } = await import('./NodeSelector');
 const { Provider: JotaiProvider, createStore: createJotaiStore } = await import('jotai');
+const { nodeSelectorFocusRequestAtom } = await import('../lib/nodeSelectorFocusRequest');
 
 afterEach(unmountAll);
 
@@ -203,6 +204,21 @@ describe('NodeSelector keyboard reorder', () => {
 		);
 		assert.equal(document.activeElement, betaRow);
 		assert.equal(liveMessage(host), '');
+	});
+
+	it('focuses the previous row when the last row is removed through the menu', async () => {
+		const { host, items } = await mountSelector([
+			[alpha, 'Alpha'],
+			[beta, 'Beta'],
+			[gamma, 'Gamma']
+		]);
+		const betaRow = rowLabelled(host, 'Beta');
+		await unlinkViaMenu(host, 'Gamma');
+		assert.deepEqual(
+			items().map((item) => item.value),
+			['Alpha', 'Beta']
+		);
+		assert.equal(document.activeElement, betaRow);
 	});
 
 	it('focuses the field body after the last row is removed, because Add cannot take focus', async () => {
@@ -473,5 +489,59 @@ describe('NodeSelector saved component label', () => {
 				{ key: 'child-1', value: 'Child Updated' }
 			]
 		);
+	});
+});
+
+describe('NodeSelector focus request', () => {
+	async function mountWithRequest() {
+		const store = createItemsStore({
+			...baseItems(),
+			[alpha]: selectorItem(alpha, 'Alpha'),
+			[beta]: selectorItem(beta, 'Beta')
+		});
+		const jotaiStore = createJotaiStore();
+		const entry = createEntry(['nodes_o']);
+		let setItems: (items: Array<ReturnType<typeof node>>) => void = () => undefined;
+		function Selector() {
+			const [value, setValue] = React.useState([node(alpha, 'Alpha')]);
+			setItems = setValue;
+			return React.createElement(NodeSelector as never, {
+				field: fieldFor('nodes_o', 'node-selector'),
+				value,
+				setValue,
+				readonly: false,
+				autoFocus: false,
+				contentType: { id: '/component/thing', fields: {} }
+			});
+		}
+		const host = await mountTree(
+			store,
+			React.createElement(
+				JotaiProvider,
+				{ store: jotaiStore },
+				React.createElement(FormHost, { entry }, React.createElement(Selector))
+			)
+		);
+		const addBeta = () => act(async () => setItems([node(alpha, 'Alpha'), node(beta, 'Beta')]));
+		return { host, jotaiStore, addBeta, modelId: entry.itemMeta.id };
+	}
+
+	it('focuses the requested row once the moved item shows up in this field, then clears the request', async () => {
+		const { host, jotaiStore, addBeta, modelId } = await mountWithRequest();
+		jotaiStore.set(nodeSelectorFocusRequestAtom, { modelId, fieldId: 'nodes_o', index: 1, key: beta, at: Date.now() });
+		await addBeta();
+		// Focus is applied on a timer after the commit, so let it run.
+		await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+		assert.equal(document.activeElement, rowLabelled(host, 'Beta'));
+		assert.equal(jotaiStore.get(nodeSelectorFocusRequestAtom), null);
+	});
+
+	it('leaves a request for another field untouched', async () => {
+		const { host, jotaiStore, addBeta, modelId } = await mountWithRequest();
+		const request = { modelId, fieldId: 'other_o', index: 1, key: beta, at: Date.now() };
+		jotaiStore.set(nodeSelectorFocusRequestAtom, request);
+		await addBeta();
+		assert.notEqual(document.activeElement, rowLabelled(host, 'Beta'));
+		assert.deepEqual(jotaiStore.get(nodeSelectorFocusRequestAtom), request);
 	});
 });

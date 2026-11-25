@@ -15,6 +15,7 @@
  */
 
 import {
+	type StableFormContextProps,
 	useItemMetaContext,
 	useStableFormContext,
 	useStableGlobalApiContext,
@@ -30,7 +31,7 @@ import HelpOutline from '@mui/icons-material/HelpOutlined';
 import SearchRounded from '@mui/icons-material/SearchRounded';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import { FormsEngineField } from '../components/FormsEngineField';
-import { ControlProps } from '../types';
+import { ControlProps, type JotaiStore } from '../types';
 import type { ContentItem, MediaItem, Primitive } from '../../../models';
 import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
@@ -133,6 +134,7 @@ import {
 	type NodeSelectorMoveTarget
 } from '../lib/nodeSelectorMoveTargets';
 import { applyNodeSelectorMove } from '../lib/applyNodeSelectorMove';
+import { nodeSelectorFocusRequestAtom, useNodeSelectorFocusRequest } from '../lib/nodeSelectorFocusRequest';
 import MoveToFieldDialog from '../components/MoveToFieldDialog';
 import TypeList from '../../ContentTypeManagement/components/TypeList';
 import { SearchBar } from '../../SearchBar';
@@ -158,6 +160,22 @@ const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
 
 /** Shared so any NodeSelector can dismiss the Move snackbar (item often lands in another field). */
 const MOVE_TO_FIELD_SNACKBAR_KEY = 'formsEngine.moveToField';
+
+/**
+ * Asks the destination row to take focus after a move. Only the top form's selectors can: the forms below it are
+ * covered by the stacked-form drawer (or are not mounted), so their moves leave focus alone.
+ */
+function requestMovedRowFocus(
+	store: JotaiStore,
+	formsStackData: StableFormContextProps[],
+	destination: { modelId: string; fieldId: string; index: number },
+	key: string
+) {
+	const top = formsStackData[formsStackData.length - 1];
+	const topModelId = top?.itemMeta?.id ?? top?.props?.update?.modelId;
+	if (topModelId == null || String(topModelId) !== destination.modelId) return;
+	store.set(nodeSelectorFocusRequestAtom, { ...destination, key, at: Date.now() });
+}
 
 export type NodeSelectorProps = ControlProps<NodeSelectorItem[]>;
 
@@ -274,6 +292,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	const { formsStackData } = useStableGlobalContext();
 	const store = useJotaiStore();
 	const { id, pathInSite } = useItemMetaContext();
+	useNodeSelectorFocusRequest({ modelId: id, fieldId: field.id, list: value, rootRef });
 	// Create forms have no store item (`getItem()` is null). See getFormContextPath.
 	const getContextItemPath = () =>
 		getFormContextPath({
@@ -823,6 +842,12 @@ function NodeSelector(props: NodeSelectorProps) {
 			targetIndex
 		});
 		if (!applied) return;
+		requestMovedRowFocus(
+			store,
+			formsStackData,
+			{ modelId: target.modelId, fieldId: target.fieldId, index: applied.insertedIndex },
+			applied.item.key
+		);
 		const undoSource = {
 			modelId: target.modelId,
 			fieldId: target.fieldId,
@@ -869,7 +894,7 @@ function NodeSelector(props: NodeSelectorProps) {
 									if (live) currentItem = live;
 									break;
 								}
-								applyNodeSelectorMove({
+								const undone = applyNodeSelectorMove({
 									store: latestStore,
 									rootForm: latestRootForm,
 									item: currentItem,
@@ -881,6 +906,15 @@ function NodeSelector(props: NodeSelectorProps) {
 									target: undoTarget,
 									targetIndex: undoTargetIndex
 								});
+								// The item is back in its original field. Focus its row there.
+								if (undone) {
+									requestMovedRowFocus(
+										latestStore,
+										latestStack,
+										{ ...undoTarget, index: undone.insertedIndex },
+										currentItem.key
+									);
+								}
 								close(snackbarKey);
 							}}
 						>
