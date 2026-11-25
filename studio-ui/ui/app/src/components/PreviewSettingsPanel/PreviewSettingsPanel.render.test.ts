@@ -98,7 +98,7 @@ describe('PreviewSettingsPanel list', () => {
 		assert.ok(editMode?.querySelector('p')?.textContent?.includes('in-context editing'));
 		assert.equal(editMode?.classList.contains('MuiListItem-divider'), false);
 
-		const shortcuts = itemWith(list, 'Keyboard shortcuts');
+		const shortcuts = itemWith(list, 'Keyboard Shortcuts');
 		assert.ok(shortcuts?.querySelector('p')?.textContent?.includes('keyboard shortcuts'));
 		assert.equal(shortcuts?.classList.contains('MuiListItem-divider'), true);
 
@@ -113,7 +113,7 @@ describe('PreviewSettingsPanel list', () => {
 		assert.ok(highlight?.querySelector('p')?.textContent?.includes('highlight movable'));
 		assert.equal(highlight?.classList.contains('MuiListItem-divider'), true);
 
-		const padding = itemWith(list, 'Padding mode (p)');
+		const padding = itemWith(list, 'Padding Mode (p)');
 		assert.equal(padding?.tagName, 'LI');
 		assert.ok(padding?.querySelector('p')?.textContent?.includes('Adds padding to collections'));
 	});
@@ -142,7 +142,7 @@ describe('PreviewSettingsPanel list', () => {
 		assert.ok(editInput && editHelper);
 		described(editInput, editHelper);
 
-		const shortcuts = itemWith(list, 'Keyboard shortcuts');
+		const shortcuts = itemWith(list, 'Keyboard Shortcuts');
 		const shortcutsInput = shortcuts?.querySelector('input');
 		const shortcutsHelper = shortcuts?.querySelector('p');
 		assert.ok(shortcutsInput && shortcutsHelper);
@@ -157,12 +157,12 @@ describe('PreviewSettingsPanel list', () => {
 		assert.equal(heading?.classList.contains('MuiListSubheader-root'), true);
 		assert.equal(accessibleName(radiogroup), heading?.textContent);
 
-		const padding = itemWith(list, 'Padding mode (p)');
+		const padding = itemWith(list, 'Padding Mode (p)');
 		const paddingInput = padding?.querySelector<HTMLElement>('input');
 		const paddingHelper = padding?.querySelector('p');
 		assert.ok(paddingInput && paddingHelper);
 		described(paddingInput, paddingHelper);
 		assert.equal(paddingInput.getAttribute('aria-labelledby'), 'paddingModeSwitchLabel');
-		assert.equal(accessibleName(paddingInput), 'Padding mode (p)');
+		assert.equal(accessibleName(paddingInput), 'Padding Mode (p)');
 	});
 });

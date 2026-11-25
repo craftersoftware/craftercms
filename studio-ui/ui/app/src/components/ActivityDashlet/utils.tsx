@@ -223,7 +223,7 @@ export function renderActivityTimestamp(timestamp: string, locale: GlobalState['
 }
 
 export const activityNameLookup: Record<Activities | 'ALL', any> = {
-	ALL: <FormattedMessage id="activityDashlet.showActivityByEveryone" defaultMessage="All activities" />,
+	ALL: <FormattedMessage id="activityDashlet.showActivityByEveryone" defaultMessage="All Activities" />,
 	CREATE: <FormattedMessage id="words.create" defaultMessage="Create" />,
 	DELETE: <FormattedMessage id="words.delete" defaultMessage="Delete" />,
 	INITIAL_PUBLISH_COMPLETE: <FormattedMessage id="operations.initialPublish" defaultMessage="Initial Publish" />,
