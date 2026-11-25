@@ -36,6 +36,7 @@ ext['httpclient5.version'] = libs.versions.httpclient5.get()
 ext['tomcat.version'] = libs.versions.tomcat.embed.get()
 ext['netty.version'] = libs.versions.netty.get()
 ext['log4j2.version'] = libs.versions.log4j.get()
+ext['jackson-bom.version'] = libs.versions.jackson3.get()
 
 dependencies {
 	implementation project(':commons:utilities')

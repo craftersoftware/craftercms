@@ -124,7 +124,6 @@ dependencies {
 	implementation libs.httpclient5
 	implementation libs.jackson.annotations
 	implementation libs.jackson.core
-	implementation libs.jackson.databind
 	implementation libs.jackson.dataformat.xml
 	implementation("org.owasp.esapi:esapi:${libs.versions.esapi.get()}:jakarta")
 	implementation libs.xstream
