@@ -30,7 +30,7 @@ import LookupTable from '../../../models/LookupTable';
 import Asterisk from '../../../icons/Asterisk';
 import controlDescriptors from '../descriptors/controls';
 import dataSourceDescriptors from '../descriptors/dataSources';
-import { applyTranslations } from '../utils';
+import { applyTranslations, resolveFieldControlDescriptor } from '../utils';
 import Button from '@mui/material/Button';
 import AdditionalFieldChip from './AdditionalFieldChip';
 
@@ -82,7 +82,7 @@ export function FieldChip(props: FieldChipProps) {
 		'&:hover': { bgcolor: 'action.selected' }
 	};
 	const { formatMessage } = useIntl();
-	const descriptor = descriptors[field.type];
+	const descriptor = resolveFieldControlDescriptor(field, descriptors[field.type]);
 	const additionalFields = descriptor?.metadata?.additionalFields;
 	return (
 		<>
@@ -150,8 +150,8 @@ export function FieldChip(props: FieldChipProps) {
 						{error && <Asterisk fontSize="small" />}
 					</Box>
 					<Typography variant="body2">
-						{descriptors[field.type]
-							? applyTranslations(descriptors[field.type], formatMessage).name
+						{descriptor
+							? applyTranslations(descriptor, formatMessage).name
 							: capitalize(field.type).replaceAll('-', ' ')}
 					</Typography>
 				</Box>

@@ -27,19 +27,43 @@ export type MinimumSaveRequirement = 'fileName' | 'internalName';
  * and for the button, the tooltip and the alert, so they cannot disagree.
  * A repeat item commits in memory and has no file name or internal name. An embedded form has no
  * file name. That holds for a stacked embedded form too: the save checks embedded before it hands the
- * values back to the parent. A full form needs both.
+ * values back to the parent. A full form needs a file name when that field is on the type, and an
+ * internal name when the content type defines that field. Callers pass `hasInternalNameField` from
+ * the content type. A blank value blocks save when the flag is true.
  */
 export function missingMinimumSaveRequirements(args: {
 	isRepeatMode: boolean;
 	isEmbedded: boolean;
 	fileNameValid: boolean;
 	internalName: unknown;
+	/** Whether the content type defines `internal-name`. */
+	hasInternalNameField: boolean;
 }): MinimumSaveRequirement[] {
 	if (args.isRepeatMode) return [];
 	const missing: MinimumSaveRequirement[] = [];
 	if (!args.isEmbedded && !args.fileNameValid) missing.push('fileName');
-	if (!isInternalNameFilled(args.internalName)) missing.push('internalName');
+	if (args.hasInternalNameField && !isInternalNameFilled(args.internalName)) missing.push('internalName');
 	return missing;
+}
+
+/**
+ * Whether the field is the Internal Name field. Identified by its reserved id alone, whatever its stored type, as FE1
+ * did (`['file-name', 'internal-name'].includes(field.id)` in forms-engine.js). The save rule
+ * ({@link missingMinimumSaveRequirements}) and the system-props writer in formUtils match by id too, so the field-level
+ * required marker and error use this same definition to agree with them: a type that defines the field always requires
+ * it, whatever its stored `required` constraint says. Type Builder uses a stricter id plus type `input` check to select
+ * its properties descriptor (`isInternalNameSystemInput` in ContentTypeManagement/utils.ts). See
+ * craftersoftware/craftercms#9505.
+ */
+export function isInternalNameField(field: { id?: string } | null | undefined): boolean {
+	return field?.id === XmlKeys.internalName;
+}
+
+/** Whether the content type defines the Internal Name field. This is what makes the save require it. */
+export function contentTypeDefinesInternalName(
+	contentType: { fields?: LookupTable<unknown> } | null | undefined
+): boolean {
+	return Boolean(contentType?.fields?.[XmlKeys.internalName]);
 }
 
 /** Not empty and not only whitespace. */
@@ -48,8 +72,10 @@ export function isInternalNameFilled(value: unknown): boolean {
 }
 
 /**
- * Current requirements from the form's atoms. A missing file-name validity is not judged here:
- * the save guard still reads it. A missing internal-name value counts as empty, as it does in the save.
+ * Current requirements from the form's atoms and the content type.
+ * A missing file-name validity atom means the type has no file-name field, so that requirement is skipped.
+ * `hasInternalNameField` comes from the content type, not from whether an atom exists. A type that defines
+ * the field still requires it when the stored XML created no atom. The value is read from the atom when one exists.
  */
 export async function readMissingMinimumSaveRequirements(
 	store: { get<Value>(atom: Atom<Value>): Value },
@@ -60,7 +86,7 @@ export async function readMissingMinimumSaveRequirements(
 		  }
 		| null
 		| undefined,
-	flags: { isRepeatMode: boolean; isEmbedded: boolean }
+	flags: { isRepeatMode: boolean; isEmbedded: boolean; hasInternalNameField: boolean }
 ): Promise<MinimumSaveRequirement[]> {
 	if (!atoms || flags.isRepeatMode) return [];
 	const fileNameAtom = atoms.validationByFieldId?.[XmlKeys.fileName];
@@ -111,6 +137,80 @@ export function minimumRequirementsNotice(
 		fileName: fields?.[XmlKeys.fileName]?.name || XmlKeys.fileName,
 		internalName: fields?.[XmlKeys.internalName]?.name || XmlKeys.internalName
 	};
+}
+
+type SaveAlertFormatter = (
+	descriptor: { defaultMessage: string },
+	values?: Record<string, string | undefined>
+) => string;
+
+/**
+ * Snackbar copy for an embedded save that is missing its internal name.
+ * Null when the type has no internal-name field, or the value is filled.
+ */
+export function embeddedMinimumSaveAlert(
+	formatMessage: SaveAlertFormatter,
+	fields: LookupTable<{ name?: string }> | null | undefined,
+	internalName: unknown,
+	hasInternalNameField: boolean
+): string | null {
+	const missing = missingMinimumSaveRequirements({
+		isRepeatMode: false,
+		isEmbedded: true,
+		fileNameValid: true,
+		internalName,
+		hasInternalNameField
+	});
+	if (!missing.length) return null;
+	const notice = minimumRequirementsNotice(missing, fields);
+	return formatMessage(
+		{ defaultMessage: '{internalName} is required to save content.' },
+		{ internalName: notice?.internalName }
+	);
+}
+
+/**
+ * Snackbar copy for a full-form save that is missing a file name, an internal name, or both.
+ * Null when every requirement that applies to this type is met.
+ */
+export function fullFormMinimumSaveAlert(
+	formatMessage: SaveAlertFormatter,
+	fields: LookupTable<{ name?: string }> | null | undefined,
+	args: { fileNameValid: boolean; internalName: unknown; hasInternalNameField: boolean }
+): string | null {
+	const missing = missingMinimumSaveRequirements({
+		isRepeatMode: false,
+		isEmbedded: false,
+		...args
+	});
+	if (!missing.length) return null;
+	const notice = minimumRequirementsNotice(missing, fields);
+	if (notice?.copy === 'fileName') {
+		return formatMessage({ defaultMessage: '{fileName} is required to save content.' }, { fileName: notice.fileName });
+	}
+	if (notice?.copy === 'internalName') {
+		return formatMessage(
+			{ defaultMessage: '{internalName} is required to save content.' },
+			{ internalName: notice.internalName }
+		);
+	}
+	return formatMessage(
+		{ defaultMessage: 'You need a valid {fileName} and {internalName} at a minimum to save content.' },
+		{ fileName: notice?.fileName, internalName: notice?.internalName }
+	);
+}
+
+/**
+ * A non-embedded create whose file name is blank. Composing the path would write
+ * `<createPath>/index.xml` for a page, or `<createPath>/.xml` for a component, and can
+ * overwrite the folder's existing index page. An embedded create and an edit are left alone.
+ */
+export function isBlankCreateFileName(args: {
+	isCreateMode: boolean;
+	isEmbedded: boolean;
+	fileName: unknown;
+}): boolean {
+	return args.isCreateMode && !args.isEmbedded && (args.fileName?.toString() ?? '').trim() === '';
 }
 
 /** The content type's name for a blocking field, for the alert's Show button. */

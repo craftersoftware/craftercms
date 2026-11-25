@@ -344,7 +344,7 @@ function NodeSelector(props: NodeSelectorProps) {
 						// Keeps the item's other children and its attributes (e.g. `datasource`).
 						...item,
 						key,
-						value: values[XmlKeys.internalName] as string,
+						value: (values[XmlKeys.internalName] as string | undefined) ?? '',
 						[isEmbedded ? 'component' : 'include']: isEmbedded ? (values as LookupTable<Primitive>) : key,
 						disableFlattening
 					};
@@ -544,7 +544,7 @@ function NodeSelector(props: NodeSelectorProps) {
 						const key = isEmbedded ? (result.values.objectId as string) : result.path;
 						const newItem: NodeSelectorItem = {
 							key,
-							value: result.values[XmlKeys.internalName] as string,
+							value: (result.values[XmlKeys.internalName] as string | undefined) ?? '',
 							[isEmbedded ? 'component' : 'include']: isEmbedded ? (result.values as LookupTable<Primitive>) : key,
 							disableFlattening
 						};
