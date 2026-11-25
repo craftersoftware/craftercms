@@ -21,6 +21,7 @@ import { FormattedMessage } from 'react-intl';
 import React from 'react';
 import { useVersionsDialogContext } from '../../CompareVersionsDialog/VersionsDialogContext';
 import useContentTypes from '../../../hooks/useContentTypes';
+import useSelection from '../../../hooks/useSelection';
 import { parseElementByContentType } from '../../../utils/content';
 import { fromString } from '../../../utils/xml';
 import { ViewComponentBaseProps } from '../utils';
@@ -31,10 +32,18 @@ export function RepeatGroupView(props: RepeatGroupViewProps) {
 	const { xml, field } = props;
 	const [, contextApiRef] = useVersionsDialogContext();
 	const contentTypes = useContentTypes();
+	const controls = useSelection((state) => state.uiConfig?.controls);
 	const parseRepeatGroupContent = (xmlString) => {
 		if (!xmlString) return [];
 		try {
-			return parseElementByContentType(fromString(xmlString).querySelector(field.id), field, contentTypes, {});
+			return parseElementByContentType(
+				fromString(xmlString).querySelector(field.id),
+				field,
+				contentTypes,
+				{},
+				undefined,
+				controls
+			);
 		} catch (error) {
 			console.error(`Error parsing XML for repeat group ${field.id}:`, error);
 			return [];

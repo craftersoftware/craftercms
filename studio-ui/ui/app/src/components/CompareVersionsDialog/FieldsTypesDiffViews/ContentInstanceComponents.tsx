@@ -33,6 +33,7 @@ import DiffCollectionItem from './DiffCollectionItem';
 import { useVersionsDialogContext } from '../VersionsDialogContext';
 import { getMockContentInstance, parseElementByContentType } from '../../../utils/content';
 import useContentTypes from '../../../hooks/useContentTypes';
+import useSelection from '../../../hooks/useSelection';
 import { fromString } from '../../../utils/xml';
 
 export interface ContentInstanceComponentsProps extends DiffViewComponentBaseProps {}
@@ -40,14 +41,31 @@ export interface ContentInstanceComponentsProps extends DiffViewComponentBasePro
 export function ContentInstanceComponents(props: ContentInstanceComponentsProps) {
 	const { aXml, bXml, field } = props;
 	const contentTypes = useContentTypes();
+	const controls = useSelection((state) => state.uiConfig?.controls);
 	const { contentA, contentB } = useMemo(
 		() => ({
 			contentA: aXml
-				? parseElementByContentType(fromString(aXml).querySelector(field.id), field, contentTypes, {})
+				? parseElementByContentType(
+						fromString(aXml).querySelector(field.id),
+						field,
+						contentTypes,
+						{},
+						undefined,
+						controls
+					)
 				: [],
-			contentB: bXml ? parseElementByContentType(fromString(bXml).querySelector(field.id), field, contentTypes, {}) : []
+			contentB: bXml
+				? parseElementByContentType(
+						fromString(bXml).querySelector(field.id),
+						field,
+						contentTypes,
+						{},
+						undefined,
+						controls
+					)
+				: []
 		}),
-		[aXml, bXml, contentTypes, field]
+		[aXml, bXml, contentTypes, controls, field]
 	);
 	const [diff, setDiff] = useState<ContentInstanceComponentsDiffResult[]>(null);
 	const itemsByPath = useItemsByPath();
