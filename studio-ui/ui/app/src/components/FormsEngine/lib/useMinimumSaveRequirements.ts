@@ -97,10 +97,10 @@ const fileNameKnownByRequirementsAtom = new WeakMap<
  */
 export function minimumSaveRequirementsAtom(
 	atoms: FormsEngineAtoms | null | undefined,
-	flags: { isRepeatMode: boolean; isEmbedded: boolean }
+	flags: { isRepeatMode: boolean; isEmbedded: boolean; hasInternalNameField: boolean }
 ): Atom<MinimumSaveRequirement[]> {
 	if (!atoms) return emptyMinimumSaveRequirementsAtom;
-	const flagsKey = `${flags.isRepeatMode}:${flags.isEmbedded}`;
+	const flagsKey = `${flags.isRepeatMode}:${flags.isEmbedded}:${flags.hasInternalNameField}`;
 	let byFlags = minimumSaveRequirementsAtomsByAtoms.get(atoms);
 	if (!byFlags) {
 		byFlags = new Map();
@@ -129,7 +129,8 @@ export function minimumSaveRequirementsAtom(
 				isRepeatMode: flags.isRepeatMode,
 				isEmbedded: flags.isEmbedded,
 				fileNameValid: fileName?.isValid ?? true,
-				internalName
+				internalName,
+				hasInternalNameField: flags.hasInternalNameField
 			});
 			if (sameMinimumSaveRequirements(previous, next)) return previous;
 			previous = next.length === 0 ? EMPTY_MINIMUM_SAVE_REQUIREMENTS : next;
@@ -149,16 +150,16 @@ export function minimumSaveRequirementsAtom(
  */
 export function useMinimumSaveRequirements(
 	atoms: FormsEngineAtoms | null | undefined,
-	flags: { isRepeatMode: boolean; isEmbedded: boolean }
+	flags: { isRepeatMode: boolean; isEmbedded: boolean; hasInternalNameField: boolean }
 ): MinimumSaveRequirement[] {
-	const { isRepeatMode, isEmbedded } = flags;
+	const { isRepeatMode, isEmbedded, hasInternalNameField } = flags;
 	const requirementsAtom = useMemo(
-		() => minimumSaveRequirementsAtom(atoms, { isRepeatMode, isEmbedded }),
-		[atoms, isEmbedded, isRepeatMode]
+		() => minimumSaveRequirementsAtom(atoms, { isRepeatMode, isEmbedded, hasInternalNameField }),
+		[atoms, isEmbedded, isRepeatMode, hasInternalNameField]
 	);
 	const requirements = useAtomValue(requirementsAtom);
 	const [missing, setMissing] = useState<MinimumSaveRequirement[]>(EMPTY_MINIMUM_SAVE_REQUIREMENTS);
-	const [source, setSource] = useState({ atoms, isRepeatMode, isEmbedded });
+	const [source, setSource] = useState({ atoms, isRepeatMode, isEmbedded, hasInternalNameField });
 	const initial = useRef(true);
 	const appliedSettledFileName = useRef(false);
 	const shownRequirements = useRef(requirements);
@@ -167,10 +168,13 @@ export function useMinimumSaveRequirements(
 	// A new atoms object must not paint the previous form's list. Adjusting state while rendering
 	// drops it before paint; an effect would run too late.
 	const sourceChanged =
-		source.atoms !== atoms || source.isRepeatMode !== isRepeatMode || source.isEmbedded !== isEmbedded;
+		source.atoms !== atoms ||
+		source.isRepeatMode !== isRepeatMode ||
+		source.isEmbedded !== isEmbedded ||
+		source.hasInternalNameField !== hasInternalNameField;
 	const nextMissing = !atoms || isRepeatMode ? EMPTY_MINIMUM_SAVE_REQUIREMENTS : requirements;
 	if (sourceChanged) {
-		setSource({ atoms, isRepeatMode, isEmbedded });
+		setSource({ atoms, isRepeatMode, isEmbedded, hasInternalNameField });
 		setMissing(nextMissing);
 	}
 
@@ -197,7 +201,7 @@ export function useMinimumSaveRequirements(
 	useEffect(() => {
 		initial.current = true;
 		appliedSettledFileName.current = false;
-	}, [atoms, isEmbedded, isRepeatMode]);
+	}, [atoms, isEmbedded, isRepeatMode, hasInternalNameField]);
 
 	useEffect(() => {
 		if (!atoms || isRepeatMode) {
@@ -220,7 +224,6 @@ export function useMinimumSaveRequirements(
 		const timer = window.setTimeout(apply, invalidFieldReadDebounceMs);
 		return () => window.clearTimeout(timer);
 	}, [atoms, isEmbedded, isRepeatMode, requirements, requirementsAtom]);
-
 	if (!atoms || isRepeatMode) return EMPTY_MINIMUM_SAVE_REQUIREMENTS;
 	return sourceChanged ? nextMissing : missing;
 }

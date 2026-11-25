@@ -92,6 +92,7 @@ import { ViewPackagesDialogProps } from '../ViewPackagesDialog';
 import {
 	buildSectionExpandedStateAtoms,
 	createFileNameAtom,
+	newItemFileName,
 	commitFormVisibility,
 	createFormsEngineAtoms,
 	extractAtomValues,
@@ -197,6 +198,7 @@ import { useInvalidFieldIds } from './lib/useInvalidFieldIds';
 import { useMinimumSaveRequirements } from './lib/useMinimumSaveRequirements';
 import {
 	blockingFieldName,
+	contentTypeDefinesInternalName,
 	firstBlockingFieldId,
 	minimumRequirementsNotice,
 	validationAlertVariant
@@ -532,11 +534,13 @@ function FormBootstrap(props: FormsEngineProps) {
 			pluginPreloadFailures: ControlPluginPreloadFailure[] = []
 		) => {
 			stableFormContextRef.current.atoms = atoms;
-			// A repeat item form is a nested scope: it passes no path, like `setFieldAtoms`. A create form has none yet: `''`.
+			// A repeat item form is a nested scope: it passes no path, like `setFieldAtoms`. A create form passes `''`
+			// and the type's file-name default, so only that default is kept.
 			stableFormContextRef.current.originalValues = withPathFileName(
 				values,
 				atoms,
-				isChildForm && repeat?.fieldId ? undefined : (itemMeta.path ?? '')
+				isChildForm && repeat?.fieldId ? undefined : (itemMeta.path ?? ''),
+				newItemFileName(itemMeta.contentType)
 			);
 			stableFormContextRef.current.itemMeta = itemMeta;
 			stableFormContextRef.current.affectedPluginControlFields = (() => {
@@ -755,7 +759,7 @@ function FormBootstrap(props: FormsEngineProps) {
 					lockResult: lockResultAtom,
 					readonly: atom(false),
 					expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-					fileName: createFileNameAtom('', stableFormContextRef),
+					fileName: createFileNameAtom('', stableFormContextRef, newItemFileName(contentType)),
 					// Default version comment for new content.
 					versionComment: atom(generateDefaultCreationComment('', formatMessage))
 				},
@@ -1246,11 +1250,22 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const parentInvalid = useInvalidFieldIds(parentEntry, undefined);
 	// What the save refuses to write without. A selected-fields item form saves through its parent,
 	// so it reports the parent's requirements, by the parent's own mode.
-	const localMinimum = useMinimumSaveRequirements(atoms, { isRepeatMode, isEmbedded });
-	const parentMinimum = useMinimumSaveRequirements(itemMode === 'selected' ? parentAtoms : null, {
-		isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
-		isEmbedded: isEmbeddedForm(parentEntry?.props ?? {})
-	});
+	const localMinimum = useMinimumSaveRequirements(
+		atoms,
+		{
+			isRepeatMode,
+			isEmbedded,
+			hasInternalNameField: contentTypeDefinesInternalName(contentType)
+		}
+	);
+	const parentMinimum = useMinimumSaveRequirements(
+		itemMode === 'selected' ? parentAtoms : null,
+		{
+			isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
+			isEmbedded: isEmbeddedForm(parentEntry?.props ?? {}),
+			hasInternalNameField: contentTypeDefinesInternalName(parentEntry?.itemMeta.contentType)
+		}
+	);
 	// region Workflow item updates
 	useAffectedPackagesRefetch(siteId, itemPath, (affectedPackages) =>
 		// Merge into the live lock record so a rename's path is not dropped.

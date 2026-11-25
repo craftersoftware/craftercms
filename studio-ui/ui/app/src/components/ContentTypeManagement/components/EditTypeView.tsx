@@ -42,19 +42,19 @@ import {
 	DescriptorContentType,
 	editTypeTemplate,
 	getFieldFromType,
-	getPropertiesAndValidationsFromDescriptor,
 	getSectionFromType,
 	getDataSourceSiblingIds,
+	extractPluginLocatorFromConfigEntry,
 	getFieldIdSet,
+	getNewFieldFromDescriptor,
 	getSiblingFieldIds,
 	isComposedPath,
 	typeForNextArtefactForm,
 	NEW_DATASOURCE_ID,
 	NEW_FIELD_ID,
 	prepareSerializeToXmlTypeObject,
+	resolveFieldControlDescriptor,
 	reverseTypeFieldValuesObject,
-	systemFieldsIdsMap,
-	systemFieldsTypesMap,
 	TYPE_TEMPLATE_BASE_PATH,
 	TypePropsToEdit,
 	typePropsToEdit
@@ -118,12 +118,8 @@ import { fetchContentTypes } from '../../../state/actions/preview';
 import useSelection from '../../../hooks/useSelection';
 import { getXmlBuilder, valueSerializersLookup } from '../../FormsEngine/lib/valueSerializers';
 import { pushErrorDialog } from '../../../utils/system';
-import {
-	contentTypeCreated,
-	contentTypeDeleted,
-	emitSystemEvent,
-	showSystemNotification
-} from '../../../state/actions/system';
+import { contentTypeDeleted, emitSystemEvent, showSystemNotification } from '../../../state/actions/system';
+import { editTypeSaveSuccessActions } from './editTypeSaveSystemEvent';
 import { extractErrorPayload } from '../../../utils/ajax';
 import Typography from '@mui/material/Typography';
 import { AjaxError } from 'rxjs/ajax';
@@ -481,8 +477,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// are preserved (e.g. selecting a parent after editing one of its children).
 		const fieldForForm = getFieldFromType(typeForForm, resolvedFieldIdPath) ?? field;
 
-		const controlDescriptor =
-			controlDescriptors[fieldForForm.type as BuiltInControlType] ?? config.controls?.[fieldForForm.type]?.descriptor;
+		const controlDescriptor = resolveFieldControlDescriptor(
+			fieldForForm,
+			controlDescriptors[fieldForForm.type as BuiltInControlType] ?? config.controls?.[fieldForForm.type]?.descriptor
+		);
 		if (!controlDescriptor)
 			return showAlert(
 				formatMessage(messages.noFieldControlDescriptor, {
@@ -662,7 +660,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			}
 			case 'deleted':
 				onUpdateHasPendingChanges(false);
-				dispatch(batchActions([emitSystemEvent(contentTypeDeleted()), fetchContentTypes()]));
+				dispatch(batchActions([emitSystemEvent(contentTypeDeleted({ contentTypeId: type.id })), fetchContentTypes()]));
 				onExit?.();
 				break;
 		}
@@ -703,8 +701,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						typeToSave,
 						formEngine.ignorePostfixFields,
 						(field) =>
-							(controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor)
-								?.metadata?.suffixes
+							resolveFieldControlDescriptor(
+								field,
+								controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor
+							)?.metadata?.suffixes
 					);
 					if (postfixViolations.length) {
 						showAlert({
@@ -757,13 +757,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							setContentItemReloadToken((token) => token + 1);
 						}
 						dispatch(
-							batchActions([
-								...(isNew ? [emitSystemEvent(contentTypeCreated())] : []),
-								fetchContentTypes(),
-								showSystemNotification({
-									message: formatMessage({ defaultMessage: 'Save successful.' })
-								})
-							])
+							batchActions(
+								editTypeSaveSuccessActions(isNew, typeToSave.id, formatMessage({ defaultMessage: 'Save successful.' }))
+							)
 						);
 						if (action === 'saveAndClose') {
 							if (postSubmitEdits) {
@@ -929,6 +925,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		handleFieldSelected(newFieldPath, newField, sectionId, nextType);
 	};
 	const handleInsertDataSource = (dataSourceType: string, position: number) => {
+		setOpenDataSourceInserter(false);
 		const configEntry = config.dataSources?.[dataSourceType];
 		const descriptor = dataSourceDescriptors[dataSourceType] ?? configEntry?.descriptor;
 		if (!descriptor) {
@@ -938,7 +935,6 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 		const newDataSource = getNewDataSourceFromDescriptor(dataSourceType, descriptor, configEntry);
 
-		setOpenDataSourceInserter(false);
 		setType((currentType) => insertDataSourceIntoType(currentType, newDataSource, position));
 		onUpdateHasPendingChanges(true);
 		handleDataSourceSelected(newDataSource);
@@ -1547,7 +1543,10 @@ function updateTypeFromFieldUpdate(
 	if (!state.selectedField) return;
 
 	const fieldType = state.selectedField.type;
-	const descriptor = configDescriptors?.[fieldType] ?? controlDescriptors[fieldType];
+	const descriptor = resolveFieldControlDescriptor(
+		state.selectedField,
+		configDescriptors?.[fieldType] ?? controlDescriptors[fieldType]
+	);
 	if (isComposedPath(fieldIdPath)) {
 		// When the field is not on the root level (composed fieldIdPath), the field is under another field, where each
 		// field contains a lookupTable of fields. In that screnario sections should not be updated.
@@ -1742,37 +1741,6 @@ function parseConfigPlugins(
 	return createLookupTable(parsedPlugins);
 }
 
-function getNewFieldFromDescriptor(
-	fieldType: string,
-	descriptor: DescriptorContentType,
-	configEntry?: { plugin?: FormDefinitionPlugin; descriptor?: DescriptorContentType }
-): NewContentTypeField {
-	const newField: NewContentTypeField = {
-		NEW: true,
-		id: systemFieldsIdsMap[fieldType] ?? null,
-		name: '',
-		helpText: '',
-		description: '',
-		type: systemFieldsTypesMap[fieldType] ?? fieldType,
-		validations: {},
-		defaultValue: '',
-		properties: {}
-	};
-	if (!descriptor) return newField;
-
-	if (descriptor.id === 'repeat') newField.fields = {};
-	const { properties, validations } = getPropertiesAndValidationsFromDescriptor(descriptor);
-
-	newField.properties = properties;
-	newField.validations = validations;
-	const plugin = extractPluginLocatorFromConfigEntry(configEntry);
-	if (plugin) {
-		Object.assign(newField.properties, { plugin });
-	}
-
-	return newField;
-}
-
 function getNewDataSourceFromDescriptor(
 	dataSourceType: string,
 	descriptor: DescriptorContentType,
@@ -1801,31 +1769,6 @@ function getNewDataSourceFromDescriptor(
 	}
 
 	return newDataSource;
-}
-
-function extractPluginLocatorFromConfigEntry(
-	configEntry?: { plugin?: FormDefinitionPlugin | Record<string, unknown> } & Record<string, unknown>
-): FormDefinitionPlugin | undefined {
-	if (!configEntry?.plugin || typeof configEntry.plugin !== 'object') return undefined;
-	const raw = configEntry.plugin as Record<string, unknown>;
-	// ui.xml attribute form: <plugin id type name fileName />; form-definition uses pluginId/filename.
-	const type = raw.type;
-	const name = raw.name;
-	const filename = raw.filename ?? raw.fileName ?? raw.file;
-	const pluginId = raw.pluginId ?? raw.id;
-	if (
-		typeof type === 'string' &&
-		typeof name === 'string' &&
-		typeof filename === 'string' &&
-		typeof pluginId === 'string' &&
-		type &&
-		name &&
-		filename &&
-		pluginId
-	) {
-		return { type, name, filename, pluginId };
-	}
-	return undefined;
 }
 
 function reorderSectionFields(
