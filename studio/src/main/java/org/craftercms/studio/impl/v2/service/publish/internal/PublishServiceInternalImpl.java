@@ -243,7 +243,7 @@ public class PublishServiceInternalImpl implements PublishService, ApplicationCo
 		validateTarget(siteId, target);
 		Map<Boolean, List<String>> publishPaths = publishDao.getUserRequestedPathMap(siteId, packageId);
 
-		Set<String> corePackagePaths = new HashSet<>(publishPaths.get(false));
+		Set<String> corePackagePaths = new HashSet<>(publishPaths.getOrDefault(false, emptyList()));
 		Collection<String> deletedPaths = publishPaths.get(true);
 
 		return buildCalculatedPublishPackageResult(siteId, target, corePackagePaths, deletedPaths);
