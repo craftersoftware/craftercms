@@ -381,10 +381,11 @@ describe('mergeAdditionalFieldIds', () => {
 	});
 
 	it('keeps a conflicting persisted id and backfills only the expanded id that is missing', () => {
-		assert.deepEqual(
-			mergeAdditionalFieldIds('title_s', ['title_s_custom', 'title_s_bk'], ['{id}_bk', '{id}_alt']),
-			['title_s_custom', 'title_s_bk', 'title_s_alt']
-		);
+		assert.deepEqual(mergeAdditionalFieldIds('title_s', ['title_s_custom', 'title_s_bk'], ['{id}_bk', '{id}_alt']), [
+			'title_s_custom',
+			'title_s_bk',
+			'title_s_alt'
+		]);
 	});
 });
 
