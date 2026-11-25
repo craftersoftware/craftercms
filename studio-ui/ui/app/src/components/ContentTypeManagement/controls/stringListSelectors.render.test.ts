@@ -126,10 +126,12 @@ describe('string list selectors render', () => {
 	});
 
 	it('removes a role and focuses the row that takes its place', async () => {
-		let latest: string[] = [];
+		const latest = { current: ['author', 'editor', 'admin'] as string[] };
 		function Roles() {
-			const [value, setValue] = React.useState(['author', 'editor', 'admin']);
-			latest = value;
+			const [value, setValue] = React.useState(latest.current);
+			React.useEffect(() => {
+				latest.current = value;
+			}, [value]);
 			return React.createElement(TypeAllowedRolesSelector, {
 				field: field('allowedRoles', 'Allowed Roles', 'type-allowed-roles-selector'),
 				value,
@@ -144,7 +146,7 @@ describe('string list selectors render', () => {
 			remove.click();
 		});
 
-		assert.deepEqual(latest, ['author', 'admin']);
+		assert.deepEqual(latest.current, ['author', 'admin']);
 		const inputs = [...host.querySelectorAll('input')].map((input) => (input as HTMLInputElement).value);
 		assert.deepEqual(inputs, ['author', 'admin']);
 		const focused = document.activeElement;
@@ -154,10 +156,12 @@ describe('string list selectors render', () => {
 	});
 
 	it('keeps earlier rows when the parent replaces the list', async () => {
-		let setRoles: (next: string[]) => void = () => {};
+		const setRoles: { current: (next: string[]) => void } = { current: () => {} };
 		function Roles() {
 			const [value, setValue] = React.useState(['author', 'editor']);
-			setRoles = setValue;
+			React.useEffect(() => {
+				setRoles.current = setValue;
+			}, [setValue]);
 			return React.createElement(TypeAllowedRolesSelector, {
 				field: field('allowedRoles', 'Allowed Roles', 'type-allowed-roles-selector'),
 				value,
@@ -173,7 +177,7 @@ describe('string list selectors render', () => {
 		);
 
 		await act(async () => {
-			setRoles(['author', 'publisher']);
+			setRoles.current(['author', 'publisher']);
 		});
 		const replaced = [...host.querySelectorAll('input')];
 		assert.deepEqual(
@@ -184,7 +188,7 @@ describe('string list selectors render', () => {
 		assert.equal(replaced[1], initial[1]);
 
 		await act(async () => {
-			setRoles(['author', 'publisher', 'admin']);
+			setRoles.current(['author', 'publisher', 'admin']);
 		});
 		const grown = [...host.querySelectorAll('input')];
 		assert.deepEqual(
@@ -195,7 +199,7 @@ describe('string list selectors render', () => {
 		assert.equal(grown[1], initial[1]);
 
 		await act(async () => {
-			setRoles(['author']);
+			setRoles.current(['author']);
 		});
 		const shrunk = [...host.querySelectorAll('input')];
 		assert.deepEqual(
@@ -206,10 +210,12 @@ describe('string list selectors render', () => {
 	});
 
 	it('does not reuse a kept row id when the parent appends after a removal', async () => {
-		let setRoles: (next: string[]) => void = () => {};
+		const setRoles: { current: (next: string[]) => void } = { current: () => {} };
 		function Roles() {
 			const [value, setValue] = React.useState(['author', 'editor']);
-			setRoles = setValue;
+			React.useEffect(() => {
+				setRoles.current = setValue;
+			}, [setValue]);
 			return React.createElement(TypeAllowedRolesSelector, {
 				field: field('allowedRoles', 'Allowed Roles', 'type-allowed-roles-selector'),
 				value,
@@ -219,7 +225,7 @@ describe('string list selectors render', () => {
 
 		const host = await render(React.createElement(Roles));
 		await act(async () => {
-			setRoles(['author', 'editor', 'admin']);
+			setRoles.current(['author', 'editor', 'admin']);
 		});
 		const grown = [...host.querySelectorAll('input')];
 		assert.deepEqual(
@@ -247,7 +253,7 @@ describe('string list selectors render', () => {
 		};
 		try {
 			await act(async () => {
-				setRoles(['editor', 'admin', 'publisher']);
+				setRoles.current(['editor', 'admin', 'publisher']);
 			});
 		} finally {
 			console.error = originalError;
@@ -268,10 +274,12 @@ describe('string list selectors render', () => {
 	});
 
 	it('appends an empty role and focuses it from an empty list and a populated list', async () => {
-		let latest: string[] = [];
+		const latest = { current: [] as string[] };
 		function Roles() {
-			const [value, setValue] = React.useState<string[]>([]);
-			latest = value;
+			const [value, setValue] = React.useState(latest.current);
+			React.useEffect(() => {
+				latest.current = value;
+			}, [value]);
 			return React.createElement(TypeAllowedRolesSelector, {
 				field: field('allowedRoles', 'Allowed Roles', 'type-allowed-roles-selector'),
 				value,
@@ -281,23 +289,23 @@ describe('string list selectors render', () => {
 
 		const host = await render(React.createElement(Roles));
 		await clickAdd(host, 'Add Role');
-		assert.deepEqual(latest, ['']);
+		assert.deepEqual(latest.current, ['']);
 		assertFocusedRow('Role 1', '');
 
 		await clickAdd(host, 'Add Role');
-		assert.deepEqual(latest, ['', '']);
+		assert.deepEqual(latest.current, ['', '']);
 		assertFocusedRow('Role 2', '');
 	});
 
 	it('appends an empty include path and focuses it from an empty list and a populated list', async () => {
-		const latest = { includes: { pattern: [] as string[] }, excludes: { pattern: [] as string[] } };
+		const latest = {
+			current: { includes: { pattern: [] as string[] }, excludes: { pattern: [] as string[] } }
+		};
 		function Paths() {
-			const [value, setValue] = React.useState({
-				includes: { pattern: [] as string[] },
-				excludes: { pattern: [] as string[] }
-			});
-			latest.includes = value.includes;
-			latest.excludes = value.excludes;
+			const [value, setValue] = React.useState(latest.current);
+			React.useEffect(() => {
+				latest.current = value;
+			}, [value]);
 			return React.createElement(TypeDestinationPathsSelector, {
 				field: field('paths', 'Paths', 'type-destination-paths-selector'),
 				value,
@@ -307,24 +315,24 @@ describe('string list selectors render', () => {
 
 		const host = await render(React.createElement(Paths));
 		await clickAdd(host, 'Add include path');
-		assert.deepEqual(latest.includes.pattern, ['']);
-		assert.deepEqual(latest.excludes.pattern, []);
+		assert.deepEqual(latest.current.includes.pattern, ['']);
+		assert.deepEqual(latest.current.excludes.pattern, []);
 		assertFocusedRow('Includes pattern 1', '');
 
 		await clickAdd(host, 'Add include path');
-		assert.deepEqual(latest.includes.pattern, ['', '']);
+		assert.deepEqual(latest.current.includes.pattern, ['', '']);
 		assertFocusedRow('Includes pattern 2', '');
 	});
 
 	it('appends an empty exclude path and focuses it from an empty list and a populated list', async () => {
-		const latest = { includes: { pattern: [] as string[] }, excludes: { pattern: [] as string[] } };
+		const latest = {
+			current: { includes: { pattern: [] as string[] }, excludes: { pattern: [] as string[] } }
+		};
 		function Paths() {
-			const [value, setValue] = React.useState({
-				includes: { pattern: [] as string[] },
-				excludes: { pattern: [] as string[] }
-			});
-			latest.includes = value.includes;
-			latest.excludes = value.excludes;
+			const [value, setValue] = React.useState(latest.current);
+			React.useEffect(() => {
+				latest.current = value;
+			}, [value]);
 			return React.createElement(TypeDestinationPathsSelector, {
 				field: field('paths', 'Paths', 'type-destination-paths-selector'),
 				value,
@@ -334,12 +342,12 @@ describe('string list selectors render', () => {
 
 		const host = await render(React.createElement(Paths));
 		await clickAdd(host, 'Add exclude path');
-		assert.deepEqual(latest.excludes.pattern, ['']);
-		assert.deepEqual(latest.includes.pattern, []);
+		assert.deepEqual(latest.current.excludes.pattern, ['']);
+		assert.deepEqual(latest.current.includes.pattern, []);
 		assertFocusedRow('Excludes pattern 1', '');
 
 		await clickAdd(host, 'Add exclude path');
-		assert.deepEqual(latest.excludes.pattern, ['', '']);
+		assert.deepEqual(latest.current.excludes.pattern, ['', '']);
 		assertFocusedRow('Excludes pattern 2', '');
 	});
 });
