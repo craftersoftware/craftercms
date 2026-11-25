@@ -254,7 +254,7 @@ describe('checkbox group minSize round trip', () => {
 	});
 
 	// Given a legacy TB2 minSize stored as type number, editing the value writes type int (#9318 / #9288 AC6).
-	it('heals a legacy number type to int when minSize is edited', () => {
+	it('heals a legacy number type to int when the type is saved, edited or not', () => {
 		const parsed = parseLegacyFormDefinition({
 			'content-type': '/page/article',
 			title: 'Article',
@@ -279,13 +279,19 @@ describe('checkbox group minSize round trip', () => {
 		} as never);
 		assert.equal(parsed.fields.topics_o.rawConstraints?.find((item) => item.name === 'minSize')?.type, 'number');
 
-		const values = createTypeFieldValuesObject(parsed.fields.topics_o);
-		values.minSize = 5;
-		const edited = reverseTypeFieldValuesObject(parsed.fields.topics_o, values, checkboxGroupDescriptor);
-		const type = { ...parsed, fields: { ...parsed.fields, topics_o: edited } };
-		const written = savedConstraint(type).constraintList.find((item) => item.name === 'minSize');
-		assert.equal(written?.value, 5);
-		assert.equal(written?.type, 'int');
+		// assert that `number -> int` happens both when there's an edition of the value and when there's no change.
+		for (const [edit, expected] of [
+			[undefined, 2],
+			[5, 5]
+		] as const) {
+			const values = createTypeFieldValuesObject(parsed.fields.topics_o);
+			if (edit !== undefined) values.minSize = edit;
+			const edited = reverseTypeFieldValuesObject(parsed.fields.topics_o, values, checkboxGroupDescriptor);
+			const type = { ...parsed, fields: { ...parsed.fields, topics_o: edited } };
+			const written = savedConstraint(type).constraintList.find((item) => item.name === 'minSize');
+			assert.equal(written?.value, expected);
+			assert.equal(written?.type, 'int', `minSize edit=${String(edit)} should save type int`);
+		}
 	});
 
 	// Given a stored 2 edited to 5, reopening shows 5. Clearing it to blank reopens blank and save omits minSize.
