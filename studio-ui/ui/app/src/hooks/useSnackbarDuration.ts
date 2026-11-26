@@ -14,8 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DEFAULT_SNACKBAR_DURATION } from '../components/AccountManagement';
-import { getStoredSnackbarDuration, subscribeSnackbarDuration } from '../utils/state';
+import { DEFAULT_SNACKBAR_DURATION, getStoredSnackbarDuration, subscribeSnackbarDuration } from '../utils/state';
 import { useSyncExternalStore } from 'react';
 
 export function useSnackbarDuration(): number {

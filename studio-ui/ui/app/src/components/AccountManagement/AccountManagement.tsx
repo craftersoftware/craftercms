@@ -54,6 +54,7 @@ import MinusRounded from '@mui/icons-material/RemoveRounded';
 
 import { pushErrorDialog } from '../../utils/system';
 import {
+	DEFAULT_SNACKBAR_DURATION,
 	getStoredEnableAnimations,
 	getStoredSnackbarDuration,
 	setStoredEnableAnimations,
@@ -104,7 +105,7 @@ const translations = defineMessages({
 	}
 });
 
-export const DEFAULT_SNACKBAR_DURATION = 5000;
+export { DEFAULT_SNACKBAR_DURATION };
 
 export function AccountManagement(props: AccountManagementProps) {
 	const { passwordRequirementsMinComplexity = 4 } = props;
