@@ -18,9 +18,11 @@ package org.craftercms.studio.impl.v2.publish;
 
 import java.beans.ConstructorProperties;
 import java.io.IOException;
+import java.sql.Statement;
 import static java.lang.String.format;
 import static java.time.Instant.now;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import static java.util.Collections.emptyList;
 import java.util.HashMap;
@@ -31,6 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.ListUtils;
+import org.apache.ibatis.executor.BatchResult;
 import static org.apache.commons.lang3.Strings.CS;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
@@ -77,12 +80,14 @@ import org.craftercms.studio.impl.v2.utils.db.DBUtils;
 import org.craftercms.studio.model.task.PublishTask;
 import org.craftercms.studio.model.task.PublishTask.PublishTaskId;
 import org.jspecify.annotations.NonNull;
+import org.mybatis.spring.SqlSessionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.event.EventListener;
+import org.springframework.dao.DataIntegrityViolationException;
 import static org.springframework.data.util.Predicates.negate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -112,6 +117,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 	private final ActivityStreamService activityService;
 	private final TaskManager taskManager;
 	private final Deployer deployer;
+	private final ProcessingPackagesReset processingPackagesReset;
+	private final SqlSessionTemplate batchSqlSessionTemplate;
 	/**
 	 * Sites whose staging deployer target has already been accepted. A 409 from deployer is success, so remembering
 	 * the site avoids that round trip on later staging publishes.
@@ -120,7 +127,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 
 	@ConstructorProperties({"siteDao", "publishDao", "auditService",
 		"contentRepository", "generalLockService", "servicesConfig", "itemTargetDAO", "transactionManager",
-		"activityService", "taskManager", "deployer"})
+		"activityService", "taskManager", "deployer", "processingPackagesReset", "batchSqlSessionTemplate"})
 	public Publisher(final SiteDAO siteDao, final PublishDAO publishDao,
 			 final AuditService auditService,
 			 final StudioBlobAwareContentRepository contentRepository,
@@ -130,7 +137,9 @@ public class Publisher implements ApplicationEventPublisherAware {
 			 final PlatformTransactionManager transactionManager,
 			 final ActivityStreamService activityService,
 			 final TaskManager taskManager,
-			 @Qualifier("allDeployers") final Deployer deployer) {
+			 @Qualifier("allDeployers") final Deployer deployer,
+			 final ProcessingPackagesReset processingPackagesReset,
+			 @Qualifier("batchSqlSessionTemplate") final SqlSessionTemplate batchSqlSessionTemplate) {
 		this.siteDao = siteDao;
 		this.publishDao = publishDao;
 		this.auditService = auditService;
@@ -142,6 +151,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 		this.activityService = activityService;
 		this.taskManager = taskManager;
 		this.deployer = deployer;
+		this.processingPackagesReset = processingPackagesReset;
+		this.batchSqlSessionTemplate = batchSqlSessionTemplate;
 	}
 
 	@Async
@@ -151,6 +162,12 @@ public class Publisher implements ApplicationEventPublisherAware {
 		Collection<Long> packageIds = event.getPackageIds();
 		String siteId = event.getSiteId();
 		logger.debug("Received request to publish packages '{}' for site: '{}'", packageIds, siteId);
+		if (!processingPackagesReset.isResetAttempted()) {
+			// The packages stay in the queue, the publishing queue probe requests them again once the reset is done
+			logger.info("The processing publish packages reset has not been attempted yet. Deferring the request " +
+					"to publish packages '{}' for site '{}' to the publishing queue", packageIds, siteId);
+			return;
+		}
 		Site site = siteDao.getSite(siteId);
 		if (!site.getPublishingEnabled()) {
 			logger.warn("Site '{}' is not enabled for publishing. Ignoring request to publish packages '{}'", siteId, packageIds);
@@ -273,8 +290,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 
 	/**
 	 * Complete a package whose publish transaction was rolled back. Nothing the failed transaction wrote is in the
-	 * database, so every target of the package is marked failed (replacing any outcome that the failed transaction
-	 * left on the in-memory package) and the package is saved as completed in a new transaction. This method does
+	 * database, so every target of the package is marked failed (replacing any outcome and published commit id that
+	 * the failed transaction left on the in-memory package) and the package is saved as completed in a new transaction. This method does
 	 * not throw. If the package cannot be saved, the error is logged and added as suppressed to {@code cause}.
 	 */
 	private void completeFailedPackage(final PublishPackage publishPackage, final Exception cause) {
@@ -317,13 +334,15 @@ public class Publisher implements ApplicationEventPublisherAware {
 	}
 
 	/**
-	 * Mark a target of the package as failed, replacing its success outcome if it has one. The error is only set
-	 * when the target was not already marked as failed, so the first failure keeps its error code.
+	 * Mark a target of the package as failed, replacing its success outcome if it has one, and clear its published
+	 * commit id. The error is only set when the target was not already marked as failed, so the first failure keeps
+	 * its error code.
 	 */
 	private void markTargetFailed(final PublishPackage publishPackage, final PublishPackageTO packageTO, final int errorCode) {
 		long failedBits = packageTO.getFailedOnBits();
 		boolean alreadyFailed = (publishPackage.getPackageState() & failedBits) != 0;
 		publishPackage.updatePackageState(failedBits, packageTO.getSuccessOnBits() | packageTO.getCompletedWithErrorsOnBits());
+		packageTO.setPublishedCommitId(null);
 		if (!alreadyFailed) {
 			packageTO.setError(errorCode);
 		}
@@ -555,8 +574,10 @@ public class Publisher implements ApplicationEventPublisherAware {
 	private void recordTargetPublishFailure(final PublishPackage publishPackage, final PublishPackageTO packageTO,
 						final String target, final Exception e) {
 		logger.error("Failed to publish package '{}' to target '{}' for site '{}'", publishPackage.getId(), target, publishPackage.getSite().getSiteId(), e);
-		// The target may have set a success outcome on the in-memory package before it failed
+		// The target may have set a success outcome and a published commit id on the in-memory package before it
+		// failed. Its writes were rolled back, so neither is saved
 		publishPackage.updatePackageState(packageTO.getFailedOnBits(), packageTO.getSuccessOnBits() | packageTO.getCompletedWithErrorsOnBits());
+		packageTO.setPublishedCommitId(null);
 		packageTO.setError(PublishUtils.translatePackageException(e));
 		publishDao.updatePackage(publishPackage);
 		publishDao.updatePublishItemsState(publishPackage.getId(), packageTO.getFailedOnBits(), 0);
@@ -758,13 +779,30 @@ public class Publisher implements ApplicationEventPublisherAware {
 		} else {
 			// Insert failed items to publish_item table. This must use the package transaction: a separate connection
 			// would block on the publish_package row, which this transaction has already updated
-			publishDao.insertInitialPublishItems(packageId, failedItems.values());
+			insertInitialPublishItems(packageId, failedItems.values());
 		}
 		// The items' states are updated after we have inserted the failed items into the publish_item table
 		if (stagingEnabled) {
 			updateStatesOnInitialPublish(publishPackage, stagingTarget, false);
 		}
 		updateStatesOnInitialPublish(publishPackage, liveTarget, true);
+	}
+
+	/**
+	 * Insert the failed items of an initial publish in a batch. The batch session joins the package transaction, so
+	 * the rows are committed or rolled back with the package. The statements are flushed before returning, so the
+	 * rows can be read by the next statements, and an insert error surfaces here and fails the package.
+	 */
+	private void insertInitialPublishItems(final long packageId, final Collection<PublishItem> publishItems) {
+		batchSqlSessionTemplate.getMapper(PublishDAO.class).insertInitialPublishItems(packageId, publishItems);
+		List<BatchResult> results = batchSqlSessionTemplate.flushStatements();
+		boolean failed = results.stream()
+			.flatMapToInt(result -> Arrays.stream(result.getUpdateCounts()))
+			.anyMatch(count -> count == Statement.EXECUTE_FAILED);
+		if (failed) {
+			throw new DataIntegrityViolationException(
+				format("Failed to insert the failed initial publish items of package '%d'", packageId));
+		}
 	}
 
 	private PublishItem getInitialPublishItem(final long packageId, final String path) {

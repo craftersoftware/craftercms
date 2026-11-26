@@ -15,51 +15,78 @@
  */
 package org.craftercms.studio.impl.v2.publish;
 
+import java.util.List;
 import java.util.Map;
 
-import org.craftercms.studio.api.v2.dal.RetryingDatabaseOperationFacade;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
+import org.craftercms.studio.api.v2.dal.publish.PublishPackageId;
+import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
-import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
-import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.READY;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 public class PublishingQueueProbeTaskTest {
 
+	private static final String SITE_ID = "site";
+
 	@Test
-	public void schedulerStartResetsProcessingPackages() {
+	public void probeDoesNothingBeforeTheResetIsAttempted() {
 		PublishDAO publishDAO = mock(PublishDAO.class);
-		PublishingQueueProbeTask task = task(publishDAO);
+		ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+		ProcessingPackagesReset reset = mock(ProcessingPackagesReset.class);
+		when(reset.isResetAttempted()).thenReturn(false);
 
-		task.doExecute();
+		task(publishDAO, reset, eventPublisher).doExecute();
 
-		verify(publishDAO).resetProcessingPackages(READY.value, PROCESSING.value);
+		verifyNoInteractions(publishDAO);
+		verifyNoInteractions(eventPublisher);
 	}
 
 	@Test
-	public void resetProcessingPackagesRunsOnlyOnce() {
+	public void probeRequestsQueuedPackagesOnceTheResetIsAttempted() {
 		PublishDAO publishDAO = mock(PublishDAO.class);
-		PublishingQueueProbeTask task = task(publishDAO);
+		ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+		ProcessingPackagesReset reset = mock(ProcessingPackagesReset.class);
+		when(reset.isResetAttempted()).thenReturn(true);
+		when(publishDAO.getNextPublishPackages())
+				.thenReturn(Map.of(SITE_ID, List.of(new PublishPackageId(SITE_ID, 1L), new PublishPackageId(SITE_ID, 2L))));
 
-		task.doExecute();
-		task.doExecute();
+		task(publishDAO, reset, eventPublisher).doExecute();
 
-		verify(publishDAO, times(1)).resetProcessingPackages(READY.value, PROCESSING.value);
+		ArgumentCaptor<RequestPublishEvent> captor = ArgumentCaptor.forClass(RequestPublishEvent.class);
+		verify(eventPublisher).publishEvent(captor.capture());
+		assertEquals(SITE_ID, captor.getValue().getSiteId());
+		assertEquals(List.of(1L, 2L), List.copyOf(captor.getValue().getPackageIds()));
 	}
 
-	private static PublishingQueueProbeTask task(PublishDAO publishDAO) {
+	@Test
+	public void probeNeverResetsPackages() {
+		PublishDAO publishDAO = mock(PublishDAO.class);
+		ProcessingPackagesReset reset = mock(ProcessingPackagesReset.class);
+		when(reset.isResetAttempted()).thenReturn(true);
 		when(publishDAO.getNextPublishPackages()).thenReturn(Map.of());
-		RetryingDatabaseOperationFacade retryingDatabaseOperationFacade = mock(RetryingDatabaseOperationFacade.class);
-		doAnswer(invocation -> {
-			invocation.getArgument(0, Runnable.class).run();
-			return null;
-		}).when(retryingDatabaseOperationFacade).retry(any(Runnable.class));
-		return new PublishingQueueProbeTask(publishDAO, 1, retryingDatabaseOperationFacade);
+		PublishingQueueProbeTask task = task(publishDAO, reset, mock(ApplicationEventPublisher.class));
+
+		task.doExecute();
+		task.doExecute();
+
+		verify(publishDAO, never()).resetProcessingPackages(anyLong(), anyLong());
+		verify(reset, never()).resetProcessingPackages();
+	}
+
+	private static PublishingQueueProbeTask task(PublishDAO publishDAO, ProcessingPackagesReset reset,
+												 ApplicationEventPublisher eventPublisher) {
+		PublishingQueueProbeTask task = new PublishingQueueProbeTask(publishDAO, 1, reset);
+		task.setApplicationEventPublisher(eventPublisher);
+		return task;
 	}
 }

@@ -16,10 +16,8 @@
 
 package org.craftercms.studio.impl.v2.publish;
 
-import org.craftercms.studio.api.v2.dal.RetryingDatabaseOperationFacade;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackageId;
-import org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
 import org.craftercms.studio.api.v2.job.ThrottledJob;
 import org.jspecify.annotations.NonNull;
@@ -27,8 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
-
-import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
 
 import java.beans.ConstructorProperties;
 import java.util.List;
@@ -43,37 +39,22 @@ public class PublishingQueueProbeTask extends ThrottledJob implements Applicatio
 	private final PublishDAO publishDAO;
 	private ApplicationEventPublisher eventPublisher;
 	private final int period;
-	private final RetryingDatabaseOperationFacade retryingDatabaseOperationFacade;
-	private boolean processingPackagesResetComplete = false;
+	private final ProcessingPackagesReset processingPackagesReset;
 
-	@ConstructorProperties({"publishDAO", "period", "retryingDatabaseOperationFacade"})
-	public PublishingQueueProbeTask(final PublishDAO publishDAO, final int period, final RetryingDatabaseOperationFacade retryingDatabaseOperationFacade) {
+	@ConstructorProperties({"publishDAO", "period", "processingPackagesReset"})
+	public PublishingQueueProbeTask(final PublishDAO publishDAO, final int period,
+									final ProcessingPackagesReset processingPackagesReset) {
 		this.publishDAO = publishDAO;
 		this.period = period;
-		this.retryingDatabaseOperationFacade = retryingDatabaseOperationFacade;
-	}
-
-	/**
-	 * Reset packages left PROCESSING by an interrupted publish so the scheduler can
-	 * pick them up again.
-	 * This method only tries to reset the packages once.
-	 */
-	private void resetProcessingPackagesIfNeeded() {
-		try {
-			if (!processingPackagesResetComplete) {
-				retryingDatabaseOperationFacade
-						.retry(() -> publishDAO.resetProcessingPackages(PackageState.READY.value, PROCESSING.value));
-			}
-		} catch (Exception e) {
-			logger.error("Error resetting processing packages", e);
-		} finally {
-			processingPackagesResetComplete = true;
-		}
+		this.processingPackagesReset = processingPackagesReset;
 	}
 
 	@Override
 	public void doExecute() {
-		resetProcessingPackagesIfNeeded();
+		if (!processingPackagesReset.isResetAttempted()) {
+			logger.debug("The processing publish packages reset has not been attempted yet. Skip probing the publishing queue.");
+			return;
+		}
 		publishDAO.getNextPublishPackages().forEach((siteId, packages) -> {
 			List<Long> packageIds = packages.stream()
 					.map(PublishPackageId::packageId).toList();

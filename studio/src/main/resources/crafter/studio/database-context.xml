@@ -166,6 +166,19 @@
 		<property name="sqlSessionFactory" ref="sqlSessionFactory"/>
 	</bean>
 
+	<!-- Batch statements that join the current Spring transaction. MyBatis keeps one session per session factory in a
+	     transaction and its executor type cannot change, so the batch template uses its own session factory. It
+	     shares the configuration of sqlSessionFactory, and its connection is the one of the current transaction -->
+	<bean id="batchSqlSessionFactory" class="org.apache.ibatis.session.defaults.DefaultSqlSessionFactory"
+	      autowire-candidate="false">
+		<constructor-arg value="#{sqlSessionFactory.configuration}"/>
+	</bean>
+
+	<bean id="batchSqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg index="0" ref="batchSqlSessionFactory"/>
+		<constructor-arg index="1" value="BATCH"/>
+	</bean>
+
 	<bean id="publishDao" class="org.mybatis.spring.mapper.MapperFactoryBean">
 		<property name="mapperInterface" value="org.craftercms.studio.api.v2.dal.publish.PublishDAO"/>
 		<property name="sqlSessionFactory" ref="sqlSessionFactory"/>

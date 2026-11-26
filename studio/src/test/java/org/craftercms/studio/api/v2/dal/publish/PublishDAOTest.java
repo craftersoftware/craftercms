@@ -24,13 +24,23 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
+import org.apache.ibatis.executor.BatchResult;
+import org.apache.ibatis.session.ExecutorType;
+import org.apache.ibatis.session.defaults.DefaultSqlSessionFactory;
+import org.apache.ibatis.transaction.TransactionFactory;
 import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.apache.ibatis.type.JdbcType;
 import org.craftercms.studio.api.v2.dal.DAOUtils;
 import org.craftercms.studio.api.v2.dal.ItemDAO;
+import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.UserDAO;
 import org.craftercms.studio.api.v2.dal.item.LightItemMetadata;
 import org.junit.AfterClass;
+import org.mybatis.spring.SqlSessionTemplate;
+import org.mybatis.spring.transaction.SpringManagedTransactionFactory;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -50,6 +60,8 @@ import static org.craftercms.studio.api.v1.constant.StudioConstants.CONTENT_TYPE
 import static org.craftercms.studio.api.v2.dal.publish.PublishItem.Action.UPDATE;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.ApprovalState.APPROVED;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.COMPLETED;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.LIVE_SUCCESS;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.READY;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageType.ITEM_LIST;
 import static org.junit.Assert.assertEquals;
@@ -115,7 +127,7 @@ public class PublishDAOTest {
 			}
 		}
 
-		sqlSessionFactory = new SqlSessionFactoryBuilder().build(mybatisConfiguration(dataSource));
+		sqlSessionFactory = new SqlSessionFactoryBuilder().build(mybatisConfiguration(dataSource, new JdbcTransactionFactory()));
 	}
 
 	@AfterClass
@@ -197,6 +209,154 @@ public class PublishDAOTest {
 	}
 
 	/**
+	 * A package left {@code PROCESSING} after its live target succeeded is reset to exactly {@code READY}, so the
+	 * queue selects it again and the retry republishes every target. Completed packages are not touched.
+	 */
+	@Test
+	public void processingPackageWithLiveSuccessIsResetAndQueuedForRepublish() throws Exception {
+		setSiteState(Site.State.READY);
+		long processingPackageId = insertPackage(PROCESSING.value | LIVE_SUCCESS.value);
+		long completedPackageId = insertPackage(COMPLETED.value | LIVE_SUCCESS.value);
+		assertEquals(List.of(), queuedPackageIds());
+
+		resetProcessingPackages();
+
+		assertEquals(READY.value, packageState(processingPackageId));
+		assertEquals(COMPLETED.value | LIVE_SUCCESS.value, packageState(completedPackageId));
+		assertEquals(List.of(processingPackageId), queuedPackageIds());
+
+		// The republish marks the package PROCESSING again and completes it with the live success bit
+		updatePackageState(processingPackageId, PROCESSING.value);
+		assertEquals(List.of(), queuedPackageIds());
+		updatePackageState(processingPackageId, COMPLETED.value | LIVE_SUCCESS.value);
+
+		// A second reset finds nothing left processing
+		resetProcessingPackages();
+
+		assertEquals(COMPLETED.value | LIVE_SUCCESS.value, packageState(processingPackageId));
+		assertEquals(COMPLETED.value | LIVE_SUCCESS.value, packageState(completedPackageId));
+		assertEquals(List.of(), queuedPackageIds());
+	}
+
+	/**
+	 * The failed items of an initial publish are inserted through a batch template that joins the package
+	 * transaction, next to the default (simple) template that updates the package. The flushed rows are visible in
+	 * the transaction, and they are rolled back or committed with the package.
+	 */
+	@Test
+	public void batchInsertedInitialPublishItemsCommitOrRollBackWithThePackage() throws Exception {
+		long packageId = insertPackage(PROCESSING.value);
+		SqlSessionFactory springSessionFactory = new SqlSessionFactoryBuilder()
+				.build(mybatisConfiguration(dataSource, new SpringManagedTransactionFactory()));
+		SqlSessionTemplate sqlSessionTemplate = new SqlSessionTemplate(springSessionFactory);
+		SqlSessionTemplate batchSqlSessionTemplate = new SqlSessionTemplate(
+				new DefaultSqlSessionFactory(springSessionFactory.getConfiguration()), ExecutorType.BATCH);
+		TransactionTemplate transaction = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
+
+		transaction.executeWithoutResult(status -> {
+			publishPackageInTransaction(sqlSessionTemplate, batchSqlSessionTemplate, packageId);
+			status.setRollbackOnly();
+		});
+
+		assertEquals(0, publishItemCount(packageId));
+		assertEquals(PROCESSING.value, packageState(packageId));
+
+		transaction.executeWithoutResult(status ->
+				publishPackageInTransaction(sqlSessionTemplate, batchSqlSessionTemplate, packageId));
+
+		assertEquals(2, publishItemCount(packageId));
+		assertEquals(READY.value, packageState(packageId));
+	}
+
+	private static void publishPackageInTransaction(SqlSessionTemplate sqlSessionTemplate,
+													SqlSessionTemplate batchSqlSessionTemplate, long packageId) {
+		sqlSessionTemplate.getMapper(PublishDAO.class).resetProcessingPackages(READY.value, PROCESSING.value);
+		batchSqlSessionTemplate.getMapper(PublishDAO.class).insertInitialPublishItems(packageId,
+				List.of(initialPublishItem(packageId, PRESENT_PATH), initialPublishItem(packageId, MISSING_PATH)));
+		List<BatchResult> results = batchSqlSessionTemplate.flushStatements();
+		assertEquals(1, results.size());
+		assertEquals(2, results.get(0).getUpdateCounts().length);
+		Connection connection = DataSourceUtils.getConnection(dataSource);
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT COUNT(*) FROM publish_item WHERE package_id = ?")) {
+			statement.setLong(1, packageId);
+			try (var result = statement.executeQuery()) {
+				assertTrue(result.next());
+				assertEquals(2, result.getInt(1));
+			}
+		} catch (java.sql.SQLException e) {
+			throw new IllegalStateException(e);
+		} finally {
+			DataSourceUtils.releaseConnection(connection, dataSource);
+		}
+	}
+
+	private static PublishItem initialPublishItem(long packageId, String path) {
+		PublishItem item = new PublishItem();
+		item.setPackageId(packageId);
+		item.setAction(PublishItem.Action.ADD);
+		item.setPath(path);
+		item.setUserRequested(true);
+		return item;
+	}
+
+	private static int publishItemCount(long packageId) throws Exception {
+		try (Connection connection = dataSource.getConnection();
+			 PreparedStatement statement = connection.prepareStatement(
+					 "SELECT COUNT(*) FROM publish_item WHERE package_id = ?")) {
+			statement.setLong(1, packageId);
+			try (var result = statement.executeQuery()) {
+				assertTrue(result.next());
+				return result.getInt(1);
+			}
+		}
+	}
+
+	private static void resetProcessingPackages() {
+		try (SqlSession session = sqlSessionFactory.openSession(true)) {
+			session.getMapper(PublishDAO.class).resetProcessingPackages(READY.value, PROCESSING.value);
+		}
+	}
+
+	private static List<Long> queuedPackageIds() {
+		try (SqlSession session = sqlSessionFactory.openSession()) {
+			return session.getMapper(PublishDAO.class).getNextPublishPackages().getOrDefault(SITE_ID, List.of())
+					.stream().map(PublishPackageId::packageId).toList();
+		}
+	}
+
+	private static long packageState(long packageId) throws Exception {
+		try (Connection connection = dataSource.getConnection();
+			 PreparedStatement statement = connection.prepareStatement(
+					 "SELECT package_state FROM publish_package WHERE id = ?")) {
+			statement.setLong(1, packageId);
+			try (var result = statement.executeQuery()) {
+				assertTrue(result.next());
+				return result.getLong(1);
+			}
+		}
+	}
+
+	private static void updatePackageState(long packageId, long state) throws Exception {
+		try (Connection connection = dataSource.getConnection();
+			 PreparedStatement statement = connection.prepareStatement(
+					 "UPDATE publish_package SET package_state = ? WHERE id = ?")) {
+			statement.setLong(1, state);
+			statement.setLong(2, packageId);
+			assertEquals(1, statement.executeUpdate());
+		}
+	}
+
+	private static void setSiteState(String state) throws Exception {
+		try (Connection connection = dataSource.getConnection();
+			 PreparedStatement statement = connection.prepareStatement("UPDATE site SET state = ? WHERE id = ?")) {
+			statement.setString(1, state);
+			statement.setLong(2, sitePk);
+			assertEquals(1, statement.executeUpdate());
+		}
+	}
+
+	/**
 	 * List size and {@link PublishDAO#getMatchingPublishItemCount} both equal 1.
 	 */
 	private static PublishItemWithMetadata assertSingleMatch(long packageId, String path) {
@@ -235,6 +395,10 @@ public class PublishDAOTest {
 	}
 
 	private static long insertCompletedPackage() throws Exception {
+		return insertPackage(COMPLETED.value);
+	}
+
+	private static long insertPackage(long packageState) throws Exception {
 		try (Connection connection = dataSource.getConnection();
 			 PreparedStatement statement = connection.prepareStatement(
 					 "INSERT INTO publish_package (site_id, target, title, approval_state, package_state, package_type) " +
@@ -242,9 +406,9 @@ public class PublishDAOTest {
 					 Statement.RETURN_GENERATED_KEYS)) {
 			statement.setLong(1, sitePk);
 			statement.setString(2, LIVE_TARGET);
-			statement.setString(3, "Completed package");
+			statement.setString(3, "Package");
 			statement.setString(4, APPROVED.name());
-			statement.setLong(5, COMPLETED.value);
+			statement.setLong(5, packageState);
 			statement.setString(6, ITEM_LIST.name());
 			statement.executeUpdate();
 			try (var keys = statement.getGeneratedKeys()) {
@@ -343,8 +507,8 @@ public class PublishDAOTest {
 		return ddl.substring(start, end);
 	}
 
-	private static Configuration mybatisConfiguration(DataSource dataSource) {
-		Configuration configuration = new Configuration(new Environment("test", new JdbcTransactionFactory(), dataSource));
+	private static Configuration mybatisConfiguration(DataSource dataSource, TransactionFactory transactionFactory) {
+		Configuration configuration = new Configuration(new Environment("test", transactionFactory, dataSource));
 		configuration.setMapUnderscoreToCamelCase(true);
 		configuration.setJdbcTypeForNull(JdbcType.VARCHAR);
 		configuration.setVariables(mapperVariables());

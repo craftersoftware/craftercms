@@ -35,6 +35,9 @@ import org.craftercms.studio.api.v2.service.audit.ActivityStreamService;
 import org.craftercms.studio.api.v2.task.TaskManager;
 import org.craftercms.studio.api.v2.task.TaskProgress;
 import org.craftercms.studio.api.v2.utils.StudioUtils;
+import org.apache.ibatis.executor.BatchResult;
+import org.craftercms.studio.api.v2.repository.PublishItemTO;
+import org.craftercms.studio.api.v2.repository.publish.GitPublishChangeSet;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,13 +48,17 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.craftercms.studio.model.rest.ApiResponse;
+import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
+import java.sql.Statement;
+import java.util.Collection;
 import java.util.List;
 
 import static java.util.Collections.emptyList;
@@ -67,6 +74,7 @@ import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLoc
 import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLockKey;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
@@ -125,6 +133,12 @@ public class PublisherTest {
 	@Mock
 	TransactionStatus transactionStatus;
 
+	@Mock
+	ProcessingPackagesReset processingPackagesReset;
+
+	@Mock
+	SqlSessionTemplate batchSqlSessionTemplate;
+
 	@Spy
 	@InjectMocks
 	Publisher publisher;
@@ -152,9 +166,33 @@ public class PublisherTest {
 		});
 
 		publisher.setApplicationEventPublisher(eventPublisher);
+		lenient().when(processingPackagesReset.isResetAttempted()).thenReturn(true);
 		lenient().when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
 
 		when(publishPackage.getPackageType()).thenReturn(PublishPackage.PackageType.ITEM_LIST);
+	}
+
+	@Test
+	public void publishRequestBeforeTheResetIsAttemptedIsDeferred() throws ServiceLayerException {
+		when(processingPackagesReset.isResetAttempted()).thenReturn(false);
+
+		publisher.handleRequestPublishEvent(new RequestPublishEvent(SITE_ID, PACKAGE_ID));
+
+		verify(siteDAO, never()).getSite(anyString());
+		verify(generalLockService, never()).tryLock(anyString());
+		verify(publisher, never()).lockAndPublish(anyLong(), anyLong());
+		verify(publishDAO, never()).getById(anyLong(), anyLong());
+	}
+
+	@Test
+	public void publishRequestAfterTheResetIsAttemptedIsPublished() throws ServiceLayerException {
+		when(generalLockService.tryLock(StudioUtils.getPublishingLockKey(SITE_ID))).thenReturn(true);
+		when(generalLockService.tryLock(StudioUtils.getPublishPackageLockKey(PACKAGE_ID))).thenReturn(false);
+
+		publisher.handleRequestPublishEvent(new RequestPublishEvent(SITE_ID, PACKAGE_ID));
+
+		verify(processingPackagesReset).isResetAttempted();
+		verify(publisher).lockAndPublish(SITE_NUMERIC_ID, PACKAGE_ID);
 	}
 
 	@Test
@@ -483,39 +521,137 @@ public class PublisherTest {
 		assertFailedUnpublishedPackage(packageState, itemState, false);
 	}
 
-	// @Test
-	// public void resetDropsLiveSuccessAndRetryRepublishesThatTarget() throws Exception {
-	// 	preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
-	// 	when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(false);
-	// 	doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
-	// 	long readyState = PublishPackage.PackageState.READY.value;
-	// 	long[] packageState = {PROCESSING.value | LIVE_SUCCESS.value};
-	// 	when(publishPackage.getPackageState()).thenAnswer(invocation -> packageState[0]);
-	// 	doAnswer(invocation -> {
-	// 		long onBits = invocation.getArgument(0);
-	// 		long offBits = invocation.getArgument(1);
-	// 		packageState[0] = (packageState[0] | onBits) & ~offBits;
-	// 		return null;
-	// 	}).when(publishPackage).updatePackageState(anyLong(), anyLong());
-	// 	doAnswer(invocation -> {
-	// 		long ready = invocation.getArgument(0);
-	// 		long processing = invocation.getArgument(1);
-	// 		if ((packageState[0] & processing) > 0) {
-	// 			packageState[0] = ready;
-	// 		}
-	// 		return null;
-	// 	}).when(publishDAO).resetProcessingPackages(anyLong(), anyLong());
+	@Test
+	public void failedTargetDoesNotSaveItsPublishedCommitId() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		trackPackageState();
+		String[] liveCommitId = trackLiveCommitId();
+		List<String> savedLiveCommitIds = new java.util.ArrayList<>();
+		doAnswer(invocation -> {
+			savedLiveCommitIds.add(liveCommitId[0]);
+			return null;
+		}).when(publishDAO).updatePackage(publishPackage);
 
-	// 	publisher.resetProcessingPackages();
+		publisher.runTargetPublisher(publishPackage, emptyList(),
+			(packageTO, target, items) -> {
+				packageTO.setPublishedCommitId("live-commit");
+				throw new IOException("git failed");
+			}, true, LIVE);
 
-	// 	assertEquals(readyState, packageState[0]);
-	// 	assertFalse(LIVE_SUCCESS.matches(packageState[0]));
-	// 	assertFalse(PROCESSING.matches(packageState[0]));
+		assertEquals(java.util.Collections.singletonList(null), savedLiveCommitIds);
+	}
 
-	// 	publisher.doPublish(publishPackage);
+	@Test
+	public void rolledBackPackageIsSavedAsFailedWithoutThePublishedCommitIdOfAFinishedTarget() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		long[] packageState = trackPackageState();
+		String[] stagingCommitId = trackStagingCommitId();
+		List<String> savedStagingCommitIds = new java.util.ArrayList<>();
+		List<Long> savedStates = new java.util.ArrayList<>();
+		doAnswer(invocation -> {
+			savedStagingCommitIds.add(stagingCommitId[0]);
+			savedStates.add(packageState[0]);
+			return null;
+		}).when(publishDAO).updatePackage(publishPackage);
+		doAnswer(invocation -> {
+			// The staging target finished and set its commit id, but its changes are rolled back with the package
+			new PublishPackageTO(publishPackage, false).setPublishedCommitId("staging-commit");
+			packageState[0] |= STAGING_SUCCESS.value;
+			return null;
+		}).doThrow(new SiteNotFoundException(SITE_ID)).when(publisher)
+			.runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
 
-	// 	verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
-	// }
+		assertThrows(SiteNotFoundException.class, () -> publisher.doPublish(publishPackage));
+
+		verify(transactionStatus).setRollbackOnly();
+		// The last save is the failed package, saved in a new transaction
+		assertEquals(COMPLETED.value | STAGING_FAILED.value | LIVE_FAILED.value, (long) savedStates.get(savedStates.size() - 1));
+		assertNull(savedStagingCommitIds.get(savedStagingCommitIds.size() - 1));
+	}
+
+	@Test
+	public void initialPublishFailedItemsAreInsertedInABatchBeforeTheyAreRead() throws Exception {
+		PublishDAO batchPublishDao = prepareInitialPublishWithFailedItem();
+		when(batchSqlSessionTemplate.flushStatements()).thenReturn(emptyList());
+
+		publisher.doPublish(publishPackage);
+
+		InOrder inOrder = inOrder(batchPublishDao, batchSqlSessionTemplate, itemTargetDAO, publishDAO, transactionManager);
+		inOrder.verify(batchPublishDao).insertInitialPublishItems(eq(PACKAGE_ID), argThat(items -> items.size() == 1));
+		inOrder.verify(batchSqlSessionTemplate).flushStatements();
+		inOrder.verify(itemTargetDAO).insertForInitialPublish(eq(SITE_NUMERIC_ID), anyLong(), anyLong(), eq(LIVE), any(), any());
+		inOrder.verify(publishDAO).updatePackage(publishPackage);
+		inOrder.verify(transactionManager).commit(transactionStatus);
+		verify(publishDAO, never()).insertInitialPublishItems(anyLong(), any());
+		verify(transactionStatus, never()).setRollbackOnly();
+	}
+
+	@Test
+	public void initialPublishBatchFlushFailureRollsBackAndCompletesThePackageAsFailed() throws Exception {
+		prepareInitialPublishWithFailedItem();
+		when(batchSqlSessionTemplate.flushStatements()).thenThrow(new DataIntegrityViolationException("insert failed"));
+		long[] packageState = trackPackageState();
+
+		assertThrows(DataIntegrityViolationException.class, () -> publisher.doPublish(publishPackage));
+
+		assertBatchInsertRolledBack(packageState);
+	}
+
+	@Test
+	public void initialPublishBatchWithAFailedInsertRollsBackAndCompletesThePackageAsFailed() throws Exception {
+		prepareInitialPublishWithFailedItem();
+		BatchResult result = new BatchResult(null, "INSERT INTO publish_item");
+		result.setUpdateCounts(new int[] {1, Statement.EXECUTE_FAILED});
+		when(batchSqlSessionTemplate.flushStatements()).thenReturn(List.of(result));
+		long[] packageState = trackPackageState();
+
+		assertThrows(DataIntegrityViolationException.class, () -> publisher.doPublish(publishPackage));
+
+		assertBatchInsertRolledBack(packageState);
+	}
+
+	private void assertBatchInsertRolledBack(long[] packageState) {
+		verify(transactionStatus).setRollbackOnly();
+		verify(itemTargetDAO, never()).insertForInitialPublish(anyLong(), anyLong(), anyLong(), anyString(), any(), any());
+		assertEquals(COMPLETED.value | LIVE_FAILED.value, packageState[0]);
+		// Without a transaction synchronization, the error event of the failed item is published too
+		verify(eventPublisher, atLeastOnce()).publishEvent((Object) isA(PublishErrorEvent.class));
+	}
+
+	private PublishDAO prepareInitialPublishWithFailedItem() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.INITIAL_PUBLISH, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(false);
+		PublishItemTO failedItem = mock(PublishItemTO.class);
+		when(failedItem.getPath()).thenReturn("/site/website/index.xml");
+		GitPublishChangeSet<PublishItemTO> changeSet = new GitPublishChangeSet<>("initial-commit", emptyList(), List.of(failedItem));
+		doReturn(changeSet).when(contentRepository).initialPublish(publishPackage, LIVE);
+		PublishDAO batchPublishDao = mock(PublishDAO.class);
+		when(batchSqlSessionTemplate.getMapper(PublishDAO.class)).thenReturn(batchPublishDao);
+		return batchPublishDao;
+	}
+
+	private String[] trackLiveCommitId() {
+		String[] commitId = {null};
+		lenient().when(publishPackage.getPublishedLiveCommitId()).thenAnswer(invocation -> commitId[0]);
+		doAnswer(invocation -> {
+			commitId[0] = invocation.getArgument(0);
+			return null;
+		}).when(publishPackage).setPublishedLiveCommitId(any());
+		return commitId;
+	}
+
+	private String[] trackStagingCommitId() {
+		String[] commitId = {null};
+		lenient().when(publishPackage.getPublishedStagingCommitId()).thenAnswer(invocation -> commitId[0]);
+		doAnswer(invocation -> {
+			commitId[0] = invocation.getArgument(0);
+			return null;
+		}).when(publishPackage).setPublishedStagingCommitId(any());
+		return commitId;
+	}
 
 	private void prepareFailedBaselineCopy(String target) throws Exception {
 		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, target);
