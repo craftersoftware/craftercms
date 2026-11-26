@@ -246,8 +246,8 @@ export function initTinyMCE(
 
 			// Meant to avoid a hard refresh causing the item to stay locked. As more XB controls come to life,
 			// this may not be the best place to handle this.
-			const beforeUnloadFn = (event: BeforeUnloadEvent) => post(unlockItem({ path }));
-			window.addEventListener('beforeunload', beforeUnloadFn, { capture: true, passive: true });
+			const pageHideFn = () => post(unlockItem({ path }));
+			window.addEventListener('pagehide', pageHideFn, { capture: true, passive: true });
 
 			function save() {
 				const content = getContent();
