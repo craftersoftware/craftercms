@@ -1169,6 +1169,10 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 		}
 		String liveBranch = servicesConfig.getLiveEnvironment(siteId);
 		String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
+		if (liveBranch.equals(stagingBranch)) {
+			throw new ServiceLayerException(format("Cannot enable staging for site '%s': the staging branch '%s' is " +
+					"the same as the live branch", siteId, stagingBranch));
+		}
 		boolean createdBranch = false;
 		boolean insertedTargets = false;
 		boolean createdDeployerTarget = false;

@@ -306,7 +306,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 			DBUtils.runInTransaction(transactionManager, format(PUBLISH_FAILURE_TRANSACTION_NAME_FORMAT, siteId, packageId), () -> {
 				publishDao.updatePackage(publishPackage);
 				for (PublishPackageTO packageTO : failedTargets) {
-					publishDao.updatePublishItemsState(packageId, packageTO.getFailedOnBits(), 0);
+					publishDao.updatePublishItemsState(packageId, packageTO.getItemFailedState(), 0);
 				}
 				publishDao.updatePublishItemsState(packageId, 0, PublishItem.PublishState.PROCESSING.value);
 				for (PublishPackageTO packageTO : failedTargets) {
@@ -571,7 +571,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 		packageTO.setPublishedCommitId(null);
 		packageTO.setError(PublishUtils.translatePackageException(e));
 		publishDao.updatePackage(publishPackage);
-		publishDao.updatePublishItemsState(publishPackage.getId(), packageTO.getFailedOnBits(), 0);
+		publishDao.updatePublishItemsState(publishPackage.getId(), packageTO.getItemFailedState(), 0);
 		publishEventAfterCommit(new PublishErrorEvent(publishPackage.getSite().getSiteId(), publishPackage.getId(), e));
 	}
 

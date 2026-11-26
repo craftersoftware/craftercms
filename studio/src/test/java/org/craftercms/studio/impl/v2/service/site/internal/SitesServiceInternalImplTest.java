@@ -424,6 +424,19 @@ public class SitesServiceInternalImplTest {
 	}
 
 	@Test
+	public void enableStagingFailsWithoutWritingWhenStagingBranchIsTheLiveBranch() throws Exception {
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("live");
+
+		assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+
+		verifyNoInteractions(contentRepository, itemTargetDao, deployer, retryingDatabaseOperationFacade);
+		verify(siteDAO, never()).setStagingBlobsCopied(anyString(), anyBoolean());
+		verify(siteDAO, never()).setStagingEnabled(anyString());
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
 	public void enableStagingExistingBranchSkipsBlobCopy() throws Exception {
 		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
 		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
@@ -764,6 +777,7 @@ public class SitesServiceInternalImplTest {
 		when(servicesConfig.getStagingEnvironment(NEW_SITE_ID)).thenReturn("staging");
 		when(contentRepository.publishedRepositoryExists(NEW_SITE_ID)).thenReturn(true);
 		when(contentRepository.isTargetPublished(NEW_SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(NEW_SITE_ID, "live", "staging")).thenReturn(true);
 		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
 
 		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, true);

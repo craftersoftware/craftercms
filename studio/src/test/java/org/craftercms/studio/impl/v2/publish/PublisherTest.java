@@ -642,7 +642,10 @@ public class PublisherTest {
 		assertEquals(liveTarget, LIVE_FAILED.matches(packageState[0]));
 		assertFalse(PROCESSING.matches(packageState[0]));
 		assertFalse(LIVE_SUCCESS.matches(packageState[0]));
-		assertEquals(failedBits, itemState[0]);
+		long itemFailedBits = liveTarget
+			? PublishItem.PublishState.STAGING_FAILED.value | PublishItem.PublishState.LIVE_FAILED.value
+			: PublishItem.PublishState.STAGING_FAILED.value;
+		assertEquals(itemFailedBits, itemState[0]);
 		assertEquals(0, itemState[0] & PublishItem.PublishState.PROCESSING.value);
 		assertEquals(0, itemState[0] & PublishItem.PublishState.LIVE_SUCCESS.value);
 		verify(publishPackage).setPublishedOn(any());
@@ -743,7 +746,7 @@ public class PublisherTest {
 
 		verify(transactionStatus).setRollbackOnly();
 		assertEquals(COMPLETED.value | STAGING_FAILED.value | LIVE_FAILED.value, packageState[0]);
-		assertEquals(STAGING_FAILED.value | LIVE_FAILED.value, itemState[0]);
+		assertEquals(PublishItem.PublishState.STAGING_FAILED.value | PublishItem.PublishState.LIVE_FAILED.value, itemState[0]);
 		verify(publishPackage).setPublishedOn(any());
 		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
 		verify(eventPublisher).publishEvent((Object) isA(PublishErrorEvent.class));
@@ -786,7 +789,7 @@ public class PublisherTest {
 		verify(transactionStatus).setRollbackOnly();
 		assertEquals(LIVE_FAILED.value, packageState[0]);
 		verify(publishPackage).setLiveError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
-		verify(publishDAO).updatePublishItemsState(PACKAGE_ID, LIVE_FAILED.value, 0);
+		verify(publishDAO).updatePublishItemsState(PACKAGE_ID, PublishItem.PublishState.LIVE_FAILED.value, 0);
 		verify(publishDAO).updateItemStatesForCompletePackage(eq(PACKAGE_ID), anyLong(), anyLong(), anyLong(), anyLong(), eq(LIVE));
 	}
 
