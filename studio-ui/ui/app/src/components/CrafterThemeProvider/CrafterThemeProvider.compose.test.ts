@@ -384,6 +384,40 @@ describe('caller style overrides composed with contrast rules', () => {
 		assert.equal(window.getComputedStyle(input).letterSpacing, '2px');
 	});
 
+	it('keeps the selected bar after a caller background shorthand in an object-valued slot', async () => {
+		const { theme } = await renderTheme({
+			components: {
+				MuiListItemButton: {
+					styleOverrides: {
+						root: { letterSpacing: '2px', '&.Mui-selected': { backgroundImage: 'none', background: 'red' } }
+					}
+				}
+			}
+		});
+		const root = apply(slot(theme, 'MuiListItemButton', 'root'), theme);
+		assert.equal(root.letterSpacing, '2px');
+		const selected = root['&.Mui-selected'] as Record<string, unknown>;
+		assert.deepEqual(Object.keys(selected), ['background', 'backgroundImage', 'backgroundSize', 'backgroundRepeat']);
+		assert.equal(selected.backgroundImage, 'linear-gradient(currentColor, currentColor)');
+	});
+
+	it("keeps a shared nested selector at the caller's position", async () => {
+		const { theme } = await renderTheme({
+			components: {
+				MuiMenuItem: {
+					styleOverrides: {
+						root: { '&.Mui-selected': { padding: '4px' }, '&.Mui-focusVisible': { padding: '2px' } }
+					}
+				}
+			}
+		});
+		const root = apply(slot(theme, 'MuiMenuItem', 'root'), theme);
+		assert.deepEqual(Object.keys(root), ['&.Mui-selected', '&.Mui-focusVisible']);
+		const selected = root['&.Mui-selected'] as Record<string, unknown>;
+		assert.equal(selected.padding, '4px');
+		assert.equal(selected.backgroundImage, 'linear-gradient(currentColor, currentColor)');
+	});
+
 	it('applies the animation rules beside a CssBaseline callback that returns css() output', async () => {
 		const { theme } = await renderTheme(
 			{

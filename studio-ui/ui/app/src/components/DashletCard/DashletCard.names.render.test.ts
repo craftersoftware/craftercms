@@ -46,9 +46,9 @@ afterEach(async () => {
 	});
 });
 
-async function render(props: Record<string, unknown>, value = intl) {
+async function render(props: Record<string, unknown>, value = intl, parent: HTMLElement = document.body) {
 	const host = document.createElement('div');
-	document.body.appendChild(host);
+	parent.appendChild(host);
 	const root = createRoot(host);
 	mounted.push({ unmount: () => root.unmount(), host });
 	await act(async () => {
@@ -235,6 +235,42 @@ describe('dashlet header toggle name', () => {
 		assert.equal(button.getAttribute('aria-label'), 'Toggle section');
 		await act(async () => title.removeAttribute('style'));
 		assert.equal(button.hasAttribute('aria-label'), false);
+	});
+
+	it('keeps the title as the name while the card sits in a visibility: hidden ancestor', async () => {
+		const wrapper = document.createElement('div');
+		wrapper.style.visibility = 'hidden';
+		document.body.appendChild(wrapper);
+		try {
+			const host = await render({ title: 'Activity' }, intl, wrapper);
+			const button = toggle(host);
+			assert.ok(button);
+			assert.equal(button.hasAttribute('aria-label'), false, 'hidden ancestor');
+			wrapper.style.visibility = '';
+			assert.equal(button.hasAttribute('aria-label'), false, 'ancestor shown again');
+		} finally {
+			wrapper.remove();
+		}
+	});
+
+	it('keeps a hidden label referenced through aria-labelledby as the name', async () => {
+		const title = React.createElement(
+			React.Fragment,
+			null,
+			React.createElement('span', { role: 'img', 'aria-labelledby': 'activity-label' }),
+			React.createElement('span', { id: 'activity-label', style: { display: 'none' } }, 'Activity')
+		);
+		const host = await render({ title });
+		const button = toggle(host);
+		assert.ok(button);
+		assert.equal(button.hasAttribute('aria-label'), false);
+	});
+
+	it('names the toggle when aria-labelledby points at nothing', async () => {
+		const host = await render({
+			title: React.createElement('span', { role: 'img', 'aria-labelledby': 'missing-label' })
+		});
+		assert.equal(toggle(host)?.getAttribute('aria-label'), 'Toggle section');
 	});
 
 	it('names the toggle when the title text is aria-hidden', async () => {

@@ -105,25 +105,50 @@ function isInvisible(element: Element): boolean {
 }
 
 /**
+ * Whether an element names itself: an image's alt text, an aria-label, or an aria-labelledby reference to
+ * an element with text. A referenced label counts even when it is hidden (accname).
+ */
+function hasOwnLabel(element: Element): boolean {
+	if (element.tagName === 'IMG' && (element.getAttribute('alt') ?? '').trim() !== '') {
+		return true;
+	}
+	if ((element.getAttribute('aria-label') ?? '').trim() !== '') {
+		return true;
+	}
+	return (element.getAttribute('aria-labelledby') ?? '')
+		.split(/\s+/)
+		.filter(Boolean)
+		.some((id) => {
+			const label = element.ownerDocument.getElementById(id);
+			return (
+				label !== null &&
+				((label.textContent ?? '').trim() !== '' || (label.getAttribute('aria-label') ?? '').trim() !== '')
+			);
+		});
+}
+
+/**
  * Whether the rendered toggle has content that names it: text, an image with alt text, or a labelled
  * descendant. The toggle's own aria-label (the fallback) is not counted. Reads the live tree, since a
  * detached copy has no computed style. Visually hidden (clipped) text still counts: assistive technology
  * exposes it.
  */
 function renderedHasName(button: HTMLElement): boolean {
+	// visibility is inherited. When the whole toggle is invisible (e.g. inside a minimized, keepMounted dialog),
+	// that says nothing about the title, and no mutation inside the toggle would re-check it once the ancestor
+	// shows again. Only visibility set inside the toggle counts.
+	const toggleInvisible = isInvisible(button);
+	const invisible = (element: Element) => !toggleInvisible && isInvisible(element);
 	const contentNames = (parent: Element): boolean =>
 		Array.from(parent.childNodes).some((child) => {
 			if (child.nodeType === 3 /* TEXT_NODE */) {
-				return (child.textContent ?? '').trim() !== '' && !isInvisible(parent);
+				return (child.textContent ?? '').trim() !== '' && !invisible(parent);
 			}
 			if (child.nodeType !== 1 /* ELEMENT_NODE */ || isRemovedFromName(child as Element)) {
 				return false;
 			}
 			const element = child as Element;
-			const ownLabel =
-				(element.tagName === 'IMG' && (element.getAttribute('alt') ?? '').trim() !== '') ||
-				(element.getAttribute('aria-label') ?? '').trim() !== '';
-			return (ownLabel && !isInvisible(element)) || contentNames(element);
+			return (hasOwnLabel(element) && !invisible(element)) || contentNames(element);
 		});
 	return contentNames(button);
 }
@@ -181,7 +206,7 @@ export function DashletCard(props: DashletCardProps) {
 			characterData: true,
 			attributes: true,
 			// class and style can show or hide title content (display / visibility).
-			attributeFilter: ['alt', 'aria-label', 'aria-hidden', 'hidden', 'class', 'style']
+			attributeFilter: ['alt', 'aria-label', 'aria-labelledby', 'aria-hidden', 'hidden', 'class', 'style']
 		});
 		return () => observer.disconnect();
 	}, [renderCardHeader, isToggleable]);
