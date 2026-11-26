@@ -21,7 +21,8 @@ import { normalizeMonacoTheme } from './types';
 import { enforceMonacoKeyboardOptions } from '../editorKeyboard/monacoKeyboard';
 // The editor itself (`window.monaco`) is loaded at runtime by `withMonaco`, but the codicon font that build ships is
 // emitted corrupt (a few bytes of JS instead of the TTF), which breaks the icons of the search widget, the diff editor
-// and others. Monaco falls back to this valid @font-face, so only the font CSS is bundled, not the editor.
+// and others. Monaco falls back to this valid @font-face, so only the font CSS is bundled, not the editor. The app declares
+// the same monaco-editor version as ui/npm-content (which builds window.monaco) so the font matches the editor's codicon set.
 import 'monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.css';
 type MonacoModel = ReturnType<Monaco['editor']['createModel']>;
 
