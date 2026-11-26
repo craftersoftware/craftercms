@@ -38,6 +38,11 @@
 		'small-to-xlarge': '(min-width: 481px) and (max-width: 1680px)'
 	});
 
+	// XB edit mode is on and the bypass key isn't held.
+	function isXbEditing() {
+		return $('html').is('.craftercms-ice-on:not(.craftercms-ice-bypass)');
+	}
+
 	// Stops animations/transitions until the page has ...
 
 	// ... loaded.
@@ -135,12 +140,11 @@
 		// Prevent default.
 		event.preventDefault();
 
-		// Skip navigation when XB edit mode is on (`craftercms-ice-on` on <html>, removed when edit mode is
-		// off or the bypass key is held) and the link is either itself an XB zone (e.g. editable email) or a
-		// direct child of an XB-marked <article> (e.g. the image link in the articles widget). Let the click
+		// Skip navigation when XB edit mode is on (`craftercms-ice-on` on <html> without `craftercms-ice-bypass`,
+		// which XB adds while the bypass key is held) and the link is either itself an XB zone (e.g. editable email)
+		// or a direct child of an XB-marked <article> (e.g. the image link in the articles widget). Let the click
 		// bubble up so XB can start editing. If XB is off, the link behaves normally.
-		if ($('html').is('.craftercms-ice-on:not(.craftercms-ice-bypass)')
-			&& ($a.is('[data-craftercms-model-id]') || $a.parent().is('article[data-craftercms-model-id]')))
+		if (isXbEditing() && ($a.is('[data-craftercms-model-id]') || $a.parent().is('article[data-craftercms-model-id]')))
 			return;
 
 		event.stopPropagation();
@@ -174,7 +178,7 @@
 		// When XB edit mode is on, let clicks bubble so Experience Builder (which listens on document)
 		// can handle them. The body handler below ignores clicks that originate inside the sidebar.
 		// When XB is off, keep the original stopPropagation so the theme behaves as before.
-		if (event.type == 'click' && $('html').is('.craftercms-ice-on:not(.craftercms-ice-bypass)'))
+		if (event.type == 'click' && isXbEditing())
 			return;
 
 		// Prevent propagation.
