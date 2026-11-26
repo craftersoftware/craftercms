@@ -884,6 +884,8 @@ function NodeSelector(props: NodeSelectorProps) {
 		};
 		const undoTarget = { modelId: source.modelId, fieldId: source.fieldId };
 		const undoTargetIndex = source.index;
+		// Only the latest move can be undone: drop the previous Undo before showing a new one.
+		dismissMoveSnackbar();
 		dispatch(
 			showSystemNotification({
 				message: formatMessage(
