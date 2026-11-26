@@ -16,6 +16,7 @@
 
 import type { Observable } from 'rxjs';
 import type { ObtainAuthTokenResponse } from '../services/auth';
+import { applyClientLocalExpiry } from './clientLocalExpiry';
 
 /**
  * Fraction of the token lifetime at which it is refreshed.
@@ -32,9 +33,17 @@ export const sessionCleanupGraceMs = 61 * 1000;
 export const sessionWarningCheckpointLeadMs = 5000;
 
 /**
+ * Half of the access token's remaining lifetime. `expiresAt` is a client-local expiry (the server's seconds remaining,
+ * added to the clock at receipt), so this does not compare the server's absolute timestamp with the client clock.
+ */
+export function getAccessTokenRefreshInterval(expiresAt: number, now = Date.now()): number {
+	return Math.floor((expiresAt - now) * refreshAtFactor);
+}
+
+/**
  * Delay before the next token refresh: the regular one, or sooner to check the session right before the warning is due
  * (so tabs warn based on up to date information, as the session may have been extended by activity) and right after it
- * should have expired.
+ * should have expired. `sessionExpiresAt` is a client-local expiry derived from the server's seconds remaining.
  */
 export function getNextRefreshDelay(
 	current: Pick<ObtainAuthTokenResponse, 'sessionExpiresAt'>,
@@ -55,6 +64,43 @@ export function getNextRefreshDelay(
 }
 
 /**
+ * How far a newly received client-local session expiry may sit from the previous one and still be the same server
+ * limit. The server counts whole seconds and each response is re-based on the clock at receipt, so a routine refresh
+ * lands up to about a second off, plus a little delay before the response is read. A real extension moves the limit
+ * by minutes.
+ */
+export const sameSessionLimitWindowMs = 2000;
+
+/**
+ * The client-local token, the access-token refresh interval, and the delay until the next refresh.
+ *
+ * `sessionExpiresAt` is kept from `previous` when the new value is within `sameSessionLimitWindowMs`. AuthMonitor and
+ * useSessionTimeoutWarning compare that value by equality, so a refresh that did not move the server limit must not
+ * look like a new expiry. The countdown and the refresh delay still use the client-local value.
+ */
+export function getTokenSchedule(
+	token: ObtainAuthTokenResponse,
+	warningLeadTimeMs: number,
+	receivedAt = Date.now(),
+	previous?: Pick<ObtainAuthTokenResponse, 'sessionExpiresAt'> | null
+): { current: ObtainAuthTokenResponse; refreshInterval: number; delay: number } {
+	const local = applyClientLocalExpiry(token, receivedAt);
+	const previousSessionExpiresAt = previous?.sessionExpiresAt;
+	const current =
+		previousSessionExpiresAt != null &&
+		local.sessionExpiresAt != null &&
+		Math.abs(local.sessionExpiresAt - previousSessionExpiresAt) < sameSessionLimitWindowMs
+			? { ...local, sessionExpiresAt: previousSessionExpiresAt }
+			: local;
+	const refreshInterval = getAccessTokenRefreshInterval(current.expiresAt, receivedAt);
+	return {
+		current,
+		refreshInterval,
+		delay: getNextRefreshDelay(current, refreshInterval, warningLeadTimeMs, receivedAt)
+	};
+}
+
+/**
  * A request for tokens, either a promise or an observable.
  */
 export type TokenRequest = Promise<ObtainAuthTokenResponse> | Pick<Observable<ObtainAuthTokenResponse>, 'subscribe'>;
@@ -62,7 +108,7 @@ export type TokenRequest = Promise<ObtainAuthTokenResponse> | Pick<Observable<Ob
 export interface AuthTokenQueueCallbacks {
 	/** Gets new tokens. */
 	obtain: () => TokenRequest;
-	/** Gets new tokens and restarts the session time limits. */
+	/** Gets new tokens and extends the limit the user is being warned about. */
 	extend: (xsrfToken: string) => TokenRequest;
 	/** Called with each new set of tokens. */
 	onToken: (token: ObtainAuthTokenResponse) => void;

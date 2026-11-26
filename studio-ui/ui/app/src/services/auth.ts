@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -103,22 +103,36 @@ export function validatePasswordResetToken(token: string): Observable<boolean> {
 
 export type ObtainAuthTokenResponse = {
 	expiresAt: number;
+	/**
+	 * Seconds until `expiresAt`, counted on the server clock. Absent on an older server; callers then fall back to
+	 * `expiresAt`.
+	 */
+	expiresIn?: number;
 	token: string;
+	/** Earliest time at which the session may expire, absent if there are no time limits shorter than 20 hours. */
 	sessionExpiresAt?: number;
+	/**
+	 * Seconds until `sessionExpiresAt`, counted on the server clock. Absent when there is nothing to warn about, or
+	 * on an older server; callers then fall back to `sessionExpiresAt`.
+	 */
+	sessionExpiresIn?: number;
+	/** Whether staying signed in would move the session expiry. */
 	canExtendSession?: boolean;
 };
 
 /**
  * Gets new tokens. `sessionExpiresAt` is the earliest time at which the session may expire (absent if there are no time
- * limits shorter than 20 hours) and `canExtendSession` tells if staying signed in would move it.
+ * limits shorter than 20 hours) and `canExtendSession` tells if staying signed in would move it. `expiresIn` and
+ * `sessionExpiresIn` are the seconds remaining on the server clock.
  **/
 export function obtainAuthToken(): Observable<ObtainAuthTokenResponse> {
 	return get<ObtainAuthTokenResponse>('/studio/refresh.json').pipe(map(toAuthTokenResponse));
 }
 
 /**
- * Gets new tokens and restarts the time limits of the session. Unlike the token refresh, this is a POST as it changes
- * state, so it requires the XSRF token.
+ * Gets new tokens and extends the limit the user is being warned about. An inactivity warning only refreshes the
+ * activity time; the absolute session limit is restarted, and one extension used, only when that limit is the one
+ * about to expire. Unlike the token refresh, this is a POST as it changes state, so it requires the XSRF token.
  **/
 export function extendSession(xsrfToken: string): Observable<ObtainAuthTokenResponse> {
 	return post<ObtainAuthTokenResponse>('/studio/refresh.json', null, { [XSRF_TOKEN_HEADER_NAME]: xsrfToken }).pipe(
@@ -131,7 +145,9 @@ function toAuthTokenResponse(response: AjaxResponse<ObtainAuthTokenResponse>): O
 	return {
 		token: auth.token,
 		expiresAt: new Date(auth.expiresAt).getTime(),
+		expiresIn: auth.expiresIn,
 		sessionExpiresAt: auth.sessionExpiresAt ? new Date(auth.sessionExpiresAt).getTime() : null,
+		sessionExpiresIn: auth.sessionExpiresIn,
 		canExtendSession: auth.canExtendSession
 	};
 }

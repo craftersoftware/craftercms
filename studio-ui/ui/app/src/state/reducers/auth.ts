@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -27,6 +27,8 @@ import {
 	sharedWorkerUnauthenticated
 } from '../actions/auth';
 import { storeInitialized } from '../actions/system';
+import { applyClientLocalExpiry } from '../../utils/clientLocalExpiry';
+import type { ObtainAuthTokenResponse } from '../../services/auth';
 
 export const initialState: GlobalState['auth'] = {
 	error: null,
@@ -39,14 +41,22 @@ export const initialState: GlobalState['auth'] = {
 
 export const INCORRECT_CREDENTIALS_ERROR_CODE = 6004;
 
+/** Client-local expiries for auth state. Seconds remaining win over the server's absolute timestamps. */
+function storedTokenTimes(auth: ObtainAuthTokenResponse) {
+	const local = applyClientLocalExpiry(auth);
+	return {
+		expiresAt: local.expiresAt,
+		sessionExpiresAt: local.sessionExpiresAt ?? null,
+		canExtendSession: local.canExtendSession ?? true
+	};
+}
+
 const reducer = createReducer<GlobalState['auth']>(initialState, (builder) => {
 	builder
 		.addCase(storeInitialized, (state, { payload }) => ({
 			...state,
 			active: true,
-			expiresAt: payload.auth.expiresAt,
-			sessionExpiresAt: payload.auth.sessionExpiresAt ?? null,
-			canExtendSession: payload.auth.canExtendSession ?? true
+			...storedTokenTimes(payload.auth)
 		}))
 		.addCase(refreshAuthToken, (state) => ({
 			...state,
@@ -56,9 +66,7 @@ const reducer = createReducer<GlobalState['auth']>(initialState, (builder) => {
 			...state,
 			active: true,
 			isFetching: false,
-			expiresAt: payload.expiresAt,
-			sessionExpiresAt: payload.sessionExpiresAt ?? null,
-			canExtendSession: payload.canExtendSession ?? true
+			...storedTokenTimes(payload)
 		}))
 		.addCase(refreshAuthTokenFailed, (state) => ({
 			...state,
