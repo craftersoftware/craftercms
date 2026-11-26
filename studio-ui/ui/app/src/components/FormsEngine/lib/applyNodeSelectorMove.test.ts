@@ -669,4 +669,54 @@ describe('undoNodeSelectorMove', () => {
 		assert.equal(restored.component?.['internal-name'], 'Renamed');
 		assert.deepEqual(keys(store, rootForm, 'right_o'), []);
 	});
+
+	it('undoes only the latest move when two moves happened in sequence', () => {
+		const first = embeddedHero('h1', 'First');
+		const second = embeddedHero('h2', 'Second');
+		const { store, rootForm } = pageForm({ left_o: [first, second], right_o: [] });
+		const firstMove = applyNodeSelectorMove({
+			store,
+			rootForm,
+			item: first,
+			rootModelId,
+			rootContentType: pageType,
+			contentTypesById,
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 0 },
+			target: { modelId: rootModelId, fieldId: 'right_o' },
+			targetIndex: 0
+		});
+		assert.ok(firstMove);
+		// A second move replaces the Undo snackbar; only this one's applied/source stay live.
+		const secondMove = applyNodeSelectorMove({
+			store,
+			rootForm,
+			item: second,
+			rootModelId,
+			rootContentType: pageType,
+			contentTypesById,
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 0 },
+			target: { modelId: rootModelId, fieldId: 'right_o' },
+			targetIndex: 1
+		});
+		assert.ok(secondMove);
+		assert.deepEqual(keys(store, rootForm, 'left_o'), []);
+		assert.deepEqual(keys(store, rootForm, 'right_o'), ['h1', 'h2']);
+
+		const undone = undoNodeSelectorMove({
+			store,
+			documentStack: [rootForm],
+			contentTypesById,
+			applied: {
+				modelId: rootModelId,
+				fieldId: 'right_o',
+				index: secondMove.insertedIndex,
+				item: secondMove.item
+			},
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 0 }
+		});
+
+		assert.ok(undone);
+		assert.deepEqual(keys(store, rootForm, 'left_o'), ['h2']);
+		assert.deepEqual(keys(store, rootForm, 'right_o'), ['h1']);
+	});
 });
