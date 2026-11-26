@@ -9,7 +9,7 @@
     </@crafter.div>
 	<ul class="contact">
 		<li class="icon solid fa-envelope">
-            <@crafter.a href="mailto:${contentModel.email_s}" target="_blank" $field="email_s">${contentModel.email_s}</@crafter.a>
+                    <@crafter.a href="mailto:${contentModel.email_s}" $field="email_s">${contentModel.email_s}</@crafter.a>
 		</li>
             <@crafter.li class="icon solid fa-phone" $field="phone_s">
                 ${contentModel.phone_s}
