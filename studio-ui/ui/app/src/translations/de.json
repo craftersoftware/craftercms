@@ -1781,5 +1781,7 @@
 	"k/3LuW": "Kein Steuerelement-Deskriptor für den Feldtyp \"{fieldType}\" gefunden",
 	"vYi9lB": "Kein Datenquellen-Deskriptor für den Typ \"{dataSourceType}\" gefunden",
 	"B2Na3Q": "Pfad auswählen",
-	"zFHoFZ": "Abschnitt umschalten"
+	"zFHoFZ": "Abschnitt umschalten",
+	"nGvC9U": "Ungültiges Element",
+	"Qv97pC": "Ungültiges Element{br}{details}"
 }

@@ -22,9 +22,9 @@ import AddRounded from '@mui/icons-material/AddRounded';
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import { FormsEngineField } from '../components/FormsEngineField';
+import { ListItemValidity } from '../components/ListItemValidity';
 import { ControlProps } from '../types';
 import List from '@mui/material/List';
-import ListItemText from '@mui/material/ListItemText';
 import ListItemButton from '@mui/material/ListItemButton';
 import Box from '@mui/material/Box';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
@@ -306,7 +306,9 @@ export function Repeat(props: RepeatProps) {
 													: undefined
 											}
 										>
-											<ListItemText
+											<ListItemValidity
+												fieldId={field.id}
+												itemKey={rowKeys[index]}
 												primary={itemLabel}
 												secondary={getRepeatItemSummary(item, displayFieldIds)}
 												slotProps={{
