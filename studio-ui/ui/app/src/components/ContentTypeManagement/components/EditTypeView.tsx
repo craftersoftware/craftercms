@@ -78,7 +78,7 @@ import EditTypeViewLayout, { EditAppLayoutProps } from './EditTypeViewLayout';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { JotaiStore } from '../../FormsEngine/types';
-import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import { createLookupTable, nnou, pluckProps, reversePluckProps } from '../../../utils/object';
 import Box, { BoxProps } from '@mui/material/Box';
 import useEnhancedDialogContext from '../../EnhancedDialog/useEnhancedDialogContext';

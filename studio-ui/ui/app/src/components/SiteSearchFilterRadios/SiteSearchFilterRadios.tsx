@@ -16,7 +16,7 @@
 
 import { Facet } from '../../models/Search';
 import { LookupTable } from '../../models/LookupTable';
-import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, useIntl, type MessageValue } from 'react-intl';
 import { capitalize, formatBytes } from '../../utils/string';
 import RadioGroup from '@mui/material/RadioGroup';
 import { nnou } from '../../utils/object';

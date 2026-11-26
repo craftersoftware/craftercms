@@ -18,7 +18,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ApiResponse from '../../models/ApiResponse';
 import { fetchItemStates, setItemStates, setItemStatesByQuery, StatesToUpdate } from '../../services/workflow';
 import GlobalAppToolbar from '../GlobalAppToolbar';
-import { defineMessage, defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessage, FormattedMessage, useIntl } from 'react-intl';
 import ItemStatesGridUI, { ItemStatesGridSkeletonTable } from '../ItemStatesGrid';
 import SetItemStateDialog from '../SetWorkflowStateDialog';
 import Button from '@mui/material/Button';

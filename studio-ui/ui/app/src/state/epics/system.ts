@@ -76,7 +76,7 @@ import { getStoredShowToolsPanel } from '../../utils/state';
 import { closeToolsPanel, openToolsPanel } from '../actions/preview';
 import { getXSRFToken, removeSiteCookie, setSiteCookie } from '../../utils/auth';
 import { changeSiteComplete, fetchSites, popSite } from '../actions/sites';
-import { defineMessage, defineMessages, type MessageValue } from 'react-intl';
+import { defineMessage, type MessageValue } from 'react-intl';
 import { batchActions } from '../actions/misc';
 import StandardAction from '../../models/StandardAction';
 import { ProjectLifecycleEvent } from '../../models/ProjectLifecycleEvent';
