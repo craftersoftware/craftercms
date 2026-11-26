@@ -23,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -125,8 +126,7 @@ public class FallbackSiteListResolverTest {
 	@Test
 	public void successLogsWhichResolverSuppliedTheList() {
 		when(first.getSiteList()).thenReturn(null);
-		when(second.getSiteList()).thenReturn(List.of("editorial", "editorial-staging"));
-		FallbackSiteListResolver resolver = chain(first, second);
+		FallbackSiteListResolver resolver = chain(first, new StaticSiteListResolver("editorial", "editorial-staging"));
 
 		List<String> events;
 		try (LogCapture logs = new LogCapture(FallbackSiteListResolver.class, Level.DEBUG)) {
@@ -134,12 +134,26 @@ public class FallbackSiteListResolverTest {
 			events = logs.events();
 		}
 
-		String resolverName = second.getClass().getSimpleName();
-		assertTrue(events.toString(), events.contains("DEBUG Site list (2 sites) supplied by " + resolverName));
+		assertTrue(events.toString(), events.contains("DEBUG Site list (2 sites) supplied by StaticSiteListResolver"));
 	}
 
 	private static FallbackSiteListResolver chain(SiteListResolver... resolvers) {
 		return new FallbackSiteListResolver(List.of(resolvers));
+	}
+
+	private static final class StaticSiteListResolver implements SiteListResolver {
+
+		private final List<String> siteNames;
+
+		private StaticSiteListResolver(String... siteNames) {
+			this.siteNames = List.of(siteNames);
+		}
+
+		@Override
+		public Collection<String> getSiteList() {
+			return siteNames;
+		}
+
 	}
 
 }
