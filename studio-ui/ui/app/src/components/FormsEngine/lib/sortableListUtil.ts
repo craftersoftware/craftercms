@@ -210,11 +210,7 @@ export function useRestoreFocusWhenEmpty<T>(list: T[]) {
 	const addButtonRef = useRef<HTMLButtonElement | null>(null);
 	const fallbackRef = useRef<HTMLDivElement | null>(null);
 	const pendingRef = useRef(false);
-	useLayoutEffect(() => {
-		if (!pendingRef.current) {
-			return;
-		}
-		pendingRef.current = false;
+	const focusEmptyField = () => {
 		const addButton = addButtonRef.current;
 		if (addButton && !addButton.disabled) {
 			addButton.focus({ preventScroll: true });
@@ -223,11 +219,18 @@ export function useRestoreFocusWhenEmpty<T>(list: T[]) {
 		// Nothing left can take focus. Park it on the field body (not a tab stop) so the next Tab
 		// starts at this field instead of the document.
 		fallbackRef.current?.focus({ preventScroll: true });
+	};
+	useLayoutEffect(() => {
+		if (!pendingRef.current) {
+			return;
+		}
+		pendingRef.current = false;
+		focusEmptyField();
 	}, [list]);
 	const rememberEmpty = () => {
 		pendingRef.current = true;
 	};
-	return { addButtonRef, fallbackRef, rememberEmpty };
+	return { addButtonRef, fallbackRef, rememberEmpty, focusEmptyField };
 }
 
 export function isTouchDevice() {

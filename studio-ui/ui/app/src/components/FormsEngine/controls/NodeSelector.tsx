@@ -158,18 +158,20 @@ const MOVE_TO_FIELD_SNACKBAR_KEY = 'formsEngine.moveToField';
 
 /**
  * Asks the destination row to take focus after a move. Only the top form's selectors can: the forms below it are
- * covered by the stacked-form drawer (or are not mounted), so their moves leave focus alone.
+ * covered by the stacked-form drawer, and the fields of an embedded item are only shown in that item's own form. Returns
+ * whether it asked, so the caller can keep focus somewhere else when it did not.
  */
 function requestMovedRowFocus(
 	store: JotaiStore,
 	formsStackData: StableFormContextProps[],
 	destination: { modelId: string; fieldId: string; index: number },
 	key: string
-) {
+): boolean {
 	const top = formsStackData[formsStackData.length - 1];
 	const topModelId = top?.itemMeta?.id ?? top?.props?.update?.modelId;
-	if (topModelId == null || String(topModelId) !== destination.modelId) return;
+	if (topModelId == null || String(topModelId) !== destination.modelId) return false;
 	store.set(nodeSelectorFocusRequestAtom, { ...destination, key, at: Date.now() });
+	return true;
 }
 
 export type NodeSelectorProps = ControlProps<NodeSelectorItem[]>;
@@ -252,7 +254,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	const [sortMode, setSortMode] = useState(false);
 	const useTouchSorting = useMemo(() => isTouchDevice(), []);
 	const { rootRef, remember, announcement } = useReorderFocus(value);
-	const { addButtonRef, fallbackRef, rememberEmpty } = useRestoreFocusWhenEmpty(value);
+	const { addButtonRef, fallbackRef, rememberEmpty, focusEmptyField } = useRestoreFocusWhenEmpty(value);
 	const rowKeys = useOccurrenceKeys(value);
 	const { closeSnackbar } = useSnackbar();
 	const dismissMoveSnackbar = () => closeSnackbar(MOVE_TO_FIELD_SNACKBAR_KEY);
@@ -850,12 +852,31 @@ function NodeSelector(props: NodeSelectorProps) {
 			targetIndex
 		});
 		if (!applied) return;
-		requestMovedRowFocus(
+		const focusRequested = requestMovedRowFocus(
 			store,
 			formsStackData,
 			{ modelId: target.modelId, fieldId: target.fieldId, index: applied.insertedIndex },
 			applied.item.key
 		);
+		if (!focusRequested) {
+			// The destination is not on screen, and the row that opened this dialog is gone. Keep focus in this field: on
+			// the item that holds the destination, else on the row that took the moved item's place.
+			const remaining = applied.sourceItems;
+			if (remaining.length) {
+				const holderIndex = remaining.findIndex((item) => item.key === target.modelId);
+				const index = holderIndex !== -1 ? holderIndex : Math.min(source.index, remaining.length - 1);
+				store.set(nodeSelectorFocusRequestAtom, {
+					modelId: id,
+					fieldId: field.id,
+					index,
+					key: remaining[index].key,
+					at: Date.now()
+				});
+			} else {
+				// Nothing is left to focus here. Wait for the dialog's focus trap to go, as the request does.
+				setTimeout(focusEmptyField, 0);
+			}
+		}
 		const undoSource = {
 			modelId: target.modelId,
 			fieldId: target.fieldId,
