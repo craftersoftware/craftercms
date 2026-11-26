@@ -16,7 +16,7 @@
 
 import { EnhancedDialog, EnhancedDialogProps } from '../../EnhancedDialog';
 import { ContentType, ContentTypeField, DataSource } from '../../../models';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { FormattedMessage, IntlShape, useIntl } from 'react-intl';
 import React, { ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { applyTranslations, DescriptorContentType, DescriptorField, PartialContentType } from '../utils';
 import { DialogBody } from '../../DialogBody';
@@ -44,7 +44,7 @@ import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
-import InsertPositionPicker from './InsertPositionPicker';
+import InsertPositionPicker, { InsertPositionPickerItem } from './InsertPositionPicker';
 
 export interface PickFieldDialogProps extends EnhancedDialogProps {
 	type: ContentType;
@@ -62,6 +62,21 @@ export interface PickFieldDialogProps extends EnhancedDialogProps {
 }
 
 export interface PickFieldDialogBodyProps extends Omit<PickFieldDialogProps, 'title'> {}
+
+/**
+ * Insert-position items for the fields or data sources already in the target. A data source is labelled by
+ * its `title`; a field by its `name`, which on a descriptor can be a message descriptor. Falls back to the id.
+ */
+export function toInsertPositionItems(
+	list: ReadonlyArray<DescriptorField | DataSource> | undefined,
+	formatMessage: IntlShape['formatMessage']
+): InsertPositionPickerItem[] {
+	return (list ?? []).map((item) => {
+		const text = 'title' in item ? item.title : item.name;
+		const label = typeof text === 'string' ? text : text ? formatMessage(text) : '';
+		return { id: item.id, label: label || item.id, secondary: item.id };
+	});
+}
 
 export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 	const {
@@ -86,13 +101,8 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 	const { formatMessage } = useIntl();
 	const hasItems = (typesCurrentList?.length ?? 0) > 0;
 	const positionItems = useMemo(
-		() =>
-			(typesCurrentList ?? []).map((item) => ({
-				id: item.id,
-				label: item.title || item.name || item.id,
-				secondary: item.id
-			})),
-		[typesCurrentList]
+		() => toInsertPositionItems(typesCurrentList, formatMessage),
+		[typesCurrentList, formatMessage]
 	);
 	const positionHintId = useId();
 	const showFieldPositionStep = !isMdUp && selectedView === 1;

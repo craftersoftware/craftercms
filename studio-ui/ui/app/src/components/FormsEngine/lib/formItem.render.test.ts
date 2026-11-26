@@ -416,9 +416,16 @@ describe('form item subscriptions', () => {
 		const entry = createEntry(['file-name']);
 		const host = await mountTree(
 			store,
-			React.createElement(FormHost, { entry }, React.createElement(EditModeHeader, { isEmbedded: true }))
+			React.createElement(
+				FormHost,
+				{ entry, create: true, itemKey: null },
+				React.createElement(EditModeHeader, { isEmbedded: true })
+			)
 		);
-		assert.equal(host.querySelector('[title]')?.getAttribute('title') ?? '', '');
+		assert.equal(host.querySelector('[data-testid="not-ready"]'), null);
+		const label = host.querySelector('[title]');
+		assert.ok(label, 'the embedded header renders its (empty) title');
+		assert.equal(label.getAttribute('title'), '');
 		assert.equal(host.textContent?.includes(formPath), false);
 	});
 

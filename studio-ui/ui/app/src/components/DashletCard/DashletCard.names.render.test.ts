@@ -46,9 +46,9 @@ afterEach(async () => {
 	});
 });
 
-async function render(props: Record<string, unknown>, value = intl) {
+async function render(props: Record<string, unknown>, value = intl, parent: HTMLElement = document.body) {
 	const host = document.createElement('div');
-	document.body.appendChild(host);
+	parent.appendChild(host);
 	const root = createRoot(host);
 	mounted.push({ unmount: () => root.unmount(), host });
 	await act(async () => {
@@ -184,6 +184,93 @@ describe('dashlet header toggle name', () => {
 		assert.ok(button, 'header toggle for title 0');
 		assert.equal(button.textContent, '0');
 		assert.equal(button.hasAttribute('aria-label'), false);
+	});
+
+	it('renders the header for a component title with false children and no headerAction', async () => {
+		function Title(props: { children?: React.ReactNode }) {
+			return React.createElement('span', null, 'Activity', props.children);
+		}
+		const host = await render({ title: React.createElement(Title, null, false), headerAction: undefined });
+		const button = toggle(host);
+		assert.ok(button, 'header toggle for <Title>{false}</Title>');
+		assert.equal(button.textContent, 'Activity');
+		assert.equal(button.hasAttribute('aria-label'), false);
+	});
+
+	it('names the toggle when the title text is display: none or visibility: hidden', async () => {
+		for (const [label, style] of [
+			['display: none', { display: 'none' }],
+			['visibility: hidden', { visibility: 'hidden' }]
+		] as const) {
+			const host = await render({ title: React.createElement('span', { style }, 'Activity') });
+			const button = toggle(host);
+			assert.ok(button, label);
+			assert.equal(button.getAttribute('aria-label'), 'Toggle section', label);
+		}
+	});
+
+	it('keeps visually hidden (clipped) title text as the name', async () => {
+		const clipped = {
+			position: 'absolute',
+			width: '1px',
+			height: '1px',
+			overflow: 'hidden',
+			clip: 'rect(0 0 0 0)',
+			whiteSpace: 'nowrap'
+		};
+		const host = await render({ title: React.createElement('span', { style: clipped }, 'Activity') });
+		const button = toggle(host);
+		assert.ok(button);
+		assert.equal(button.hasAttribute('aria-label'), false);
+	});
+
+	it('follows a title whose style hides and shows it again', async () => {
+		const host = await render({ title: React.createElement('span', { id: 'title' }, 'Activity') });
+		const button = toggle(host);
+		assert.ok(button);
+		const title = host.querySelector<HTMLElement>('#title');
+		assert.ok(title);
+		assert.equal(button.hasAttribute('aria-label'), false);
+		await act(async () => title.setAttribute('style', 'display: none'));
+		assert.equal(button.getAttribute('aria-label'), 'Toggle section');
+		await act(async () => title.removeAttribute('style'));
+		assert.equal(button.hasAttribute('aria-label'), false);
+	});
+
+	it('keeps the title as the name while the card sits in a visibility: hidden ancestor', async () => {
+		const wrapper = document.createElement('div');
+		wrapper.style.visibility = 'hidden';
+		document.body.appendChild(wrapper);
+		try {
+			const host = await render({ title: 'Activity' }, intl, wrapper);
+			const button = toggle(host);
+			assert.ok(button);
+			assert.equal(button.hasAttribute('aria-label'), false, 'hidden ancestor');
+			wrapper.style.visibility = '';
+			assert.equal(button.hasAttribute('aria-label'), false, 'ancestor shown again');
+		} finally {
+			wrapper.remove();
+		}
+	});
+
+	it('keeps a hidden label referenced through aria-labelledby as the name', async () => {
+		const title = React.createElement(
+			React.Fragment,
+			null,
+			React.createElement('span', { role: 'img', 'aria-labelledby': 'activity-label' }),
+			React.createElement('span', { id: 'activity-label', style: { display: 'none' } }, 'Activity')
+		);
+		const host = await render({ title });
+		const button = toggle(host);
+		assert.ok(button);
+		assert.equal(button.hasAttribute('aria-label'), false);
+	});
+
+	it('names the toggle when aria-labelledby points at nothing', async () => {
+		const host = await render({
+			title: React.createElement('span', { role: 'img', 'aria-labelledby': 'missing-label' })
+		});
+		assert.equal(toggle(host)?.getAttribute('aria-label'), 'Toggle section');
 	});
 
 	it('names the toggle when the title text is aria-hidden', async () => {

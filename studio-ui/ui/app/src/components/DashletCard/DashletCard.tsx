@@ -55,8 +55,8 @@ export type DashletCardProps = PropsWithChildren<
 /**
  * Whether a title node gives the toggle a content-based accessible name. Numbers (0 included) render as
  * text. Booleans, null and blank strings render nothing. A host element counts only through its children
- * or its own label. A component element (e.g. FormattedMessage) is assumed to render text here; this is
- * only the first guess, and DashletCard corrects it from the rendered toggle.
+ * or its own label. A component element (e.g. FormattedMessage) is assumed to render text here, whatever
+ * its children are; this is only the first guess, and DashletCard corrects it from the rendered toggle.
  */
 export function nodeHasName(node: React.ReactNode): boolean {
 	if (typeof node === 'string') {
@@ -79,27 +79,78 @@ export function nodeHasName(node: React.ReactNode): boolean {
 		if (typeof elementProps.alt === 'string' && elementProps.alt.trim() !== '') {
 			return true;
 		}
-		if (elementProps.children !== undefined) {
-			return nodeHasName(elementProps.children);
+		// A component decides what it renders and may ignore its children (e.g. <Title>{false}</Title>), so
+		// only host elements and fragments are judged by their children.
+		if (typeof node.type !== 'string' && node.type !== React.Fragment) {
+			return true;
 		}
-		return typeof node.type !== 'string' && node.type !== React.Fragment;
+		return nodeHasName(elementProps.children);
 	}
 	// Iterables, portals and other renderable values: assume they render content.
 	return true;
 }
 
+/** Content under aria-hidden, hidden or display: none is not part of the name (nor is anything inside it). */
+function isRemovedFromName(element: Element): boolean {
+	if (element.getAttribute('aria-hidden') === 'true' || element.hasAttribute('hidden')) {
+		return true;
+	}
+	return element.ownerDocument.defaultView?.getComputedStyle(element).display === 'none';
+}
+
+/** visibility: hidden/collapse is inherited, but a descendant can set visibility: visible again. */
+function isInvisible(element: Element): boolean {
+	const visibility = element.ownerDocument.defaultView?.getComputedStyle(element).visibility;
+	return visibility === 'hidden' || visibility === 'collapse';
+}
+
+/**
+ * Whether an element names itself: an image's alt text, an aria-label, or an aria-labelledby reference to
+ * an element with text. A referenced label counts even when it is hidden (accname).
+ */
+function hasOwnLabel(element: Element): boolean {
+	if (element.tagName === 'IMG' && (element.getAttribute('alt') ?? '').trim() !== '') {
+		return true;
+	}
+	if ((element.getAttribute('aria-label') ?? '').trim() !== '') {
+		return true;
+	}
+	return (element.getAttribute('aria-labelledby') ?? '')
+		.split(/\s+/)
+		.filter(Boolean)
+		.some((id) => {
+			const label = element.ownerDocument.getElementById(id);
+			return (
+				label !== null &&
+				((label.textContent ?? '').trim() !== '' || (label.getAttribute('aria-label') ?? '').trim() !== '')
+			);
+		});
+}
+
 /**
  * Whether the rendered toggle has content that names it: text, an image with alt text, or a labelled
- * descendant. The toggle's own aria-label (the fallback) is not counted.
+ * descendant. The toggle's own aria-label (the fallback) is not counted. Reads the live tree, since a
+ * detached copy has no computed style. Visually hidden (clipped) text still counts: assistive technology
+ * exposes it.
  */
 function renderedHasName(button: HTMLElement): boolean {
-	// Content under aria-hidden or hidden is not part of the name.
-	const shown = button.cloneNode(true) as HTMLElement;
-	shown.querySelectorAll('[aria-hidden="true"], [hidden]').forEach((element) => element.remove());
-	return (
-		(shown.textContent ?? '').trim() !== '' ||
-		shown.querySelector('img[alt]:not([alt=""]), [aria-label]:not([aria-label=""])') !== null
-	);
+	// visibility is inherited. When the whole toggle is invisible (e.g. inside a minimized, keepMounted dialog),
+	// that says nothing about the title, and no mutation inside the toggle would re-check it once the ancestor
+	// shows again. Only visibility set inside the toggle counts.
+	const toggleInvisible = isInvisible(button);
+	const invisible = (element: Element) => !toggleInvisible && isInvisible(element);
+	const contentNames = (parent: Element): boolean =>
+		Array.from(parent.childNodes).some((child) => {
+			if (child.nodeType === 3 /* TEXT_NODE */) {
+				return (child.textContent ?? '').trim() !== '' && !invisible(parent);
+			}
+			if (child.nodeType !== 1 /* ELEMENT_NODE */ || isRemovedFromName(child as Element)) {
+				return false;
+			}
+			const element = child as Element;
+			return (hasOwnLabel(element) && !invisible(element)) || contentNames(element);
+		});
+	return contentNames(button);
 }
 
 export function DashletCard(props: DashletCardProps) {
@@ -154,7 +205,8 @@ export function DashletCard(props: DashletCardProps) {
 			subtree: true,
 			characterData: true,
 			attributes: true,
-			attributeFilter: ['alt', 'aria-label', 'aria-hidden', 'hidden']
+			// class and style can show or hide title content (display / visibility).
+			attributeFilter: ['alt', 'aria-label', 'aria-labelledby', 'aria-hidden', 'hidden', 'class', 'style']
 		});
 		return () => observer.disconnect();
 	}, [renderCardHeader, isToggleable]);

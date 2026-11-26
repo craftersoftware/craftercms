@@ -33,6 +33,7 @@ const { useTheme } = await import('@mui/material/styles');
 const { default: Avatar } = await import('@mui/material/Avatar');
 const { default: ToggleButton } = await import('@mui/material/ToggleButton');
 const { default: CssBaseline } = await import('@mui/material/CssBaseline');
+const { default: OutlinedInput } = await import('@mui/material/OutlinedInput');
 const { css } = await import('@emotion/react');
 const { default: CrafterThemeProvider } = await import('./CrafterThemeProvider.tsx');
 const { default: palette } = await import('../../styles/palette.ts');
@@ -339,6 +340,82 @@ describe('caller style overrides composed with contrast rules', () => {
 		assert.equal((primary[checkedTrack] as Record<string, unknown>).backgroundColor, theme.palette.primary.main);
 		const standard = apply(slot(theme, 'MuiSwitch', 'root'), theme, { color: 'default' });
 		assert.equal((standard[checkedTrack] as Record<string, unknown>).backgroundColor, theme.palette.text.secondary);
+	});
+
+	it('keeps the provider surface colour over a caller background shorthand on the outlined input', async () => {
+		const callerRoot = { backgroundColor: 'rgb(255, 0, 0)', background: 'rgb(0, 128, 0)', letterSpacing: '2px' };
+		const themeOptions: ThemeOptions = { components: { MuiOutlinedInput: { styleOverrides: { root: callerRoot } } } };
+		let theme: Theme | null = null;
+		function Capture() {
+			theme = useTheme();
+			return null;
+		}
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		const root = createRoot(host);
+		await act(async () => {
+			root.render(
+				React.createElement(
+					CrafterThemeProvider,
+					{ themeOptions },
+					React.createElement(Capture),
+					React.createElement(OutlinedInput, { inputProps: { 'aria-label': 'Name' } })
+				)
+			);
+		});
+		mounted.push({ unmount: () => root.unmount(), host });
+		assert.ok(theme);
+		const styles = apply(slot(theme, 'MuiOutlinedInput', 'root'), theme);
+		const keys = Object.keys(styles);
+		assert.ok(
+			keys.indexOf('backgroundColor') > keys.indexOf('background'),
+			'our backgroundColor follows the shorthand'
+		);
+		assert.ok(
+			keys.indexOf('letterSpacing') < keys.indexOf('backgroundColor'),
+			'unrelated caller keys keep their place'
+		);
+
+		const input = host.querySelector<HTMLElement>('.MuiOutlinedInput-root');
+		assert.ok(input);
+		const probe = document.createElement('span');
+		probe.style.color = theme.palette.background.paper;
+		assert.equal(window.getComputedStyle(input).backgroundColor, probe.style.color);
+		assert.equal(window.getComputedStyle(input).letterSpacing, '2px');
+	});
+
+	it('keeps the selected bar after a caller background shorthand in an object-valued slot', async () => {
+		const { theme } = await renderTheme({
+			components: {
+				MuiListItemButton: {
+					styleOverrides: {
+						root: { letterSpacing: '2px', '&.Mui-selected': { backgroundImage: 'none', background: 'red' } }
+					}
+				}
+			}
+		});
+		const root = apply(slot(theme, 'MuiListItemButton', 'root'), theme);
+		assert.equal(root.letterSpacing, '2px');
+		const selected = root['&.Mui-selected'] as Record<string, unknown>;
+		assert.deepEqual(Object.keys(selected), ['background', 'backgroundImage', 'backgroundSize', 'backgroundRepeat']);
+		assert.equal(selected.backgroundImage, 'linear-gradient(currentColor, currentColor)');
+	});
+
+	it("keeps a shared nested selector at the caller's position", async () => {
+		const { theme } = await renderTheme({
+			components: {
+				MuiMenuItem: {
+					styleOverrides: {
+						root: { '&.Mui-selected': { padding: '4px' }, '&.Mui-focusVisible': { padding: '2px' } }
+					}
+				}
+			}
+		});
+		const root = apply(slot(theme, 'MuiMenuItem', 'root'), theme);
+		assert.deepEqual(Object.keys(root), ['&.Mui-selected', '&.Mui-focusVisible']);
+		const selected = root['&.Mui-selected'] as Record<string, unknown>;
+		assert.equal(selected.padding, '4px');
+		assert.equal(selected.backgroundImage, 'linear-gradient(currentColor, currentColor)');
 	});
 
 	it('applies the animation rules beside a CssBaseline callback that returns css() output', async () => {

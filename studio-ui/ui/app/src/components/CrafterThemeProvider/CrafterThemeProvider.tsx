@@ -93,6 +93,31 @@ function omitUndefined(styles: Record<string, unknown>): Record<string, unknown>
 	return result;
 }
 
+/**
+ * Merge two plain style objects so our declarations come after the caller's. MUI's deepmerge keeps a
+ * caller key at its original position, so a caller shorthand that follows it (e.g. `background` after
+ * `backgroundColor`) would set the property again and beat our value. Caller-only keys keep their order,
+ * our declarations follow them, and a nested selector both sides set stays at the caller's position (so
+ * the caller's own state rules cascade as before), merged the same way.
+ */
+function mergeOursLast(callerStyles: Record<string, unknown>, ourStyles: Record<string, unknown>) {
+	const result: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(callerStyles)) {
+		const ourValue = ourStyles[key];
+		if (!(key in ourStyles)) {
+			result[key] = value;
+		} else if (isPlainObject(value) && isPlainObject(ourValue)) {
+			result[key] = mergeOursLast(value, ourValue);
+		}
+	}
+	for (const [key, value] of Object.entries(ourStyles)) {
+		if (!(key in result)) {
+			result[key] = value;
+		}
+	}
+	return result;
+}
+
 function mergeStyleResults(callerStyles: unknown, ourStyles: unknown): unknown {
 	if (
 		isPlainObject(callerStyles) &&
@@ -103,7 +128,7 @@ function mergeStyleResults(callerStyles: unknown, ourStyles: unknown): unknown {
 		!('variants' in callerStyles) &&
 		!isSerializedStyles(callerStyles)
 	) {
-		return deepmerge(callerStyles, omitUndefined(ourStyles));
+		return mergeOursLast(callerStyles, omitUndefined(ourStyles));
 	}
 	// `&&` overrides return false when the rule does not apply. Keep whichever side has styles.
 	if (callerStyles == null || callerStyles === false) {
@@ -127,6 +152,30 @@ function readStyleSlot(
 		return undefined;
 	}
 	return overrides[slotName];
+}
+
+/**
+ * Every styleOverrides value in `ours` is already composed with the caller's (per slot via styleSlot, or
+ * whole for CssBaseline). deepmerge would recurse into a plain-object result and put the keys back in the
+ * caller's order, undoing mergeOursLast, so the composed values replace what deepmerge produced.
+ */
+function mergeComponents(
+	caller: ThemeOptions['components'] | undefined,
+	ours: Record<string, { styleOverrides?: unknown } & Record<string, unknown>>
+): ThemeOptions['components'] {
+	const merged = deepmerge(caller ?? {}, ours) as Record<string, { styleOverrides?: unknown }>;
+	for (const [name, entry] of Object.entries(ours)) {
+		const overrides = entry.styleOverrides;
+		if (overrides === undefined) {
+			continue;
+		}
+		const current = merged[name].styleOverrides;
+		merged[name].styleOverrides =
+			name !== 'MuiCssBaseline' && isPlainObject(overrides) && isPlainObject(current)
+				? { ...current, ...overrides }
+				: overrides;
+	}
+	return merged as ThemeOptions['components'];
 }
 
 export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
@@ -168,7 +217,7 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 				contrastThreshold: 4.5,
 				...props.themeOptions?.palette
 			},
-			components: deepmerge(callerComponents ?? {}, {
+			components: mergeComponents(callerComponents, {
 				// Switch root is overflow: hidden, so MUI draws the theme ring inset on it (see styles/focusRing.ts).
 				MuiSwitch: {
 					styleOverrides: {
