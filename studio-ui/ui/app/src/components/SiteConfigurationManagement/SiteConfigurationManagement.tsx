@@ -645,6 +645,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 					dense
 					subheader={
 						<ListSubheader
+							component="div"
 							sx={(theme) => ({
 								background: theme.palette.background.paper,
 								padding: 0,
@@ -664,6 +665,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 										}
 									>
 										<Alert
+											role="note"
 											severity="info"
 											sx={{
 												borderRadius: 0,

@@ -122,6 +122,17 @@ test.describe('Project screens', () => {
 		await checkA11y(page, testInfo, 'site tools');
 	});
 
+	test('configuration', async ({ page }, testInfo) => {
+		await page.goto('/studio/site-config#/configuration');
+		const nav = page.getByRole('navigation', { name: 'Configuration files', exact: true });
+		await settle(page, 'configuration', {
+			loaded: nav.getByRole('button').first(),
+			error: errorState(page.locator('body'))
+		});
+		await expect.soft(nav.getByRole('alert'), 'the environment banner must not be an alert').toHaveCount(0);
+		await checkA11y(page, testInfo, 'configuration');
+	});
+
 	test('search', async ({ page }, testInfo) => {
 		await page.goto('/studio/search');
 		await settle(page, 'search', {
