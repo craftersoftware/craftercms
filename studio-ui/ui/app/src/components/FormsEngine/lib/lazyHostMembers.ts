@@ -33,38 +33,53 @@ import type { useFieldValue as useFieldValueHook } from './formsEngineContext';
  * synchronously, with no extra Suspense. The lazy load is only a fallback for the member being used before any
  * form has rendered; the stand-in then suspends until the chunk arrives.
  */
-interface HostMembers {
+export interface HostMembers {
 	FormsEngineField: typeof FormsEngineFieldComponent;
 	useFieldValue: typeof useFieldValueHook;
 }
 
-let installed: HostMembers | undefined;
-let loading: Promise<HostMembers> | undefined;
+/**
+ * Creates the stand-ins around a loader of the real members. `importImpl` must evaluate a module that ends up
+ * calling the returned `install` (that is what `hostMembersImpl` does). It is a parameter so the load, and its
+ * failure, can be exercised without a bundler; the plugin-facing exports below use the real module.
+ */
+export function createHostMemberStandIns(importImpl: () => Promise<unknown>) {
+	let installed: HostMembers | undefined;
+	let loading: Promise<HostMembers> | undefined;
+
+	function install(members: HostMembers): void {
+		installed = members;
+	}
+
+	function load(): Promise<HostMembers> {
+		return (loading ??= importImpl().then(
+			() => installed,
+			(error) => {
+				// Don't cache a failed chunk load, so a later render can retry.
+				loading = undefined;
+				throw error;
+			}
+		));
+	}
+
+	const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps>(function FormsEngineField(props, ref) {
+		const members = installed ?? use(load());
+		return createElement(members.FormsEngineField, { ...props, ref });
+	}) as typeof FormsEngineFieldComponent;
+
+	function useFieldValue<T = unknown>(fieldId: string): [T | undefined, (value: T) => void, boolean] {
+		const members = installed ?? use(load());
+		return members.useFieldValue<T>(fieldId);
+	}
+
+	return { install, FormsEngineField, useFieldValue };
+}
+
+const standIns = createHostMemberStandIns(() => import('./hostMembersImpl'));
 
 /** Called by `hostMembersImpl` when it is evaluated. Not part of the plugin API. */
-export function installHostMembers(members: HostMembers): void {
-	installed = members;
-}
+export const installHostMembers = standIns.install;
 
-function loadHostMembers(): Promise<HostMembers> {
-	return (loading ??= import('./hostMembersImpl').then(
-		() => installed,
-		(error) => {
-			// Don't cache a failed chunk load, so a later render can retry.
-			loading = undefined;
-			throw error;
-		}
-	));
-}
+export const FormsEngineField = standIns.FormsEngineField;
 
-export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps>(
-	function FormsEngineField(props, ref) {
-		const members = installed ?? use(loadHostMembers());
-		return createElement(members.FormsEngineField, { ...props, ref });
-	}
-) as typeof FormsEngineFieldComponent;
-
-export function useFieldValue<T = unknown>(fieldId: string): [T | undefined, (value: T) => void, boolean] {
-	const members = installed ?? use(loadHostMembers());
-	return members.useFieldValue<T>(fieldId);
-}
+export const useFieldValue = standIns.useFieldValue;
