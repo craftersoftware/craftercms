@@ -41,6 +41,7 @@ import Box from '@mui/material/Box';
 import { drawerClasses } from '@mui/material';
 import Tooltip from '@mui/material/Tooltip';
 import PoliteStatus from '../PoliteStatus/PoliteStatus';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 export interface SearchUIProps
 	extends
@@ -160,6 +161,7 @@ export function SearchUI(props: SearchUIProps) {
 			ref={container}
 			sx={{ height: '100%', position: 'relative', background: (theme) => theme.palette.background.default }}
 		>
+			{!embedded && <SkipToMainContent />}
 			<PoliteStatus message={resultsStatus} />
 			<SiteSearchToolBar
 				onChange={handleSearchKeyword}
@@ -218,7 +220,9 @@ export function SearchUI(props: SearchUIProps) {
 			</Drawer>
 			<Box
 				component="section"
+				{...(!embedded ? { component: 'main', id: STUDIO_MAIN_CONTENT_ID, tabIndex: -1 } : undefined)}
 				sx={[
+					!embedded && mainLandmarkSx,
 					(theme) => ({
 						height: 'calc(100% - 65px)', // 100% - toolbar height
 						margin: 'auto',
