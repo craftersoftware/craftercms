@@ -15,7 +15,7 @@
  */
 
 import { expect, Page, test } from '@playwright/test';
-import { NotReadyError, panelDestination, settle, siteToolsReady } from '../readiness';
+import { NotReadyError, panelDestination, searchPageReady, settle, siteToolsReady } from '../readiness';
 
 const origin = 'https://studio.test';
 
@@ -173,5 +173,40 @@ test.describe('site tools readiness', () => {
 		const scan = settle(page, 'site tools', ready);
 		release({ error: true });
 		await expect(scan).rejects.toThrow(/error state \("Error 500"\)/);
+	});
+});
+
+/**
+ * The standalone Search page below its h1: results are cards whose title is an h2 inside the card header, and the error
+ * state is an h2 that is a direct child of ErrorState's `section`.
+ */
+const searchPageHtml = (results: string) => `<!doctype html><html><body>
+<header><h1>Search</h1></header>
+<main>${results}</main>
+</body></html>`;
+
+const resultCard = (name: string) =>
+	`<div class="MuiCard-root"><div class="MuiCardHeader-root"><div class="MuiCardHeader-content"><h2>${name}</h2></div></div></div>`;
+
+async function openSearchPage(page: Page, results: string) {
+	await page.route(`${origin}/**`, (route) =>
+		route.fulfill({ contentType: 'text/html', body: searchPageHtml(results) })
+	);
+	await page.goto(`${origin}/`);
+	return searchPageReady(page.locator('body'));
+}
+
+test.describe('search page readiness', () => {
+	test('a result card titled "Error 404" is not an error state', async ({ page }) => {
+		const ready = await openSearchPage(page, `<section>${resultCard('Error 404')}${resultCard('Home')}</section>`);
+		await expect(settle(page, 'search', ready)).resolves.toBeUndefined();
+	});
+
+	test('the error state fails with NotReadyError', async ({ page }) => {
+		const ready = await openSearchPage(
+			page,
+			'<section><section><h2>Error 500</h2><p>Internal error.</p></section></section>'
+		);
+		await expect(settle(page, 'search', ready)).rejects.toThrow(/error state \("Error 500"\)/);
 	});
 });

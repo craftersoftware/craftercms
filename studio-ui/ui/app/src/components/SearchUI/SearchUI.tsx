@@ -202,21 +202,26 @@ export function SearchUI(props: SearchUIProps) {
 				}}
 			>
 				{searchResults && searchResults.facets && (
-					<SiteSearchFilters
-						mode={mode}
-						embedded={embedded}
-						sx={{ marginRight: '7px' }}
-						facets={searchResults.facets}
-						handleFilterChange={handleFilterChange}
-						sortBy={sortBy}
-						sortOrder={sortOrder}
-						checkedFilters={checkedFilters}
-						setCheckedFilters={onCheckedFiltersChanges}
-						clearFilters={clearFilters}
-						handleClearClick={clearFilter}
-						selectedPath={selectedPath}
-						setSelectedPath={onSelectedPathChanges}
-					/>
+					<Box
+						component={embedded ? 'div' : 'aside'}
+						aria-label={embedded ? undefined : formatMessage({ id: 'words.filters', defaultMessage: 'Filters' })}
+					>
+						<SiteSearchFilters
+							mode={mode}
+							embedded={embedded}
+							sx={{ marginRight: '7px' }}
+							facets={searchResults.facets}
+							handleFilterChange={handleFilterChange}
+							sortBy={sortBy}
+							sortOrder={sortOrder}
+							checkedFilters={checkedFilters}
+							setCheckedFilters={onCheckedFiltersChanges}
+							clearFilters={clearFilters}
+							handleClearClick={clearFilter}
+							selectedPath={selectedPath}
+							setSelectedPath={onSelectedPathChanges}
+						/>
+					</Box>
 				)}
 			</Drawer>
 			<Box

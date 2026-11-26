@@ -96,11 +96,13 @@ export function dashboardReady(scope: Locator): ReadyState {
 
 /**
  * The Search page, ready once its h1 title renders. Shared by the first load and the reloads that wait for the index.
- * Below the h1 its error state is an h2, not the h3 of `errorState`.
+ * Below the h1 its error state is an h2, not the h3 of `errorState`. The error title sits directly in ErrorState's
+ * `section`; result card titles are h2 too (the item name), but inside the card header, so a card named "Error 404"
+ * is not an error.
  */
 export const searchPageReady = (scope: Locator): ReadyState => ({
 	loaded: scope.getByRole('heading', { name: 'Search', level: 1 }),
-	error: scope.getByRole('heading', { level: 2, name: /^Error\b/ })
+	error: scope.locator('section > h2', { hasText: /^Error\b/ })
 });
 
 /**

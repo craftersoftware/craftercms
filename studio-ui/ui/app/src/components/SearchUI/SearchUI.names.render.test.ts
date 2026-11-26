@@ -325,6 +325,26 @@ describe('search page landmarks', () => {
 		assert.ok(title, 'the Search title is not an h2');
 	});
 
+	describe('filters landmark', () => {
+		const facets = [{ name: 'content-type', range: false, date: false, multiple: true, values: { page: 3 } }];
+		const open = { drawerOpen: true, searchResults: { items: [], total: 0, facets, offset: 0 } };
+
+		it('puts the filters in a "Filters" complementary landmark on the standalone page', async () => {
+			const { host } = await mount({ mode: 'default', embedded: false, ...open });
+			const asides = host.querySelectorAll('aside');
+			assert.equal(asides.length, 1);
+			assert.equal(asides[0].getAttribute('aria-label'), 'Filters');
+			assert.ok(asides[0].querySelector('h2'), 'the filters are not inside the landmark');
+			assert.equal(host.querySelector('main')?.contains(asides[0]), false, 'the filters landmark is inside main');
+		});
+
+		it('adds no landmark around the filters when embedded', async () => {
+			const { host } = await mount({ mode: 'default', embedded: true, ...open });
+			assert.equal(host.querySelectorAll('aside').length, 0);
+			assert.equal(host.querySelectorAll('[aria-label="Filters"]').length, 0);
+		});
+	});
+
 	describe('heading levels', () => {
 		const facets = [{ name: 'content-type', range: false, date: false, multiple: true, values: { page: 3 } }];
 		const headings = (host: HTMLElement) =>
