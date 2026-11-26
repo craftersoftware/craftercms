@@ -124,7 +124,10 @@ export function VersionList(props: VersionListProps) {
 							sx={{ margin: 0 }}
 							slotProps={{
 								primary: { id: labelId, sx: { display: 'flex', alignItems: 'center' } },
-								secondary: { sx: { whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' } }
+								secondary: {
+									sx: { whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' },
+									title: version.comment
+								}
 							}}
 							primary={
 								<>
