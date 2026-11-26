@@ -333,3 +333,60 @@ export function applyNodeSelectorMove(args: ApplyNodeSelectorMoveArgs): ApplyNod
 
 	return applied;
 }
+
+export interface UndoNodeSelectorMoveArgs {
+	store: JotaiStore;
+	/** Stack from the document root to the top, the same one the move was applied with. */
+	documentStack: StableFormContextProps[];
+	contentTypesById: LookupTable<ContentType>;
+	/** Where the move placed the item, and the item as it was then. */
+	applied: NodeSelectorMoveSource & { item: NodeSelectorItem };
+	/** The field and index the item came from. */
+	source: NodeSelectorMoveSource;
+}
+
+/**
+ * Reverses a move. Reads the item from where it landed, so an edit made after the move is kept, and follows it by key
+ * when that list was reordered. Returns null when the document root is missing or the item can no longer be found.
+ */
+export function undoNodeSelectorMove(args: UndoNodeSelectorMoveArgs): ApplyNodeSelectorMoveToValuesResult | null {
+	const { store, documentStack, contentTypesById, applied, source } = args;
+	const rootForm = documentStack[0];
+	const rootModelId = rootForm?.itemMeta?.id;
+	const rootContentType = rootForm?.itemMeta?.contentType;
+	if (!rootForm || !rootModelId || !rootContentType) return null;
+
+	// Prefer the live item at the recorded slot. If a reorder moved it, follow the key.
+	let currentItem = applied.item;
+	let placedIndex = applied.index;
+	for (const entry of documentStack) {
+		const entryModelId = entry.itemMeta?.id ?? entry.props?.update?.modelId;
+		if (entryModelId == null || String(entryModelId) !== applied.modelId) continue;
+		const atom = entry.atoms?.valueByFieldId?.[applied.fieldId];
+		if (!atom) break;
+		const items = nodeSelectorItems(store.get(atom));
+		const atIndex = items[applied.index];
+		if (atIndex?.key === applied.item.key) {
+			currentItem = atIndex;
+		} else {
+			const found = items.findIndex((entry) => entry?.key === applied.item.key);
+			if (found === -1) return null;
+			currentItem = items[found];
+			placedIndex = found;
+		}
+		break;
+	}
+
+	return applyNodeSelectorMove({
+		store,
+		rootForm,
+		item: currentItem,
+		formsStackData: documentStack,
+		rootModelId,
+		rootContentType,
+		contentTypesById,
+		source: { modelId: applied.modelId, fieldId: applied.fieldId, index: placedIndex },
+		target: { modelId: source.modelId, fieldId: source.fieldId },
+		targetIndex: source.index
+	});
+}

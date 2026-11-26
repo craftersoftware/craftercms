@@ -128,7 +128,7 @@ import {
 	enumerateNodeSelectorMoveTargets,
 	type NodeSelectorMoveTarget
 } from '../lib/nodeSelectorMoveTargets';
-import { applyNodeSelectorMove, readValuesWithOpenForms } from '../lib/applyNodeSelectorMove';
+import { applyNodeSelectorMove, readValuesWithOpenForms, undoNodeSelectorMove } from '../lib/applyNodeSelectorMove';
 import { nodeSelectorFocusRequestAtom, useNodeSelectorFocusRequest } from '../lib/nodeSelectorFocusRequest';
 import MoveToFieldDialog from '../components/MoveToFieldDialog';
 import TypeList from '../../ContentTypeManagement/components/TypeList';
@@ -882,47 +882,23 @@ function NodeSelector(props: NodeSelectorProps) {
 									store: latestStore,
 									closeSnackbar: close
 								} = moveUndoRefs.current;
-								const latestDocumentStack = documentFormStack(latestStack, stableForm);
-								const latestRootForm = latestDocumentStack[0];
-								const latestRootModelId = latestRootForm?.itemMeta?.id;
-								const latestRootContentType = latestRootForm?.itemMeta?.contentType;
-								if (!latestRootForm || !latestRootModelId || !latestRootContentType || !latestContentTypes) {
-									close(snackbarKey);
-									return;
-								}
-								// Use the item currently at the destination so Undo keeps edits from handleEditItem.onSave.
-								let currentItem = applied.item;
-								for (const entry of latestStack) {
-									const entryModelId = entry.itemMeta?.id ?? entry.props?.update?.modelId;
-									if (entryModelId == null || String(entryModelId) !== undoSource.modelId) continue;
-									const atom = entry.atoms?.valueByFieldId?.[undoSource.fieldId];
-									if (!atom) continue;
-									const live = asArray(latestStore.get(atom) as NodeSelectorItem | NodeSelectorItem[])[
-										undoSource.index
-									];
-									if (live) currentItem = live;
-									break;
-								}
-								const undone = applyNodeSelectorMove({
-									store: latestStore,
-									rootForm: latestRootForm,
-									item: currentItem,
-									formsStackData: latestDocumentStack,
-									rootModelId: latestRootModelId,
-									rootContentType: latestRootContentType,
-									contentTypesById: latestContentTypes,
-									source: undoSource,
-									target: undoTarget,
-									targetIndex: undoTargetIndex
-								});
-								// The item is back in its original field. Focus its row there.
-								if (undone) {
-									requestMovedRowFocus(
-										latestStore,
-										latestStack,
-										{ ...undoTarget, index: undone.insertedIndex },
-										currentItem.key
-									);
+								if (latestContentTypes) {
+									const undone = undoNodeSelectorMove({
+										store: latestStore,
+										documentStack: documentFormStack(latestStack, stableForm),
+										contentTypesById: latestContentTypes,
+										applied: { ...undoSource, item: applied.item },
+										source: { ...undoTarget, index: undoTargetIndex }
+									});
+									// The item is back in its original field. Focus its row there.
+									if (undone) {
+										requestMovedRowFocus(
+											latestStore,
+											latestStack,
+											{ ...undoTarget, index: undone.insertedIndex },
+											undone.item.key
+										);
+									}
 								}
 								close(snackbarKey);
 							}}

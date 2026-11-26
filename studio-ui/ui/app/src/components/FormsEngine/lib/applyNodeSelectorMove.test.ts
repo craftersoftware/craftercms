@@ -21,7 +21,7 @@ import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 
-const { applyNodeSelectorMove, applyNodeSelectorMoveToValues, readValuesWithOpenForms } =
+const { applyNodeSelectorMove, applyNodeSelectorMoveToValues, readValuesWithOpenForms, undoNodeSelectorMove } =
 	await import('./applyNodeSelectorMove.ts');
 const { enumerateNodeSelectorMoveTargets } = await import('./nodeSelectorMoveTargets.ts');
 const { buildContentXml } = await import('./valueSerializers.ts');
@@ -574,5 +574,99 @@ describe('applyNodeSelectorMove', () => {
 			(rootChildren[0].component?.children_o as NodeSelectorItem[]).map((item) => item.key),
 			['m']
 		);
+	});
+});
+
+describe('undoNodeSelectorMove', () => {
+	function pageForm(originalValues: Record<string, NodeSelectorItem[]>) {
+		const store = createStore();
+		const rootForm = createFormStackData({
+			itemMeta: { path: '/site/website/index.xml', id: rootModelId, contentType: pageType } as never,
+			originalValues
+		});
+		rootForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
+		for (const field of Object.values(pageType.fields)) {
+			const [valueAtom, validationAtom] = createFieldAtoms(field, rootForm.originalValues[field.id], {
+				current: rootForm
+			});
+			rootForm.atoms.valueByFieldId[field.id] = valueAtom;
+			rootForm.atoms.validationByFieldId[field.id] = validationAtom;
+		}
+		return { store, rootForm };
+	}
+
+	const keys = (
+		store: ReturnType<typeof createStore>,
+		rootForm: ReturnType<typeof createFormStackData>,
+		fieldId: string
+	) => (store.get(rootForm.atoms.valueByFieldId[fieldId]) as NodeSelectorItem[]).map((item) => item.key);
+
+	it('restores the moved item after the destination list is reordered', () => {
+		const moving = embeddedHero('h1', 'Hero');
+		const other = embeddedHero('h2', 'Other');
+		const { store, rootForm } = pageForm({ left_o: [moving], right_o: [other] });
+		const applied = applyNodeSelectorMove({
+			store,
+			rootForm,
+			item: moving,
+			rootModelId,
+			rootContentType: pageType,
+			contentTypesById,
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 0 },
+			target: { modelId: rootModelId, fieldId: 'right_o' },
+			targetIndex: 0
+		});
+		assert.ok(applied);
+		// The move landed at index 0. Reorder puts it last.
+		store.set(rootForm.atoms.valueByFieldId.right_o, [other, moving]);
+
+		const undone = undoNodeSelectorMove({
+			store,
+			documentStack: [rootForm],
+			contentTypesById,
+			applied: { modelId: rootModelId, fieldId: 'right_o', index: applied.insertedIndex, item: applied.item },
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 0 }
+		});
+
+		assert.ok(undone);
+		assert.deepEqual(keys(store, rootForm, 'left_o'), ['h1']);
+		assert.deepEqual(keys(store, rootForm, 'right_o'), ['h2']);
+	});
+
+	it('restores edits made to the item after the move', () => {
+		const moving = embeddedHero('h1', 'Hero');
+		const { store, rootForm } = pageForm({ left_o: [moving], right_o: [] });
+		const applied = applyNodeSelectorMove({
+			store,
+			rootForm,
+			item: moving,
+			rootModelId,
+			rootContentType: pageType,
+			contentTypesById,
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 0 },
+			target: { modelId: rootModelId, fieldId: 'right_o' },
+			targetIndex: 0
+		});
+		assert.ok(applied);
+		const edited: NodeSelectorItem = {
+			...moving,
+			value: 'Renamed',
+			component: { ...moving.component, 'internal-name': 'Renamed' }
+		};
+		store.set(rootForm.atoms.valueByFieldId.right_o, [edited]);
+
+		const undone = undoNodeSelectorMove({
+			store,
+			documentStack: [rootForm],
+			contentTypesById,
+			applied: { modelId: rootModelId, fieldId: 'right_o', index: applied.insertedIndex, item: applied.item },
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 0 }
+		});
+
+		assert.ok(undone);
+		const restored = (store.get(rootForm.atoms.valueByFieldId.left_o) as NodeSelectorItem[])[0];
+		assert.equal(restored.value, 'Renamed');
+		assert.equal(restored.component?.['internal-name'], 'Renamed');
+		assert.deepEqual(keys(store, rootForm, 'right_o'), []);
 	});
 });
