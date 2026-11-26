@@ -91,26 +91,31 @@ class FakeXhr {
 	}
 }
 
-const RealXhr = (globalThis as any).XMLHttpRequest;
-const RealDOMParser = (globalThis as any).DOMParser;
-const RealXMLSerializer = (globalThis as any).XMLSerializer;
+type SwappedGlobal = 'XMLHttpRequest' | 'DOMParser' | 'XMLSerializer' | 'sessionStorage';
+const globals = globalThis as unknown as Record<SwappedGlobal, unknown>;
+const RealXhr = globals.XMLHttpRequest;
+const RealDOMParser = globals.DOMParser;
+const RealXMLSerializer = globals.XMLSerializer;
 beforeEach(() => {
-	(globalThis as any).XMLHttpRequest = FakeXhr;
-	(globalThis as any).DOMParser = window.DOMParser;
-	(globalThis as any).XMLSerializer = window.XMLSerializer;
-	(globalThis as any).sessionStorage ??= (window as any).sessionStorage;
+	globals.XMLHttpRequest = FakeXhr;
+	globals.DOMParser = window.DOMParser;
+	globals.XMLSerializer = window.XMLSerializer;
+	globals.sessionStorage ??= window.sessionStorage;
 });
 
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
 afterEach(async () => {
-	for (const { unmount, host } of mounted.splice(0)) {
-		await act(async () => unmount());
-		host.remove();
+	try {
+		for (const { unmount, host } of mounted.splice(0)) {
+			await act(async () => unmount());
+			host.remove();
+		}
+	} finally {
+		globals.XMLHttpRequest = RealXhr;
+		globals.DOMParser = RealDOMParser;
+		globals.XMLSerializer = RealXMLSerializer;
+		sessionStorage.clear();
 	}
-	(globalThis as any).XMLHttpRequest = RealXhr;
-	(globalThis as any).DOMParser = RealDOMParser;
-	(globalThis as any).XMLSerializer = RealXMLSerializer;
-	sessionStorage.clear();
 });
 
 async function renderConfigurationList() {
