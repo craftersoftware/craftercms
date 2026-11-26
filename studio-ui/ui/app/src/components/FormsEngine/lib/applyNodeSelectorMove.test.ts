@@ -670,7 +670,97 @@ describe('undoNodeSelectorMove', () => {
 		assert.deepEqual(keys(store, rootForm, 'right_o'), []);
 	});
 
-	it('undoes only the latest move when two moves happened in sequence', () => {
+	// P1 is not an open form. Its children live only in the page values, which is the tree the move reads.
+	function moveIntoClosedParent() {
+		const moving = embeddedHero('x', 'X');
+		const parent = embeddedHero('p1', 'P1');
+		const { store, rootForm } = pageForm({ left_o: [parent, moving], right_o: [] });
+		const applied = applyNodeSelectorMove({
+			store,
+			rootForm,
+			item: moving,
+			rootModelId,
+			rootContentType: pageType,
+			contentTypesById,
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 1 },
+			target: { modelId: parent.key, fieldId: 'children_o' },
+			targetIndex: 0
+		});
+		assert.ok(applied);
+		return { store, rootForm, moving, applied };
+	}
+
+	function renameInParent(
+		store: ReturnType<typeof createStore>,
+		rootForm: ReturnType<typeof createFormStackData>,
+		children: NodeSelectorItem[]
+	) {
+		const left = store.get(rootForm.atoms.valueByFieldId.left_o) as NodeSelectorItem[];
+		const parent = left[0];
+		store.set(rootForm.atoms.valueByFieldId.left_o, [
+			{ ...parent, component: { ...parent.component, children_o: children } }
+		]);
+	}
+
+	it('keeps a rename made in a closed embedded field after another item was inserted before it', () => {
+		const { store, rootForm, moving, applied } = moveIntoClosedParent();
+		const renamed: NodeSelectorItem = {
+			...moving,
+			value: 'Renamed',
+			component: { ...moving.component, 'internal-name': 'Renamed' }
+		};
+		renameInParent(store, rootForm, [embeddedHero('y', 'Y'), renamed]);
+
+		const undone = undoNodeSelectorMove({
+			store,
+			documentStack: [rootForm],
+			contentTypesById,
+			applied: { modelId: 'p1', fieldId: 'children_o', index: applied.insertedIndex, item: applied.item },
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 1 }
+		});
+
+		assert.ok(undone);
+		const restored = (store.get(rootForm.atoms.valueByFieldId.left_o) as NodeSelectorItem[]).find(
+			(item) => item.key === 'x'
+		);
+		assert.equal(restored?.value, 'Renamed');
+		assert.equal(restored?.component?.['internal-name'], 'Renamed');
+		const parent = (store.get(rootForm.atoms.valueByFieldId.left_o) as NodeSelectorItem[])[0];
+		assert.deepEqual(
+			(parent.component?.children_o as NodeSelectorItem[]).map((item) => item.key),
+			['y']
+		);
+	});
+
+	it('keeps a rename made in a closed embedded field', () => {
+		const { store, rootForm, moving, applied } = moveIntoClosedParent();
+		const renamed: NodeSelectorItem = {
+			...moving,
+			value: 'Renamed',
+			component: { ...moving.component, 'internal-name': 'Renamed' }
+		};
+		renameInParent(store, rootForm, [renamed]);
+
+		const undone = undoNodeSelectorMove({
+			store,
+			documentStack: [rootForm],
+			contentTypesById,
+			applied: { modelId: 'p1', fieldId: 'children_o', index: applied.insertedIndex, item: applied.item },
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 1 }
+		});
+
+		assert.ok(undone);
+		const left = store.get(rootForm.atoms.valueByFieldId.left_o) as NodeSelectorItem[];
+		const restored = left.find((item) => item.key === 'x');
+		assert.equal(restored?.value, 'Renamed');
+		assert.equal(restored?.component?.['internal-name'], 'Renamed');
+		assert.deepEqual(
+			(left[0].component?.children_o as NodeSelectorItem[]).map((item) => item.key),
+			[]
+		);
+	});
+
+	it('puts the second item back and leaves the first item in the destination', () => {
 		const first = embeddedHero('h1', 'First');
 		const second = embeddedHero('h2', 'Second');
 		const { store, rootForm } = pageForm({ left_o: [first, second], right_o: [] });
@@ -686,7 +776,7 @@ describe('undoNodeSelectorMove', () => {
 			targetIndex: 0
 		});
 		assert.ok(firstMove);
-		// A second move replaces the Undo snackbar; only this one's applied/source stay live.
+		// Undo is given only the second move. The first item stays in the destination.
 		const secondMove = applyNodeSelectorMove({
 			store,
 			rootForm,

@@ -350,8 +350,9 @@ export interface UndoNodeSelectorMoveArgs {
 }
 
 /**
- * Reverses a move. Reads the item from where it landed, so an edit made after the move is kept, and follows it by key
- * when that list was reordered. Returns null when the document root is missing or the item can no longer be found.
+ * Reverses a move. Reads the item by key from the same tree the move uses, so an edit or reorder made afterwards is
+ * kept, including inside an embedded item that is no longer open. Returns null when the document root is missing or
+ * the item can no longer be found.
  */
 export function undoNodeSelectorMove(args: UndoNodeSelectorMoveArgs): ApplyNodeSelectorMoveToValuesResult | null {
 	const { store, documentStack, contentTypesById, applied, source } = args;
@@ -360,26 +361,21 @@ export function undoNodeSelectorMove(args: UndoNodeSelectorMoveArgs): ApplyNodeS
 	const rootContentType = rootForm?.itemMeta?.contentType;
 	if (!rootForm || !rootModelId || !rootContentType) return null;
 
-	// Prefer the live item at the recorded slot. If a reorder moved it, follow the key.
-	let currentItem = applied.item;
-	let placedIndex = applied.index;
-	for (const entry of documentStack) {
-		const entryModelId = entry.itemMeta?.id ?? entry.props?.update?.modelId;
-		if (entryModelId == null || String(entryModelId) !== applied.modelId) continue;
-		const atom = entry.atoms?.valueByFieldId?.[applied.fieldId];
-		if (!atom) break;
-		const items = nodeSelectorItems(store.get(atom));
-		const atIndex = items[applied.index];
-		if (atIndex?.key === applied.item.key) {
-			currentItem = atIndex;
-		} else {
-			const found = items.findIndex((entry) => entry?.key === applied.item.key);
-			if (found === -1) return null;
-			currentItem = items[found];
-			placedIndex = found;
-		}
-		break;
-	}
+	// Find the item where it is now, by key: in an open form's live list, else in the root values.
+	const values = readValuesWithOpenForms(store, documentStack, rootContentType, contentTypesById);
+	let items: NodeSelectorItem[] = [];
+	updateModelFieldFromRoot(
+		values,
+		String(rootModelId),
+		rootContentType,
+		contentTypesById,
+		applied.modelId,
+		applied.fieldId,
+		(current) => (items = current)
+	);
+	const placedIndex = items.findIndex((item) => item?.key === applied.item.key);
+	if (placedIndex === -1) return null;
+	const currentItem = items[placedIndex];
 
 	return applyNodeSelectorMove({
 		store,
