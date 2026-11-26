@@ -38,6 +38,7 @@ import { EnhancedDialogProps } from '../EnhancedDialog';
 import { DialogStackItem } from '../../models/GlobalState';
 import DialogStackItemContainer from './DialogStackItemContainer';
 import { createCallback } from './createCallback';
+import { MountOnFirstOpen } from './MountOnFirstOpen';
 
 // region const ... = lazy(() => import('...'));
 const ViewVersionDialog = lazy(() => import('../ViewVersionDialog'));
@@ -203,49 +204,55 @@ function GlobalDialogManager() {
 			))}
 			<Suspense fallback="">
 				{/* region History */}
-				<HistoryDialog
-					{...state.history}
-					versionsBranch={versionsBranch}
-					onClose={createCallback(state.history.onClose, dispatch)}
-					onClosed={createCallback(state.history.onClosed, dispatch)}
-				/>
+				<MountOnFirstOpen open={state.history.open}>
+					<HistoryDialog
+						{...state.history}
+						versionsBranch={versionsBranch}
+						onClose={createCallback(state.history.onClose, dispatch)}
+						onClosed={createCallback(state.history.onClosed, dispatch)}
+					/>
+				</MountOnFirstOpen>
 				{/* endregion */}
 
 				{/* region View Versions */}
-				<ViewVersionDialog
-					{...state.viewVersion}
-					rightActions={state.viewVersion.rightActions?.map((action) => ({
-						...action,
-						onClick: createCallback(action.onClick, dispatch)
-					}))}
-					leftActions={state.viewVersion.leftActions?.map((action) => ({
-						...action,
-						onClick: createCallback(action.onClick, dispatch)
-					}))}
-					contentTypesBranch={contentTypesBranch}
-					onClose={createCallback(state.viewVersion.onClose, dispatch)}
-					onClosed={createCallback(state.viewVersion.onClosed, dispatch)}
-				/>
+				<MountOnFirstOpen open={state.viewVersion.open}>
+					<ViewVersionDialog
+						{...state.viewVersion}
+						rightActions={state.viewVersion.rightActions?.map((action) => ({
+							...action,
+							onClick: createCallback(action.onClick, dispatch)
+						}))}
+						leftActions={state.viewVersion.leftActions?.map((action) => ({
+							...action,
+							onClick: createCallback(action.onClick, dispatch)
+						}))}
+						contentTypesBranch={contentTypesBranch}
+						onClose={createCallback(state.viewVersion.onClose, dispatch)}
+						onClosed={createCallback(state.viewVersion.onClosed, dispatch)}
+					/>
+				</MountOnFirstOpen>
 				{/* endregion */}
 
 				{/* region Compare Versions */}
-				<CompareVersionsDialog
-					{...state.compareVersions}
-					leftActions={state.compareVersions.leftActions?.map((action) => ({
-						...action,
-						onClick: createCallback(action.onClick, dispatch)
-					}))}
-					rightActions={state.compareVersions.rightActions?.map((action) => ({
-						...action,
-						onClick: createCallback(action.onClick, dispatch)
-					}))}
-					contentTypesBranch={contentTypesBranch}
-					selectedA={versionsBranch?.selected[0] ? versionsBranch.byId[versionsBranch.selected[0]] : null}
-					selectedB={versionsBranch?.selected[1] ? versionsBranch.byId[versionsBranch.selected[1]] : null}
-					versionsBranch={versionsBranch}
-					onClose={createCallback(state.compareVersions.onClose, dispatch)}
-					onClosed={createCallback(state.compareVersions.onClosed, dispatch)}
-				/>
+				<MountOnFirstOpen open={state.compareVersions.open}>
+					<CompareVersionsDialog
+						{...state.compareVersions}
+						leftActions={state.compareVersions.leftActions?.map((action) => ({
+							...action,
+							onClick: createCallback(action.onClick, dispatch)
+						}))}
+						rightActions={state.compareVersions.rightActions?.map((action) => ({
+							...action,
+							onClick: createCallback(action.onClick, dispatch)
+						}))}
+						contentTypesBranch={contentTypesBranch}
+						selectedA={versionsBranch?.selected[0] ? versionsBranch.byId[versionsBranch.selected[0]] : null}
+						selectedB={versionsBranch?.selected[1] ? versionsBranch.byId[versionsBranch.selected[1]] : null}
+						versionsBranch={versionsBranch}
+						onClose={createCallback(state.compareVersions.onClose, dispatch)}
+						onClosed={createCallback(state.compareVersions.onClosed, dispatch)}
+					/>
+				</MountOnFirstOpen>
 				{/* endregion */}
 
 				{/* region Auth Monitor */}
