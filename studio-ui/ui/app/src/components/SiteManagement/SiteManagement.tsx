@@ -59,10 +59,10 @@ import { nanoid } from 'nanoid';
 import { ErrorState } from '../ErrorState';
 import { useOpenedOnce } from '../../hooks/useOpenedOnce';
 import { lazyWithRetry } from '../../utils/lazyWithRetry';
-import { LazyDialogBoundary } from '../LazyDialogBoundary';
+import LoadFailureBoundary from '../ErrorBoundary/LoadFailureBoundary';
 
 // None of these dialogs are on screen when the page loads, so their code loads the first time they open. A failed
-// load is contained by a LazyDialogBoundary and retried the next time the dialog opens.
+// load is contained by a LoadFailureBoundary and retried the next time the dialog opens.
 const CreateSiteDialog = lazyWithRetry(() => import('../CreateSiteDialog/CreateSiteDialog'));
 const PublishingStatusDialog = lazyWithRetry(() => import('../PublishingStatusDialog/PublishingStatusDialog'));
 const DuplicateSiteDialog = lazyWithRetry(() => import('../DuplicateSiteDialog/DuplicateSiteDialog'));
@@ -72,10 +72,6 @@ const translations = defineMessages({
 	siteDeleted: {
 		id: 'sitesGrid.siteDeleted',
 		defaultMessage: 'Project deleted successfully'
-	},
-	dialogLoadFailed: {
-		id: 'sitesGrid.dialogLoadFailed',
-		defaultMessage: 'The dialog could not be loaded. Check your connection and try again.'
 	}
 });
 
@@ -200,11 +196,16 @@ export function SiteManagement() {
 	const mountDuplicateSiteDialog = useOpenedOnce(duplicateSiteDialogState.open);
 	const mountConfirmDeleteDialog = useOpenedOnce(confirmDeleteState.open);
 
-	const onDialogLoadError = (closeDialog: () => void) => (error: Error) => {
+	const onDialogLoadError = (closeDialog: () => void) => (error: unknown) => {
 		console.error(error);
 		closeDialog();
 		dispatch(
-			showSystemNotification({ message: formatMessage(translations.dialogLoadFailed), options: { variant: 'error' } })
+			showSystemNotification({
+				message: formatMessage({
+					defaultMessage: 'This dialog could not be loaded. Check your connection and try again.'
+				}),
+				options: { variant: 'error' }
+			})
 		);
 	};
 
@@ -311,9 +312,9 @@ export function SiteManagement() {
 				)}
 			</ErrorBoundary>
 			{mountPublishingStatusDialog && (
-				<LazyDialogBoundary
-					dialog={PublishingStatusDialog}
-					open={publishingStatusDialogState.open}
+				<LoadFailureBoundary
+					fallback={null}
+					retryWhen={publishingStatusDialogState.open}
 					onError={onDialogLoadError(() => {
 						publishingStatusDialogState.onClose();
 						setSelectedSiteStatus(null);
@@ -333,12 +334,12 @@ export function SiteManagement() {
 							{...selectedSiteStatus}
 						/>
 					</Suspense>
-				</LazyDialogBoundary>
+				</LoadFailureBoundary>
 			)}
 			{mountCreateSiteDialog && (
-				<LazyDialogBoundary
-					dialog={CreateSiteDialog}
-					open={openCreateSiteDialog}
+				<LoadFailureBoundary
+					fallback={null}
+					retryWhen={openCreateSiteDialog}
 					onError={onDialogLoadError(() => setOpenCreateSiteDialog(false))}
 				>
 					<Suspense fallback="">
@@ -351,12 +352,12 @@ export function SiteManagement() {
 							}}
 						/>
 					</Suspense>
-				</LazyDialogBoundary>
+				</LoadFailureBoundary>
 			)}
 			{mountDuplicateSiteDialog && (
-				<LazyDialogBoundary
-					dialog={DuplicateSiteDialog}
-					open={duplicateSiteDialogState.open}
+				<LoadFailureBoundary
+					fallback={null}
+					retryWhen={duplicateSiteDialogState.open}
 					onError={onDialogLoadError(() => {
 						setDuplicateSiteId(null);
 						duplicateSiteDialogState.onClose();
@@ -376,12 +377,12 @@ export function SiteManagement() {
 							updateSubmittingOrHasPendingChanges={duplicateSiteDialogState.onSubmittingAndOrPendingChange}
 						/>
 					</Suspense>
-				</LazyDialogBoundary>
+				</LoadFailureBoundary>
 			)}
 			{mountConfirmDeleteDialog && (
-				<LazyDialogBoundary
-					dialog={ConfirmDialog}
-					open={confirmDeleteState.open}
+				<LoadFailureBoundary
+					fallback={null}
+					retryWhen={confirmDeleteState.open}
 					onError={onDialogLoadError(() => setConfirmDeleteState(confirmDeleteInitialState))}
 				>
 					<Suspense fallback="">
@@ -423,7 +424,7 @@ export function SiteManagement() {
 							onCancel={() => setConfirmDeleteState(confirmDeleteInitialState)}
 						/>
 					</Suspense>
-				</LazyDialogBoundary>
+				</LoadFailureBoundary>
 			)}
 		</Paper>
 	);

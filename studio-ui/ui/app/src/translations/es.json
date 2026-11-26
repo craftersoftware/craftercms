@@ -1446,6 +1446,7 @@
 	"usoL4u": "Ir al paso {step}",
 	"uUDyk/": "Permitir Buscar Compartidos",
 	"UxTJRa": "Proyectos",
+	"V+xkxd": "No se pudo cargar este diálogo. Verifique su conexión e inténtelo de nuevo.",
 	"validations.itemLocked": "El artículo ya está bloqueado por {lockOwner}. Por favor, inténtelo de nuevo más tarde.",
 	"validations.maxCount": "El número máximo de elementos es {maxCount}",
 	"validations.maxLength": "Longitud máxima alcanzada ({maxLength})",

@@ -14,32 +14,48 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ComponentType, createElement, lazy } from 'react';
+import { ComponentProps, ComponentType, createElement, lazy } from 'react';
 
-export type RetryableLazyComponent<P> = ComponentType<P> & {
-	/**
-	 * Discards the rejected import, so that the next render of the component starts a new one. Call it once the
-	 * failure has been handled (it is committed to an error boundary): calling it as soon as the import rejects makes
-	 * React, which re-renders the suspended component, start yet another import each time and never report the error.
-	 */
-	retryLoad(): void;
-};
+const retryByError = new WeakMap<object, () => void>();
 
 /**
- * Like `React.lazy`, but a failed load can be retried. `lazy` keeps the rejected promise forever, so once its chunk
- * request fails every later render throws the same error, even after an error boundary is reset. Call `retryLoad()`
- * on the result (see `LazyDialogBoundary`) and the next render imports again.
- * @param load Dynamic import of the module whose default export is the component.
+ * Makes the component that failed to load with `error` (an error thrown by a `lazyWithRetry` component) request its
+ * module again the next time it renders. Does nothing for any other error. Call it once the error has been reported
+ * (e.g. from `componentDidCatch`), not while React may still be rendering the failed component.
  */
-export function lazyWithRetry<P extends object>(
-	load: () => Promise<{ default: ComponentType<P> }>
-): RetryableLazyComponent<P> {
-	let current = lazy(load);
-	const LazyWithRetry = ((props: P) => createElement(current as ComponentType<P>, props)) as RetryableLazyComponent<P>;
-	LazyWithRetry.retryLoad = () => {
-		current = lazy(load);
+export function retryFailedLoad(error: unknown): void {
+	if (typeof error === 'object' && error !== null) retryByError.get(error)?.();
+}
+
+/**
+ * Like `lazy()`, but a failed load (e.g. a chunk request that failed because of a transient network error) can be
+ * retried. React keeps the rejection of a lazy component forever, so a plain `lazy()` would throw the same error every
+ * time it is rendered again. Here the rejected `lazy()` is kept for as long as React needs it to report the failure to
+ * the nearest error boundary (replacing it right away would make React retry endlessly), and it is swapped for a fresh
+ * one by `retryFailedLoad(error)`. `LoadFailureBoundary` does that as soon as it has caught the error.
+ * @param factory Function that loads the module, typically `() => import('...')`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function lazyWithRetry<T extends ComponentType<any>>(
+	factory: () => Promise<{ default: T }>
+): ComponentType<ComponentProps<T>> {
+	let Lazy = create();
+	function create() {
+		const component = lazy(() =>
+			factory().catch((error) => {
+				if (typeof error === 'object' && error !== null) {
+					retryByError.set(error, () => {
+						if (Lazy === component) Lazy = create();
+					});
+				}
+				throw error;
+			})
+		);
+		return component;
+	}
+	return function LazyWithRetry(props: ComponentProps<T>) {
+		return createElement(Lazy as ComponentType<ComponentProps<T>>, props);
 	};
-	return LazyWithRetry;
 }
 
 export default lazyWithRetry;
