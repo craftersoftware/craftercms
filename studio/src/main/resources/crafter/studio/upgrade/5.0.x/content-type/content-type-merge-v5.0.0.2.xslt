@@ -17,7 +17,7 @@
 
 <!--
   XSLT to generate an intermediate XSLT from config.xml, which will then be used to transform form-definition.xml.
-  The generated XSLT will copy the elements: previewable, noThumbnail, paths, delete-dependencies, copy-dependencies, and allowed-roles from config.xml into form-definition.xml.
+  The generated XSLT will copy the elements: previewable, paths, delete-dependencies, copy-dependencies, and allowed-roles from config.xml into form-definition.xml.
 -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
     <xsl:output method="xml" indent="yes"/>
@@ -43,7 +43,6 @@
         <xsl:copy>
             <xsl:apply-templates select="node() | @*"/>
             <xsl:copy-of select="document($configFileName)/content-type/previewable"/>
-            <xsl:copy-of select="document($configFileName)/content-type/noThumbnail"/>
             <xsl:copy-of select="document($configFileName)/content-type/paths"/>
             <xsl:copy-of select="document($configFileName)/content-type/delete-dependencies"/>
             <xsl:copy-of select="document($configFileName)/content-type/copy-dependencies"/>

@@ -60,7 +60,7 @@ const translations = defineMessages({
 		defaultMessage: 'Drop Targets'
 	},
 	selectedContentType: {
-		defaultMessage: 'Selected content type'
+		defaultMessage: 'Selected Content Type'
 	},
 	noResults: {
 		id: 'previewDropTargetsPanel.noResults',

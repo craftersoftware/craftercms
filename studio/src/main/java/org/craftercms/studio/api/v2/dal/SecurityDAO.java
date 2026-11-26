@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -39,7 +39,9 @@ public interface SecurityDAO {
 	Long getRefreshTokenExpiration(@Param("userId") long userId, @Param("minutes") int minutes);
 
 	/**
-	 * Restarts the session time limit of the user if the extensions used are below the given maximum
+	 * Restarts the absolute session time limit of the user and uses one extension, if the extensions used are below
+	 * the given maximum. Callers only invoke this when that limit is the one reached next; an inactivity extension
+	 * does not.
 	 *
 	 * @return the number of refresh tokens updated, 0 if the maximum was reached
 	 */

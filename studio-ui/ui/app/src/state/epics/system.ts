@@ -101,6 +101,14 @@ const msgs = {
 	})
 };
 
+/** Forwards SYSTEM_EVENT payloads onto the host-to-host bus (one next per emit). */
+export const emitSystemEventEpic: CrafterCMSEpic = (action$) =>
+	action$.pipe(
+		ofType(emitSystemEvent.type),
+		tap(({ payload }) => getHostToHostBus().next(payload)),
+		map(({ payload: action }) => action)
+	);
+
 const systemEpics: CrafterCMSEpic[] = [
 	// region storeInitialized
 	(action$, state$) =>
@@ -144,12 +152,7 @@ const systemEpics: CrafterCMSEpic[] = [
 		),
 	// endregion
 	// region emitSystemEvent
-	(action$) =>
-		action$.pipe(
-			ofType(emitSystemEvent.type),
-			tap(({ payload }) => getHostToHostBus().next(payload)),
-			map(({ payload: action }) => action)
-		),
+	emitSystemEventEpic,
 	// endregion
 	// region emitSystemEvents
 	(action$: Observable<StandardAction<ReturnType<typeof emitSystemEvents>['payload']>>) =>

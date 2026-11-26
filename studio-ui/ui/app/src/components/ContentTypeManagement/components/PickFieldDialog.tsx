@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -16,15 +16,14 @@
 
 import { EnhancedDialog, EnhancedDialogProps } from '../../EnhancedDialog';
 import { ContentType, ContentTypeField, DataSource } from '../../../models';
-import { FormattedMessage, useIntl } from 'react-intl';
-import React, { ReactNode, useMemo, useState } from 'react';
+import { FormattedMessage, IntlShape, useIntl } from 'react-intl';
+import React, { ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { applyTranslations, DescriptorContentType, DescriptorField, PartialContentType } from '../utils';
 import { DialogBody } from '../../DialogBody';
 import { SearchBar, SearchBarProps } from '../../SearchBar';
 import Box from '@mui/material/Box';
 import ListItemButton from '@mui/material/ListItemButton';
 import { ListItemIcon, ListItemText } from '@mui/material';
-import StarBorderIcon from '@mui/icons-material/StarBorder';
 import SecondaryButton from '../../SecondaryButton';
 import PrimaryButton from '../../PrimaryButton';
 import { nou } from '../../../utils/object';
@@ -35,9 +34,6 @@ import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import ListItem from '@mui/material/ListItem';
 import FormLabel from '@mui/material/FormLabel';
 import FormControl from '@mui/material/FormControl';
-import RadioGroup from '@mui/material/RadioGroup';
-import Radio from '@mui/material/Radio';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import Divider from '@mui/material/Divider';
 import LookupTable from '../../../models/LookupTable';
 import { SystemIcon } from '../../SystemIcon';
@@ -45,6 +41,10 @@ import ComponentIcon from '../../../icons/Component';
 import Button from '@mui/material/Button';
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
+import InsertPositionPicker, { InsertPositionPickerItem } from './InsertPositionPicker';
 
 export interface PickFieldDialogProps extends EnhancedDialogProps {
 	type: ContentType;
@@ -57,9 +57,26 @@ export interface PickFieldDialogProps extends EnhancedDialogProps {
 	onInsert: (fieldType: string, position: number) => void;
 	systemFieldsIds?: string[];
 	systemFieldsTitle?: ReactNode;
+	/** Accessible name for the insert-after select in the position picker. */
+	insertAfterSelectLabel?: ReactNode;
 }
 
 export interface PickFieldDialogBodyProps extends Omit<PickFieldDialogProps, 'title'> {}
+
+/**
+ * Insert-position items for the fields or data sources already in the target. A data source is labelled by
+ * its `title`; a field by its `name`, which on a descriptor can be a message descriptor. Falls back to the id.
+ */
+export function toInsertPositionItems(
+	list: ReadonlyArray<DescriptorField | DataSource> | undefined,
+	formatMessage: IntlShape['formatMessage']
+): InsertPositionPickerItem[] {
+	return (list ?? []).map((item) => {
+		const text = 'title' in item ? item.title : item.name;
+		const label = typeof text === 'string' ? text : text ? formatMessage(text) : '';
+		return { id: item.id, label: label || item.id, secondary: item.id };
+	});
+}
 
 export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 	const {
@@ -69,17 +86,44 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 		currentFields,
 		onInsert,
 		onClose,
+		open,
 		systemFieldsTitle,
 		systemFieldsIds,
-		type
+		type,
+		insertAfterSelectLabel = <FormattedMessage defaultMessage="Control to insert after" />
 	} = props;
+	const theme = useTheme();
+	const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
 	const [selectedField, setSelectedField] = useState<PartialContentType>(undefined);
 	const [selectedView, setSelectedView] = useState<number>(0);
 	const [position, setPosition] = useState<number>(typesCurrentList?.length ?? 0);
+	const insertedRef = useRef(false);
 	const { formatMessage } = useIntl();
+	const hasItems = (typesCurrentList?.length ?? 0) > 0;
+	const positionItems = useMemo(
+		() => toInsertPositionItems(typesCurrentList, formatMessage),
+		[typesCurrentList, formatMessage]
+	);
+	const positionHintId = useId();
+	const showFieldPositionStep = !isMdUp && selectedView === 1;
+
+	// Dialog exit transition keeps the body mounted; ignore further inserts after the first in this open session.
+	useEffect(() => {
+		if (open) {
+			insertedRef.current = false;
+		}
+	}, [open]);
+
+	const insertOnce = (fieldType: string, insertPosition: number) => {
+		if (insertedRef.current) {
+			return;
+		}
+		insertedRef.current = true;
+		onInsert(fieldType, insertPosition);
+	};
 
 	const onSecondaryAction = (e: React.MouseEvent) => {
-		if (selectedView === 0) {
+		if (isMdUp || selectedView === 0) {
 			onClose?.(e, null);
 		} else {
 			setSelectedView(0);
@@ -87,37 +131,98 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 	};
 
 	const onPrimaryAction = () => {
-		if (selectedView === 0) {
-			setSelectedView(1);
+		if (nou(selectedField)) {
+			return;
+		}
+		if (!hasItems) {
+			insertOnce(selectedField.id, 0);
+			return;
+		}
+		if (isMdUp || selectedView === 1) {
+			insertOnce(selectedField.id, position);
 		} else {
-			onInsert(selectedField.id, position);
+			setSelectedView(1);
 		}
 	};
 
 	const onSelectField = (field: PartialContentType) => {
 		setSelectedField(field);
-		// If there are items in the current section, move to next view (select position). Otherwise, insert at first position.
-		if (typesCurrentList?.length > 0) {
+		if (!hasItems) {
+			insertOnce(field.id, 0);
+		} else if (!isMdUp) {
 			setSelectedView(1);
-		} else {
-			onInsert(field.id, 0);
 		}
 	};
+
+	const onConfirmField = (field: PartialContentType) => {
+		setSelectedField(field);
+		if (!hasItems) {
+			insertOnce(field.id, 0);
+		} else if (isMdUp) {
+			insertOnce(field.id, position);
+		} else {
+			setSelectedView(1);
+		}
+	};
+
+	const positionPicker = (
+		<InsertPositionPicker
+			items={positionItems}
+			value={position}
+			onChange={setPosition}
+			disabled={!selectedField}
+			afterSelectLabel={insertAfterSelectLabel}
+			emptyMode="hide"
+			describedById={isMdUp && !selectedField ? positionHintId : undefined}
+		/>
+	);
+
+	const selectField = (
+		<SelectField
+			configLookup={configLookup}
+			currentFields={currentFields ?? type.fields}
+			typesFullList={typesFullList}
+			selectedField={selectedField}
+			setSelectedField={onSelectField}
+			onConfirmField={onConfirmField}
+			systemFieldsIds={systemFieldsIds}
+			systemFieldsTitle={systemFieldsTitle}
+		/>
+	);
 
 	return (
 		<>
 			<DialogBody sx={{ transition: 'height 0.3s ease-in-out', minHeight: '40vh' }}>
-				{selectedView === 0 ? (
-					<SelectField
-						configLookup={configLookup}
-						currentFields={currentFields ?? type.fields}
-						typesFullList={typesFullList}
-						selectedField={selectedField}
-						setSelectedField={onSelectField}
-						systemFieldsIds={systemFieldsIds}
-						systemFieldsTitle={systemFieldsTitle}
-					/>
-				) : (
+				{/* If the dialog is wide enough, show the select field and the position picker side by side. */}
+				{isMdUp ? (
+					<Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch', minHeight: '40vh', minWidth: 0 }}>
+						<Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>{selectField}</Box>
+						{hasItems && (
+							<Box
+								sx={{
+									width: 300,
+									flexShrink: 0,
+									minWidth: 0,
+									overflow: 'hidden',
+									borderLeft: 1,
+									borderColor: 'divider',
+									pl: 2,
+									display: 'flex',
+									flexDirection: 'column',
+									gap: 1
+								}}
+							>
+								{!selectedField && (
+									<Typography id={positionHintId} variant="body2" color="text.secondary">
+										<FormattedMessage defaultMessage="Select an item to choose its insert position." />
+									</Typography>
+								)}
+								{positionPicker}
+							</Box>
+						)}
+					</Box>
+				) : showFieldPositionStep ? (
+					// If the dialog is narrow, show the select field and the position picker one after the other.
 					<Box>
 						<Box sx={{ display: 'flex', mb: 1 }}>
 							<Box
@@ -135,7 +240,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 									</IconButton>
 								</Tooltip>
 							</Box>
-							<ListItem>
+							<ListItem component="div">
 								<ListItemIcon>
 									{selectedField && configLookup?.[selectedField.id]?.icon?.id ? (
 										<SystemIcon icon={configLookup[selectedField.id].icon} />
@@ -146,64 +251,25 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 								<ListItemText primary={selectedField.name} secondary={selectedField.description} />
 							</ListItem>
 						</Box>
-						<FormControl>
-							<FormLabel id="controlInsertionRadioGroupLabel">
-								<FormattedMessage defaultMessage="Pick the position for the new control:" />
-							</FormLabel>
-						</FormControl>
-						<RadioGroup
-							aria-labelledby="controlInsertionRadioGroupLabel"
-							name="controlInsertionRadioGroupLabel"
-							value={position}
-							onChange={(e) => setPosition(parseInt(e.target.value))}
-							sx={{ padding: '10px' }}
-						>
-							<FormControlLabel
-								control={<Radio />}
-								value={0}
-								sx={{ marginBottom: '10px' }}
-								slotProps={{ typography: { variant: 'body2' } }}
-								label={<FormattedMessage defaultMessage="Insert first" />}
-							/>
-							{typesCurrentList?.map((field, index) => (
-								<FormControlLabel
-									key={field.id}
-									control={<Radio />}
-									value={index + 1}
-									sx={{ marginBottom: '10px' }}
-									slotProps={{ typography: { variant: 'body2' } }}
-									label={
-										index + 1 === typesCurrentList.length ? (
-											<FormattedMessage
-												defaultMessage='Insert last (after "{sectionName}")'
-												values={{ sectionName: field.title ?? field.name }}
-											/>
-										) : (
-											<FormattedMessage
-												defaultMessage='Insert after "{sectionName}"'
-												values={{ sectionName: field.title ?? field.name }}
-											/>
-										)
-									}
-								/>
-							))}
-						</RadioGroup>
+						{positionPicker}
 					</Box>
+				) : (
+					selectField
 				)}
 			</DialogBody>
 			<DialogFooter>
 				<SecondaryButton onClick={onSecondaryAction}>
-					{selectedView === 0 ? (
+					{isMdUp || selectedView === 0 ? (
 						<FormattedMessage defaultMessage="Cancel" />
 					) : (
 						<FormattedMessage defaultMessage="Back" />
 					)}
 				</SecondaryButton>
 				<PrimaryButton disabled={nou(selectedField)} onClick={() => onPrimaryAction()}>
-					{selectedView === 0 ? (
-						<FormattedMessage defaultMessage="Select" />
-					) : (
+					{isMdUp || selectedView === 1 ? (
 						<FormattedMessage defaultMessage="Accept" />
+					) : (
+						<FormattedMessage defaultMessage="Select" />
 					)}
 				</PrimaryButton>
 			</DialogFooter>
@@ -220,6 +286,8 @@ export function PickFieldDialog({
 	currentFields,
 	systemFieldsTitle,
 	systemFieldsIds,
+	insertAfterSelectLabel,
+	configLookup,
 	...dialogProps
 }: PickFieldDialogProps) {
 	return (
@@ -233,6 +301,8 @@ export function PickFieldDialog({
 				currentFields={currentFields}
 				systemFieldsTitle={systemFieldsTitle}
 				systemFieldsIds={systemFieldsIds}
+				insertAfterSelectLabel={insertAfterSelectLabel}
+				configLookup={configLookup}
 			/>
 		</EnhancedDialog>
 	);
@@ -243,6 +313,8 @@ export function SelectField(props: {
 	selectedField: PartialContentType;
 	configLookup?: PickFieldDialogProps['configLookup'];
 	setSelectedField: (field: PartialContentType) => void;
+	/** Double-click or Enter. Defaults to `setSelectedField` when omitted. */
+	onConfirmField?: (field: PartialContentType) => void;
 	systemFieldsIds?: PickFieldDialogProps['systemFieldsIds'];
 	systemFieldsTitle?: PickFieldDialogProps['systemFieldsTitle'];
 	currentFields?: LookupTable<ContentTypeField>;
@@ -252,6 +324,7 @@ export function SelectField(props: {
 		typesFullList,
 		selectedField,
 		setSelectedField,
+		onConfirmField,
 		systemFieldsIds = [],
 		systemFieldsTitle = <FormattedMessage defaultMessage="System Fields" />,
 		currentFields = {}
@@ -261,6 +334,9 @@ export function SelectField(props: {
 	const { formatMessage, locale } = useIntl();
 	const collator = useMemo(() => new Intl.Collator(locale), [locale]);
 	const currentFieldTypes = Object.values(currentFields).map((field) => field.type);
+	const confirmField = onConfirmField ?? setSelectedField;
+	// MUI ButtonBase synthesizes a click after Enter; skip that click when onKeyDown already confirmed.
+	const ignoreClickAfterEnterRef = useRef(false);
 
 	const systemFields = sortFieldsByName(
 		typesFullList
@@ -302,6 +378,35 @@ export function SelectField(props: {
 		setSearchTerm(value);
 	};
 
+	const renderFieldButton = (field: PartialContentType, key: React.Key) => (
+		<ListItemButton
+			key={key}
+			// Double-click or Enter selects the field (inserts at current position on large screens).
+			onClick={() => {
+				if (ignoreClickAfterEnterRef.current) {
+					ignoreClickAfterEnterRef.current = false;
+					return;
+				}
+				setSelectedField(field);
+			}}
+			onDoubleClick={() => confirmField(field)}
+			onKeyDown={(e) => {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					ignoreClickAfterEnterRef.current = true;
+					confirmField(field);
+				}
+			}}
+			selected={selectedField?.id === field.id}
+			aria-pressed={selectedField?.id === field.id}
+		>
+			<ListItemIcon>
+				{configLookup?.[field.id]?.icon?.id ? <SystemIcon icon={configLookup[field.id].icon} /> : <ComponentIcon />}
+			</ListItemIcon>
+			<ListItemText primary={field.name} secondary={field.description} />
+		</ListItemButton>
+	);
+
 	return (
 		<>
 			<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -340,22 +445,7 @@ export function SelectField(props: {
 				</Tooltip>
 			</Box>
 			<Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', mt: 1, mb: 2 }}>
-				{filteredFields.map((field, index) => (
-					<ListItemButton
-						key={field.id}
-						onClick={() => setSelectedField(field)}
-						selected={selectedField?.id === field.id}
-					>
-						<ListItemIcon>
-							{configLookup?.[field.id]?.icon?.id ? (
-								<SystemIcon icon={configLookup[field.id].icon} />
-							) : (
-								<ComponentIcon />
-							)}
-						</ListItemIcon>
-						<ListItemText primary={field.name} secondary={field.description} />
-					</ListItemButton>
-				))}
+				{filteredFields.map((field) => renderFieldButton(field, field.id))}
 			</Box>
 			{systemFields.length > 0 && (
 				<>
@@ -364,22 +454,7 @@ export function SelectField(props: {
 						<FormLabel id="fieldSectionRadioGroupLabel">{systemFieldsTitle}</FormLabel>
 					</FormControl>
 					<Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', mt: 2 }}>
-						{systemFields.map((field, index) => (
-							<ListItemButton
-								key={index}
-								onClick={() => setSelectedField(field)}
-								selected={selectedField?.id === field.id}
-							>
-								<ListItemIcon>
-									{configLookup?.[field.id]?.icon?.id ? (
-										<SystemIcon icon={configLookup[field.id].icon} />
-									) : (
-										<ComponentIcon />
-									)}
-								</ListItemIcon>
-								<ListItemText primary={field.name} secondary={field.description} />
-							</ListItemButton>
-						))}
+						{systemFields.map((field, index) => renderFieldButton(field, index))}
 					</Box>
 				</>
 			)}

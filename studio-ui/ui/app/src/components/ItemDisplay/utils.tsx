@@ -55,11 +55,11 @@ export function getItemStateText(
 		scheduled: formatMessage({ id: 'itemState.scheduled', defaultMessage: 'Scheduled' }),
 		publishing: formatMessage({ id: 'itemState.publishing', defaultMessage: 'Publishing' }),
 		submittedToStaging: stateMap.submitted
-			? formatMessage({ id: 'itemState.submittedToStaging', defaultMessage: 'Submitted to staging' })
-			: formatMessage({ id: 'itemState.scheduledToStaging', defaultMessage: 'Scheduled to staging' }),
+			? formatMessage({ id: 'itemState.submittedToStaging', defaultMessage: 'Submitted to Staging' })
+			: formatMessage({ id: 'itemState.scheduledToStaging', defaultMessage: 'Scheduled to Staging' }),
 		submittedToLive: stateMap.submitted
-			? formatMessage({ id: 'itemState.submittedToLive', defaultMessage: 'Submitted to live' })
-			: formatMessage({ id: 'itemState.scheduledToGoLive', defaultMessage: 'Scheduled to live' }),
+			? formatMessage({ id: 'itemState.submittedToLive', defaultMessage: 'Submitted to Live' })
+			: formatMessage({ id: 'itemState.scheduledToGoLive', defaultMessage: 'Scheduled to Live' }),
 		staged: null,
 		live: null,
 		disabled: formatMessage({ id: 'itemState.disabled', defaultMessage: 'Disabled' }),
@@ -69,7 +69,7 @@ export function getItemStateText(
 	};
 
 	return (
-		map[getItemStateId(stateMap)] ?? formatMessage({ id: 'itemState.notInWorkflow', defaultMessage: 'Not in workflow' })
+		map[getItemStateId(stateMap)] ?? formatMessage({ id: 'itemState.notInWorkflow', defaultMessage: 'Not in Workflow' })
 	);
 }
 

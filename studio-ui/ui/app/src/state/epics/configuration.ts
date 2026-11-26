@@ -49,7 +49,7 @@ const configurationMessages = {
 	})
 };
 
-function handleSystemEvent(action: StandardAction): StandardAction[] {
+export function handleSystemEvent(action: StandardAction): StandardAction[] {
 	if (action.type !== configurationEvent.type) {
 		return [];
 	}
@@ -58,8 +58,9 @@ function handleSystemEvent(action: StandardAction): StandardAction[] {
 		return [fetchSiteUiConfig({ site: action.payload.siteId })];
 	} else if (targetPath === '/config/studio/site-config.xml') {
 		return [fetchSiteConfig()];
-	} else if (/^\/config\/studio\/content-types\/.*\/form-definition\.xml$/.test(targetPath)) {
-		return [contentTypeUpdated(), fetchQuickCreateList()];
+	} else if (/^\/config\/studio\/content-types\/.+\/form-definition\.xml$/.test(targetPath)) {
+		const contentTypeId = targetPath.replace(/^\/config\/studio\/content-types(\/.+)\/form-definition\.xml$/, '$1');
+		return [contentTypeUpdated({ contentTypeId }), fetchQuickCreateList()];
 	}
 	return [];
 }

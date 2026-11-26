@@ -109,6 +109,8 @@ export const pageControllersLegacyFieldId = 'scripts';
 
 export const SHARED_WORKER_NAME = 'CrafterCMS-Worker';
 // Time before the session expires at which the user is warned (WCAG 2.1 SC 2.2.1 requires at least 20 seconds).
+// The expiry compared with the client clock is client-local, derived from the server's seconds remaining, so clock
+// skew does not eat into those 20 seconds.
 export const SESSION_TIMEOUT_WARNING_MS = 60 * 1000;
 export const SITE_COOKIE_NAME = 'crafterSite';
 export const XSRF_TOKEN_HEADER_NAME = 'X-XSRF-TOKEN';

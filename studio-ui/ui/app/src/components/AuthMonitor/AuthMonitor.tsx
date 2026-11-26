@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -108,8 +108,12 @@ export function AuthMonitor() {
 	);
 }
 
-// WCAG 2.1 SC 2.2.1 Timing Adjustable: warns before the session expires and lets the user extend it. The number of
-// extensions is limited (server side), so the last warning only tells the user to save their work.
+// WCAG 2.1 SC 2.2.1 Timing Adjustable: warns at least 20 seconds before the session expires and lets the user extend
+// the limit being warned about. The countdown uses a client-local expiry (the server's seconds remaining, added to
+// the clock when the token arrives), so a slow client clock does not shorten that warning. An extension is used only
+// when the absolute session limit is the one about to expire; Stay signed in on an inactivity warning only refreshes
+// activity. The number of extensions is limited (server side), so the last warning for the absolute limit only tells
+// the user to save their work.
 function SessionTimeoutWarning() {
 	const dispatch = useDispatch();
 	const { active, sessionExpiresAt, canExtendSession } = useSelection((state) => state.auth);

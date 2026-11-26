@@ -55,7 +55,7 @@ afterEach(async () => {
 
 async function renderHook(
 	form: ReturnType<typeof createFormAtoms> | null,
-	flags: { isRepeatMode: boolean; isEmbedded: boolean },
+	flags: { isRepeatMode: boolean; isEmbedded: boolean; hasInternalNameField: boolean },
 	fieldUpdates$?: InstanceType<typeof Subject<FieldUpdate>>
 ) {
 	const results: string[][] = [];
@@ -76,7 +76,7 @@ async function renderHook(
 	return { latest: () => results[results.length - 1] };
 }
 
-const full = { isRepeatMode: false, isEmbedded: false };
+const full = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: true };
 
 describe('useMinimumSaveRequirements', () => {
 	it('reports nothing when both the file name and the internal name are fine', async () => {
@@ -107,13 +107,65 @@ describe('useMinimumSaveRequirements', () => {
 
 	it('does not require anything of a repeat item', async () => {
 		const form = createFormAtoms({ fileNameValid: false, internalName: '' });
-		const { latest } = await renderHook(form, { isRepeatMode: true, isEmbedded: false });
+		const { latest } = await renderHook(form, { isRepeatMode: true, isEmbedded: false, hasInternalNameField: true });
+		assert.deepEqual(latest(), []);
+	});
+
+	it('does not require an internal name when the type has no such field', async () => {
+		const fileName = atom(Promise.resolve({ isValid: true }));
+		const store = createStore();
+		const form = {
+			store,
+			fileName,
+			internalName: atom<unknown>(''),
+			atoms: { validationByFieldId: { 'file-name': fileName }, valueByFieldId: {} }
+		};
+		const { latest } = await renderHook(form, { ...full, hasInternalNameField: false });
+		assert.deepEqual(latest(), []);
+	});
+
+	it('requires internal-name when the type defines the field and valueByFieldId is empty', async () => {
+		const fileName = atom(Promise.resolve({ isValid: true }));
+		const store = createStore();
+		const form = {
+			store,
+			fileName,
+			internalName: atom<unknown>(''),
+			atoms: { validationByFieldId: { 'file-name': fileName }, valueByFieldId: {} }
+		};
+		const { latest } = await renderHook(form, full);
+		assert.deepEqual(latest(), ['internalName']);
+	});
+
+	it('still blocks an invalid file name when there is no internal-name field', async () => {
+		const fileName = atom(Promise.resolve({ isValid: false }));
+		const store = createStore();
+		const form = {
+			store,
+			fileName,
+			internalName: atom<unknown>(''),
+			atoms: { validationByFieldId: { 'file-name': fileName }, valueByFieldId: {} }
+		};
+		const { latest } = await renderHook(form, { ...full, hasInternalNameField: false });
+		assert.deepEqual(latest(), ['fileName']);
+	});
+
+	it('does not require an internal name of an embedded form that has no such field', async () => {
+		const fileName = atom(Promise.resolve({ isValid: false }));
+		const store = createStore();
+		const form = {
+			store,
+			fileName,
+			internalName: atom<unknown>(''),
+			atoms: { validationByFieldId: { 'file-name': fileName }, valueByFieldId: {} }
+		};
+		const { latest } = await renderHook(form, { isRepeatMode: false, isEmbedded: true, hasInternalNameField: false });
 		assert.deepEqual(latest(), []);
 	});
 
 	it('does not require a file name of an embedded form, only the internal name', async () => {
 		const form = createFormAtoms({ fileNameValid: false, internalName: '' });
-		const { latest } = await renderHook(form, { isRepeatMode: false, isEmbedded: true });
+		const { latest } = await renderHook(form, { isRepeatMode: false, isEmbedded: true, hasInternalNameField: true });
 		assert.deepEqual(latest(), ['internalName']);
 	});
 

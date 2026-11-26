@@ -30,6 +30,7 @@ import useDebouncedInput from '../../hooks/useDebouncedInput';
 import { checkPathExistence } from '../../services/content';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import { applyContentNameRules } from '../../utils/content';
+import { exceedsRenameMaxLength, getItemName } from './utils';
 
 export interface RenameContentDialogContainerProps extends Pick<
 	RenameContentDialogProps,
@@ -60,7 +61,11 @@ export function RenameContentDialogContainer(props: RenameContentDialogContainer
 	const { isSubmitting, updateSubmittingOrHasPendingChanges } = useEnhancedDialogContext();
 	const [name, setName] = useState(itemName);
 	const [itemExists, setItemExists] = useState(false);
-	const exceedsMaxLength = maxLength != null && name.length > maxLength;
+	// Intentional: name starts as the current item name. If that name already exceeds maxLength
+	// (legacy / limit tightened later), flag it immediately — same as FE2 when a restriction changes.
+	// The user must shorten before rename. HTML maxLength only limits further typing; it does not
+	// truncate or clear this initial over-limit state.
+	const exceedsMaxLength = exceedsRenameMaxLength(name, maxLength);
 	const isValid = !isBlank(name) && !itemExists && !exceedsMaxLength && name !== itemName;
 	const [confirmBrokenReferences, setConfirmBrokenReferences] = useState(false);
 	const renameDisabled =
@@ -127,20 +132,6 @@ export function RenameContentDialogContainer(props: RenameContentDialogContainer
 			</DialogFooter>
 		</>
 	);
-}
-
-/**
- * Gets the name of the content item by removing the file extension (`.xml` if the item is a component or `index.xml` if page).
- * The function checks if the input string represents a page (contains '/index.xml').
- * - If it is a page, it removes '/index.xml' from the string.
- * - Otherwise, it removes '.xml' from the string.
- *
- * @param {string} value - The file path or name to process.
- * @returns {string} - The stripped value without the file extension.
- */
-function getItemName(value: string): string {
-	const isPage = value.includes('/index.xml');
-	return isPage ? value.replace('/index.xml', '') : value.replace('.xml', '');
 }
 
 export default RenameContentDialogContainer;
