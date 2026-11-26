@@ -99,6 +99,7 @@
 		"marked": "^18.1.2",
 		"marked-highlight": "^2.2.4",
 		"moment-timezone": "^0.6.5",
+		"monaco-editor": "0.54.0",
 		"monaco-graphql": "^1.9.0",
 		"nanoid": "^6.0.2",
 		"notistack": "3.0.2",

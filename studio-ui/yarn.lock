@@ -2281,6 +2281,7 @@ __metadata:
     marked: "npm:^18.1.2"
     marked-highlight: "npm:^2.2.4"
     moment-timezone: "npm:^0.6.5"
+    monaco-editor: "npm:0.54.0"
     monaco-graphql: "npm:^1.9.0"
     nanoid: "npm:^6.0.2"
     ncp: "npm:^2.0.0"
