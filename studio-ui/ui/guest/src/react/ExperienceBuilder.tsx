@@ -481,7 +481,6 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 		// Use pagehide (not beforeunload) so non-navigating schemes like mailto:/tel:
 		// — which fire beforeunload without unloading the document — leave the connection up.
 		const handler = () => {
-			console.log('pagehide', path);
 			post(guestCheckOut({ path }))
 		};
 		window.addEventListener('pagehide', handler, false);
