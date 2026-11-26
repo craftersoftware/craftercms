@@ -25,9 +25,32 @@ const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { RawIntlProvider, createIntl } = await import('react-intl');
+const { accessibleName } = await import('../../../../test/accessibleName.ts');
 const { MoveToFieldDialog } = await import('./MoveToFieldDialog.tsx');
 
 const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
+
+const destinations = [
+	{
+		modelId: 'page-1',
+		fieldId: 'right_o',
+		labelPath: 'Right Rail',
+		items: [{ key: 'a', value: 'Alpha' }],
+		currentCount: 1,
+		maxCount: null,
+		disabled: false
+	},
+	{
+		modelId: 'page-1',
+		fieldId: 'locked_o',
+		labelPath: 'Locked',
+		items: [],
+		currentCount: 0,
+		maxCount: null,
+		disabled: true,
+		reason: 'readonly'
+	}
+];
 
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
 afterEach(async () => {
@@ -69,27 +92,7 @@ describe('MoveToFieldDialog', () => {
 	it('lists destinations, disables invalid ones with a reason, and enables position after a valid pick', async () => {
 		const accepted: Array<{ modelId: string; fieldId: string; targetIndex: number }> = [];
 		await renderDialog({
-			targets: [
-				{
-					modelId: 'page-1',
-					fieldId: 'right_o',
-					labelPath: 'Right Rail',
-					items: [{ key: 'a', value: 'Alpha' }],
-					currentCount: 1,
-					maxCount: null,
-					disabled: false
-				},
-				{
-					modelId: 'page-1',
-					fieldId: 'locked_o',
-					labelPath: 'Locked',
-					items: [],
-					currentCount: 0,
-					maxCount: null,
-					disabled: true,
-					reason: 'readonly'
-				}
-			],
+			targets: destinations,
 			onAccept(target, targetIndex) {
 				accepted.push({ modelId: target.modelId, fieldId: target.fieldId, targetIndex });
 			}
@@ -115,6 +118,27 @@ describe('MoveToFieldDialog', () => {
 			(move as HTMLButtonElement).click();
 		});
 		assert.deepEqual(accepted, [{ modelId: 'page-1', fieldId: 'right_o', targetIndex: 1 }]);
+	});
+
+	it('names the dialog and the destination list, and marks the selected destination as pressed', async () => {
+		await renderDialog({ targets: destinations });
+
+		const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
+		assert.ok(dialog);
+		assert.equal(accessibleName(dialog), 'Move Hero to field');
+
+		const destinationList = Array.from(dialog.querySelectorAll<HTMLElement>('.MuiList-root')).find(
+			(list) => accessibleName(list) === 'Destination field'
+		);
+		assert.ok(destinationList, 'destination list is not named by aria-labelledby');
+
+		const buttons = Array.from(destinationList.querySelectorAll<HTMLElement>('.MuiListItemButton-root'));
+		const rightRail = buttons.find((button) => button.textContent?.includes('Right Rail'));
+		const locked = buttons.find((button) => button.textContent?.includes('Locked'));
+		assert.ok(rightRail);
+		assert.ok(locked);
+		assert.equal(rightRail.getAttribute('aria-pressed'), 'true');
+		assert.equal(locked.getAttribute('aria-pressed'), 'false');
 	});
 
 	it('shows an empty state when there are no destinations', async () => {
