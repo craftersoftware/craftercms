@@ -91,7 +91,7 @@ jaxb-api = "2.3.1"
 tomcat = "11.0.29"
 
 # Embedded Tomcat for Spring Boot 3.x modules (former spring-boot/pom.xml)
-tomcat-embed = "11.0.27"
+tomcat-embed = "11.0.29"
 testng = "7.12.0"
 junit-jupiter = "5.14.4"
 junit-vintage = "6.1.3"
@@ -167,6 +167,7 @@ aspectjweaver = { module = "org.aspectj:aspectjweaver", version.ref = "aspectj" 
 freemarker = { module = "org.freemarker:freemarker", version.ref = "freemarker" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
 jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
+jackson3-bom = { module = "tools.jackson:jackson-bom", version.ref = "jackson3" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson-annotations" }
 jackson-dataformat-cbor = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor", version.ref = "jackson" }
 jackson-dataformat-xml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-xml", version.ref = "jackson" }

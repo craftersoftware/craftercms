@@ -32,6 +32,7 @@ dependencies {
 	implementation project(':core')
 	implementation project(':commons:utilities')
 
+	api platform(libs.jackson3.bom)
 	implementation libs.opensearch.rest.high.level.client
 	implementation libs.opensearch.java
 	implementation libs.tika.core
