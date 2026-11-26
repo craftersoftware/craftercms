@@ -94,10 +94,13 @@ export function dashboardReady(scope: Locator): ReadyState {
 	};
 }
 
-/** The Search page, ready once its h1 title renders. Shared by the first load and the reloads that wait for the index. */
+/**
+ * The Search page, ready once its h1 title renders. Shared by the first load and the reloads that wait for the index.
+ * Below the h1 its error state is an h2, not the h3 of `errorState`.
+ */
 export const searchPageReady = (scope: Locator): ReadyState => ({
 	loaded: scope.getByRole('heading', { name: 'Search', level: 1 }),
-	error: errorState(scope)
+	error: scope.getByRole('heading', { level: 2, name: /^Error\b/ })
 });
 
 /**

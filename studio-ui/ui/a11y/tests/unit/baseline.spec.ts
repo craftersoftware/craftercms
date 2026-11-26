@@ -159,7 +159,7 @@ function searchHtml(cards: number, total: number, pager = true) {
 		(_, i) => `<div class="MuiGrid-root MuiGrid-item"><div class="MuiCard-root">Card ${i}</div></div>`
 	);
 	const footer = pager ? `<p>1-${cards} of ${total} results</p>` : '';
-	return `<!doctype html><body><h2>Search</h2>${footer}<div class="MuiGrid-container">${items.join('')}</div></body>`;
+	return `<!doctype html><body><h1>Search</h1>${footer}<div class="MuiGrid-container">${items.join('')}</div></body>`;
 }
 
 /** The Users grid the way it renders: the header row, one row per user and the pager's "1-n of total" text. */
@@ -413,7 +413,7 @@ test.describe('search baseline while the index builds', () => {
 				body:
 					requests++ === 0
 						? searchHtml(3, 3)
-						: '<!doctype html><body><h2>Search</h2><section><h3>Error 500</h3></section></body>'
+						: '<!doctype html><body><h1>Search</h1><section><h2>Error 500</h2></section></body>'
 			})
 		);
 		await page.goto(`${origin}/`);

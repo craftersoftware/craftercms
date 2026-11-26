@@ -324,4 +324,58 @@ describe('search page landmarks', () => {
 		const title = Array.from(host.querySelectorAll('h2')).find((h) => h.textContent === 'Search');
 		assert.ok(title, 'the Search title is not an h2');
 	});
+
+	describe('heading levels', () => {
+		const facets = [{ name: 'content-type', range: false, date: false, multiple: true, values: { page: 3 } }];
+		const headings = (host: HTMLElement) =>
+			Array.from(host.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')).map((h) => ({
+				level: Number(h.tagName[1]),
+				text: h.textContent
+			}));
+		const errorResponse = { code: 500, message: 'Boom' };
+
+		it('does not skip a level after the h1 on the standalone page', async () => {
+			const { host } = await mount({
+				mode: 'default',
+				embedded: false,
+				drawerOpen: true,
+				searchResults: { items: [], total: 0, facets, offset: 0 }
+			});
+			const found = headings(host);
+			assert.deepEqual(
+				found.map((h) => h.text),
+				['Search', 'Sort By', 'Path', 'Content Type', 'No Results Were Found.']
+			);
+			assert.deepEqual(
+				found.map((h) => h.level),
+				[1, 2, 2, 2, 2]
+			);
+		});
+
+		it('makes the standalone error state an h2', async () => {
+			const { host } = await mount({ mode: 'default', embedded: false, error: errorResponse });
+			assert.deepEqual(
+				headings(host).find((h) => h.text?.startsWith('Error')),
+				{ level: 2, text: 'Error 500' }
+			);
+		});
+
+		it('keeps h3 for the accordion titles, empty state and error state when embedded', async () => {
+			const filters = await mount({
+				mode: 'default',
+				embedded: true,
+				drawerOpen: true,
+				searchResults: { items: [], total: 0, facets, offset: 0 }
+			});
+			assert.deepEqual(
+				headings(filters.host).map((h) => h.level),
+				[3, 3, 3, 3]
+			);
+			const failed = await mount({ mode: 'default', embedded: true, error: errorResponse });
+			assert.deepEqual(
+				headings(failed.host).find((h) => h.text?.startsWith('Error')),
+				{ level: 3, text: 'Error 500' }
+			);
+		});
+	});
 });

@@ -204,6 +204,7 @@ export function SearchUI(props: SearchUIProps) {
 				{searchResults && searchResults.facets && (
 					<SiteSearchFilters
 						mode={mode}
+						embedded={embedded}
 						sx={{ marginRight: '7px' }}
 						facets={searchResults.facets}
 						handleFilterChange={handleFilterChange}
@@ -364,7 +365,7 @@ export function SearchUI(props: SearchUIProps) {
 				</Box>
 				<Box component="section" sx={{ flexGrow: 1, padding: '25px 30px', overflowY: 'scroll', position: 'relative' }}>
 					{error ? (
-						<ApiResponseErrorState error={error} />
+						<ApiResponseErrorState error={error} titleComponent={embedded ? undefined : 'h2'} />
 					) : (
 						<Grid
 							container
@@ -449,6 +450,7 @@ export function SearchUI(props: SearchUIProps) {
 										))
 									) : (
 										<EmptyState
+											titleComponent={embedded ? undefined : 'h2'}
 											title={formatMessage(translations.noResults)}
 											subtitle={formatMessage(translations.changeQuery)}
 										/>
