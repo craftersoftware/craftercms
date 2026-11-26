@@ -246,6 +246,7 @@ function GlobalDialogManager() {
 				<MountOnFirstOpen
 					open={state.compareVersions.open}
 					onClose={createCallback(state.compareVersions.onClose, dispatch)}
+					onClosed={createCallback(state.compareVersions.onClosed, dispatch)}
 				>
 					<CompareVersionsDialog
 						{...state.compareVersions}
