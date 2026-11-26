@@ -78,6 +78,8 @@ export interface ToolbarOverflowProps {
 	children: React.ReactNode;
 	/** Pack the items that still fit against this edge of the row. */
 	align?: 'start' | 'end';
+	/** Accessible name of the More button and its menu. Give each bar on a page its own. */
+	label?: string;
 }
 
 /**
@@ -85,10 +87,10 @@ export interface ToolbarOverflowProps {
  * Items stay mounted in only one place, so a control is not duplicated when the row is narrow.
  */
 export function ToolbarOverflow(props: ToolbarOverflowProps) {
-	const { children, align = 'start' } = props;
+	const { children, align = 'start', label } = props;
 	const items = Children.toArray(children);
 	const { formatMessage } = useIntl();
-	const moreLabel = formatMessage(messages.moreActions);
+	const moreLabel = label ?? formatMessage(messages.moreActions);
 	const menuId = useId();
 	const barRef = useRef<HTMLDivElement>(null);
 	const moreRef = useRef<HTMLButtonElement>(null);
