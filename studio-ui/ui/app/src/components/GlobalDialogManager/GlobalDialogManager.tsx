@@ -39,11 +39,12 @@ import { DialogStackItem } from '../../models/GlobalState';
 import DialogStackItemContainer from './DialogStackItemContainer';
 import { createCallback } from './createCallback';
 import { MountOnFirstOpen } from './MountOnFirstOpen';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
 
 // region const ... = lazy(() => import('...'));
-const ViewVersionDialog = lazy(() => import('../ViewVersionDialog'));
-const CompareVersionsDialog = lazy(() => import('../CompareVersionsDialog'));
-const HistoryDialog = lazy(() => import('../HistoryDialog'));
+const ViewVersionDialog = lazyWithRetry(() => import('../ViewVersionDialog'));
+const CompareVersionsDialog = lazyWithRetry(() => import('../CompareVersionsDialog'));
+const HistoryDialog = lazyWithRetry(() => import('../HistoryDialog'));
 const ItemMenu = lazy(() => import('../ItemActionsMenu'));
 const ItemMegaMenu = lazy(() => import('../ItemMegaMenu'));
 const AuthMonitor = lazy(() => import('../AuthMonitor'));
@@ -204,7 +205,7 @@ function GlobalDialogManager() {
 			))}
 			<Suspense fallback="">
 				{/* region History */}
-				<MountOnFirstOpen open={state.history.open}>
+				<MountOnFirstOpen open={state.history.open} onClose={createCallback(state.history.onClose, dispatch)}>
 					<HistoryDialog
 						{...state.history}
 						versionsBranch={versionsBranch}
@@ -215,7 +216,7 @@ function GlobalDialogManager() {
 				{/* endregion */}
 
 				{/* region View Versions */}
-				<MountOnFirstOpen open={state.viewVersion.open}>
+				<MountOnFirstOpen open={state.viewVersion.open} onClose={createCallback(state.viewVersion.onClose, dispatch)}>
 					<ViewVersionDialog
 						{...state.viewVersion}
 						rightActions={state.viewVersion.rightActions?.map((action) => ({
@@ -234,7 +235,10 @@ function GlobalDialogManager() {
 				{/* endregion */}
 
 				{/* region Compare Versions */}
-				<MountOnFirstOpen open={state.compareVersions.open}>
+				<MountOnFirstOpen
+					open={state.compareVersions.open}
+					onClose={createCallback(state.compareVersions.onClose, dispatch)}
+				>
 					<CompareVersionsDialog
 						{...state.compareVersions}
 						leftActions={state.compareVersions.leftActions?.map((action) => ({

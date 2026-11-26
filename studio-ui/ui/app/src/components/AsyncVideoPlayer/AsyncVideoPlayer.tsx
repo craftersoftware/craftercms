@@ -14,13 +14,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import type { VideoPlayerProps } from '../VideoPlayer/VideoPlayer';
 import '../../styles/async-video-player.scss';
 import { defineMessages, useIntl } from 'react-intl';
+import LoadFailureBoundary from '../ErrorBoundary/LoadFailureBoundary';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
 
-// video.js is large, and it's only needed once the video is known to be playable.
-const VideoPlayer = lazy(() => import('../VideoPlayer/VideoPlayer'));
+// video.js is large, and it's only needed once the video is known to be playable. If its chunk fails to load, the failure
+// is contained here (see LoadFailureBoundary) and requested again the next time a player mounts.
+const VideoPlayer = lazyWithRetry(() => import('../VideoPlayer/VideoPlayer'));
 
 interface AsyncVideoPlayerProps {
 	playerOptions: VideoPlayerProps;
@@ -31,6 +34,10 @@ const messages = defineMessages({
 	videoBeingProcessed: {
 		id: 'asyncVideoPlayer.videoBeingProcessed',
 		defaultMessage: 'Video is being processed, preview will be available when processing is complete'
+	},
+	videoPlayerLoadFailed: {
+		id: 'asyncVideoPlayer.videoPlayerLoadFailed',
+		defaultMessage: 'The video player could not be loaded. Check your connection and try again.'
 	}
 });
 
@@ -62,15 +69,24 @@ function AsyncVideoPlayer(props: AsyncVideoPlayerProps) {
 	if (playable) {
 		return (
 			<section className="async-video-player">
-				<Suspense
+				<LoadFailureBoundary
+					key={playerOptions.src}
 					fallback={
-						<div className="async-video-player--loading" style={errMessageStyle}>
-							Loading...
+						<div className="async-video-player--unavailable-message" style={errMessageStyle} role="alert">
+							{formatMessage(messages.videoPlayerLoadFailed)}
 						</div>
 					}
 				>
-					<VideoPlayer {...playerOptions} />
-				</Suspense>
+					<Suspense
+						fallback={
+							<div className="async-video-player--loading" style={errMessageStyle}>
+								Loading...
+							</div>
+						}
+					>
+						<VideoPlayer {...playerOptions} />
+					</Suspense>
+				</LoadFailureBoundary>
 			</section>
 		);
 	} else {
