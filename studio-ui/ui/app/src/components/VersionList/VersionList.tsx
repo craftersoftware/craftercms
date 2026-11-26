@@ -21,6 +21,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import MoreVertIcon from '@mui/icons-material/MoreVertRounded';
+import Tooltip from '@mui/material/Tooltip';
 import { ItemHistoryEntry } from '../../models/Version';
 import palette from '../../styles/palette';
 import GlobalState from '../../models/GlobalState';
@@ -125,8 +126,7 @@ export function VersionList(props: VersionListProps) {
 							slotProps={{
 								primary: { id: labelId, sx: { display: 'flex', alignItems: 'center' } },
 								secondary: {
-									sx: { whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' },
-									title: version.comment
+									sx: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
 								}
 							}}
 							primary={
@@ -146,7 +146,27 @@ export function VersionList(props: VersionListProps) {
 									)}
 								</>
 							}
-							secondary={version.comment}
+							secondary={
+								version.comment ? (
+									<Tooltip
+										describeChild
+										title={version.comment}
+										slotProps={{
+											tooltip: {
+												sx: {
+													maxWidth: 400,
+													maxHeight: 240,
+													overflow: 'auto',
+													whiteSpace: 'pre-wrap',
+													wordBreak: 'break-word'
+												}
+											}
+										}}
+									>
+										<span>{version.comment}</span>
+									</Tooltip>
+								) : null
+							}
 						/>
 					</ListItemButton>
 				);
