@@ -480,9 +480,7 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 		// This only triggers when navigation occurs from within the guest page.
 		// Use pagehide (not beforeunload) so non-navigating schemes like mailto:/tel:
 		// — which fire beforeunload without unloading the document — leave the connection up.
-		const handler = () => {
-			post(guestCheckOut({ path }))
-		};
+		const handler = () => post(guestCheckOut({ path }));
 		window.addEventListener('pagehide', handler, false);
 		return () => {
 			post(guestCheckOut({ path }));
