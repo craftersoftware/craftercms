@@ -129,6 +129,7 @@ test.describe('Project screens', () => {
 			loaded: nav.getByRole('button').first(),
 			error: errorState(page.locator('body'))
 		});
+		await expect.soft(nav.getByRole('note'), 'the environment banner is a note').toContainText('Environment');
 		await expect.soft(nav.getByRole('alert'), 'the environment banner must not be an alert').toHaveCount(0);
 		await checkA11y(page, testInfo, 'configuration');
 	});
