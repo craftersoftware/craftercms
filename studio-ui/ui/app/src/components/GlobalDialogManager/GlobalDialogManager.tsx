@@ -205,7 +205,11 @@ function GlobalDialogManager() {
 			))}
 			<Suspense fallback="">
 				{/* region History */}
-				<MountOnFirstOpen open={state.history.open} onClose={createCallback(state.history.onClose, dispatch)}>
+				<MountOnFirstOpen
+					open={state.history.open}
+					onClose={createCallback(state.history.onClose, dispatch)}
+					onClosed={createCallback(state.history.onClosed, dispatch)}
+				>
 					<HistoryDialog
 						{...state.history}
 						versionsBranch={versionsBranch}
@@ -216,7 +220,11 @@ function GlobalDialogManager() {
 				{/* endregion */}
 
 				{/* region View Versions */}
-				<MountOnFirstOpen open={state.viewVersion.open} onClose={createCallback(state.viewVersion.onClose, dispatch)}>
+				<MountOnFirstOpen
+					open={state.viewVersion.open}
+					onClose={createCallback(state.viewVersion.onClose, dispatch)}
+					onClosed={createCallback(state.viewVersion.onClosed, dispatch)}
+				>
 					<ViewVersionDialog
 						{...state.viewVersion}
 						rightActions={state.viewVersion.rightActions?.map((action) => ({

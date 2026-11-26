@@ -53,12 +53,17 @@ function setup() {
 	document.body.append(host);
 	const root = createRoot(host);
 	mounted.push({ unmount: () => root.unmount(), host });
+	const errors: unknown[] = [];
 	const render = (retryWhen: boolean) =>
 		act(async () => {
 			root.render(
 				React.createElement(
 					LoadFailureBoundary,
-					{ retryWhen, fallback: React.createElement('span', null, 'failed') },
+					{
+						retryWhen,
+						onError: (error: unknown) => errors.push(error),
+						fallback: React.createElement('span', null, 'failed')
+					},
 					React.createElement(Suspense, { fallback: 'loading' }, React.createElement(Component, { label: 'loaded' }))
 				)
 			);
@@ -79,7 +84,7 @@ function setup() {
 		});
 		return other;
 	};
-	return { host, network, render, mountNew, requests: () => requests };
+	return { host, network, render, mountNew, errors, requests: () => requests };
 }
 
 describe('lazyWithRetry', () => {
@@ -150,5 +155,22 @@ describe('lazyWithRetry', () => {
 		const second = await mountNew();
 		assert.equal(second.textContent, 'loaded');
 		assert.equal(requests(), afterFailure + 1);
+	});
+
+	it('does not call onError when the load succeeds', async () => {
+		const { render, errors } = setup();
+		await render(true);
+		assert.equal(errors.length, 0);
+	});
+
+	it('reports a failure to onError once, with the error', async () => {
+		mock.method(console, 'error', () => {});
+		const { network, render, errors } = setup();
+		network.online = false;
+		await render(true);
+		assert.equal(errors.length, 1);
+		assert.match((errors[0] as Error).message, /Loading chunk failed/);
+		await render(true);
+		assert.equal(errors.length, 1);
 	});
 });

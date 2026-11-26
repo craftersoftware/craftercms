@@ -47,7 +47,7 @@ afterEach(async () => {
 
 function setup() {
 	const network = { online: false };
-	const events = { chunkRequests: 0, closes: 0 };
+	const events = { chunkRequests: 0, closes: 0, closed: 0 };
 	const LazyDialog = lazyWithRetry(() => {
 		events.chunkRequests++;
 		return network.online
@@ -74,7 +74,7 @@ function setup() {
 						React.createElement('main', null, 'page'),
 						React.createElement(
 							MountOnFirstOpen,
-							{ open, onClose: () => void events.closes++ },
+							{ open, onClose: () => void events.closes++, onClosed: () => void events.closed++ },
 							React.createElement(LazyDialog, { open })
 						),
 						React.createElement('footer', null, 'sibling')
@@ -128,5 +128,28 @@ describe('MountOnFirstOpen when the dialog code fails to load', () => {
 		await render(false);
 		await render(false);
 		assert.equal(events.chunkRequests, afterFailure);
+	});
+
+	it('calls onClosed once, after the message is gone, so the dialog state can be reset', async () => {
+		mock.method(console, 'error', () => {});
+		const { render, events, alert } = setup();
+		await render(true);
+		assert.equal(events.closed, 0);
+		await render(false);
+		await act(async () => void (await new Promise<void>((resolve) => setTimeout(resolve, 600))));
+		assert.equal(alert(), null);
+		assert.equal(events.closed, 1);
+		await render(false);
+		assert.equal(events.closed, 1);
+	});
+
+	it('does not call onClosed when the dialog opens again before the message has gone, as that retry owns the state', async () => {
+		mock.method(console, 'error', () => {});
+		const { render, events } = setup();
+		await render(true);
+		await render(false);
+		await render(true);
+		await act(async () => void (await new Promise<void>((resolve) => setTimeout(resolve, 600))));
+		assert.equal(events.closed, 0);
 	});
 });

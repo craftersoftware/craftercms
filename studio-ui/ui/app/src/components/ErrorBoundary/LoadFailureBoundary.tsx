@@ -25,6 +25,11 @@ export interface LoadFailureBoundaryProps {
 	 * again. Use it to retry on demand (e.g. the next time a dialog opens) rather than as soon as something changes.
 	 */
 	retryWhen?: boolean;
+	/**
+	 * Called once, after the fallback has been committed to the screen, for each failure the boundary catches. Use it to
+	 * clean up (e.g. close a dialog, reset state), log, or notify the user.
+	 */
+	onError?(error: unknown): void;
 	children?: ReactNode;
 }
 
@@ -49,6 +54,7 @@ export class LoadFailureBoundary extends Component<LoadFailureBoundaryProps, Loa
 		// Once the failure has been committed to the screen React has no need for the rejected lazy component anymore, so
 		// it can be swapped for a fresh one: whatever renders the children next (a retry, or a new mount) requests it again.
 		retryFailedLoad(error);
+		this.props.onError?.(error);
 	}
 
 	static getDerivedStateFromProps(

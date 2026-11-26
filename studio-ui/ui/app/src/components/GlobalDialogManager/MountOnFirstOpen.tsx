@@ -17,6 +17,7 @@
 import React, { ReactNode, Suspense } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { useOpenedOnce } from '../../hooks/useOpenedOnce';
+import useUpdateRefs from '../../hooks/useUpdateRefs';
 import LoadFailureBoundary from '../ErrorBoundary/LoadFailureBoundary';
 import AlertDialog from '../AlertDialog';
 import PrimaryButton from '../PrimaryButton';
@@ -26,6 +27,8 @@ export interface MountOnFirstOpenProps {
 	children: ReactNode;
 	/** Closes the dialog. Used by the message shown when the dialog's code fails to load. */
 	onClose?(): void;
+	/** Called once the message shown when the dialog's code fails to load is gone, in place of the dialog's own `onClosed`. */
+	onClosed?(): void;
 }
 
 /**
@@ -42,21 +45,32 @@ export interface MountOnFirstOpenProps {
  * the chunk anew, declare the lazy dialog with `lazyWithRetry` instead of `lazy`.
  **/
 export function MountOnFirstOpen(props: MountOnFirstOpenProps) {
-	const { open, children, onClose } = props;
+	const { open, children, onClose, onClosed } = props;
 	const mounted = useOpenedOnce(open);
+	const openRef = useUpdateRefs(open);
+	const onClosedRef = useUpdateRefs(onClosed);
+	// The message is also removed, without having been closed by the user, when the dialog opens again and retries the
+	// load. In that case the dialog is open again, so its `onClosed` (which resets its state) must not run.
+	const onMessageClosed = () => {
+		if (!openRef.current) onClosedRef.current?.();
+	};
 	return mounted ? (
-		<LoadFailureBoundary retryWhen={open} fallback={<LoadFailedDialog open={open} onClose={onClose} />}>
+		<LoadFailureBoundary
+			retryWhen={open}
+			fallback={<LoadFailedDialog open={open} onClose={onClose} onClosed={onMessageClosed} />}
+		>
 			<Suspense fallback="">{children}</Suspense>
 		</LoadFailureBoundary>
 	) : null;
 }
 
-function LoadFailedDialog(props: { open: boolean; onClose?(): void }) {
-	const { open, onClose } = props;
+function LoadFailedDialog(props: { open: boolean; onClose?(): void; onClosed?(): void }) {
+	const { open, onClose, onClosed } = props;
 	return (
 		<AlertDialog
 			open={open}
 			onClose={() => onClose?.()}
+			onClosed={onClosed}
 			body={<FormattedMessage defaultMessage="This dialog could not be loaded. Check your connection and try again." />}
 			buttons={
 				<PrimaryButton fullWidth onClick={() => onClose?.()}>

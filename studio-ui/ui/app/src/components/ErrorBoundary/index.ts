@@ -17,5 +17,3 @@
 export { default } from './ErrorBoundary';
 
 export * from './ErrorBoundary';
-
-export { default as LoadFailureBoundary } from './LoadFailureBoundary';
