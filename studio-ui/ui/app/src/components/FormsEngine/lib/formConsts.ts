@@ -14,7 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { atom } from 'jotai';
 import { XML_ATTRIBUTE_PREFIX } from './controlValueTypes';
 
 export const ItemNotFoundError = Symbol('ItemNotFoundError');
@@ -23,9 +22,6 @@ export const InvalidParamsError = Symbol('InvalidParamsError');
 export const NoSiteIdError = Symbol('NoSiteIdError');
 export const UnknownError = Symbol('UnknownError');
 export const PropsChangedError = Symbol('PropsChangedError');
-
-// TODO: should be defined in GlobalFormContext
-export const stackFormCountAtom = atom(0);
 
 export enum XmlKeys {
 	modelId = 'objectId',

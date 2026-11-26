@@ -24,8 +24,7 @@ import {
 import { dataSourceModuleRegistry, registerDataSourceModule } from './registry';
 import { DATA_SOURCE_API_VERSION } from './types';
 import { CONTROL_API_VERSION } from '../types';
-import { FormsEngineField } from '../components/FormsEngineField';
-import { useFieldValue } from '../lib/formsEngineContext';
+import { FormsEngineField, useFieldValue } from '../lib/lazyHostMembers';
 import {
 	XML_ATTRIBUTE_PREFIX,
 	XML_CDATA_KEY,
