@@ -25,7 +25,7 @@ const { act } = await import('react');
 const { RawIntlProvider } = await import('react-intl');
 const { ThemeProvider, createTheme } = await import('@mui/material/styles');
 const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
-const { PickFieldDialogBody } = await import('./PickFieldDialog.tsx');
+const { PickFieldDialogBody, toInsertPositionItems } = await import('./PickFieldDialog.tsx');
 const { inputDescriptor } = await import('../descriptors/controls/input.ts');
 
 const intl = createTestIntl();
@@ -69,7 +69,7 @@ afterEach(async () => {
 });
 
 async function renderBody(props: {
-	typesCurrentList: Array<{ id: string; title?: string; name?: string }>;
+	typesCurrentList: Array<{ id: string; title?: string; name?: string | { id?: string; defaultMessage: string } }>;
 	/** When false, exercises the stepped (!isMdUp) flow. Defaults to true. */
 	mdUp?: boolean;
 }): Promise<{ host: HTMLElement; inserts: Array<[string, number]> }> {
@@ -255,5 +255,53 @@ describe('PickFieldDialogBody', () => {
 
 		assert.equal(host.querySelector('[role="radiogroup"]')?.hasAttribute('aria-describedby'), false);
 		assert.equal(document.getElementById(hintId), null);
+	});
+});
+
+describe('toInsertPositionItems', () => {
+	it('labels fields by name, data sources by title, and falls back to the id', () => {
+		const items = toInsertPositionItems(
+			[
+				{ id: 'title_t', name: 'Title' },
+				{ id: 'desc_t', name: { id: 'desc', defaultMessage: 'Description' } },
+				{ id: 'components', title: 'Components', type: 'components' },
+				{ id: 'blank_s', title: '' },
+				{ id: 'unnamed_s', name: '' }
+			] as never,
+			intl.formatMessage
+		);
+		assert.deepEqual(items, [
+			{ id: 'title_t', label: 'Title', secondary: 'title_t' },
+			{ id: 'desc_t', label: 'Description', secondary: 'desc_t' },
+			{ id: 'components', label: 'Components', secondary: 'components' },
+			{ id: 'blank_s', label: 'blank_s', secondary: 'blank_s' },
+			{ id: 'unnamed_s', label: 'unnamed_s', secondary: 'unnamed_s' }
+		]);
+	});
+
+	it('shows a field whose name is a message descriptor by its translated text', async () => {
+		const { host } = await renderBody({
+			typesCurrentList: [
+				{ id: 'a', name: 'Alpha' },
+				{ id: 'b', name: { id: 'beta', defaultMessage: 'Beta' } },
+				{ id: 'c', name: 'Gamma' }
+			]
+		});
+
+		await act(async () => {
+			fieldButton(host).click();
+		});
+		const combobox = host.querySelector<HTMLElement>('[role="combobox"]');
+		assert.ok(combobox, 'expected insert-after select');
+		await act(async () => {
+			combobox.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+		});
+
+		// The last item is covered by "Insert last", so the insert-after options stop before it.
+		const options = [...document.querySelectorAll('[role="option"]')];
+		assert.deepEqual(
+			options.map((option) => option.querySelector('span')?.textContent ?? ''),
+			['Alpha', 'Beta']
+		);
 	});
 });

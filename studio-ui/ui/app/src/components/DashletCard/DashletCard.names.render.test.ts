@@ -186,6 +186,57 @@ describe('dashlet header toggle name', () => {
 		assert.equal(button.hasAttribute('aria-label'), false);
 	});
 
+	it('renders the header for a component title with false children and no headerAction', async () => {
+		function Title(props: { children?: React.ReactNode }) {
+			return React.createElement('span', null, 'Activity', props.children);
+		}
+		const host = await render({ title: React.createElement(Title, null, false), headerAction: undefined });
+		const button = toggle(host);
+		assert.ok(button, 'header toggle for <Title>{false}</Title>');
+		assert.equal(button.textContent, 'Activity');
+		assert.equal(button.hasAttribute('aria-label'), false);
+	});
+
+	it('names the toggle when the title text is display: none or visibility: hidden', async () => {
+		for (const [label, style] of [
+			['display: none', { display: 'none' }],
+			['visibility: hidden', { visibility: 'hidden' }]
+		] as const) {
+			const host = await render({ title: React.createElement('span', { style }, 'Activity') });
+			const button = toggle(host);
+			assert.ok(button, label);
+			assert.equal(button.getAttribute('aria-label'), 'Toggle section', label);
+		}
+	});
+
+	it('keeps visually hidden (clipped) title text as the name', async () => {
+		const clipped = {
+			position: 'absolute',
+			width: '1px',
+			height: '1px',
+			overflow: 'hidden',
+			clip: 'rect(0 0 0 0)',
+			whiteSpace: 'nowrap'
+		};
+		const host = await render({ title: React.createElement('span', { style: clipped }, 'Activity') });
+		const button = toggle(host);
+		assert.ok(button);
+		assert.equal(button.hasAttribute('aria-label'), false);
+	});
+
+	it('follows a title whose style hides and shows it again', async () => {
+		const host = await render({ title: React.createElement('span', { id: 'title' }, 'Activity') });
+		const button = toggle(host);
+		assert.ok(button);
+		const title = host.querySelector<HTMLElement>('#title');
+		assert.ok(title);
+		assert.equal(button.hasAttribute('aria-label'), false);
+		await act(async () => title.setAttribute('style', 'display: none'));
+		assert.equal(button.getAttribute('aria-label'), 'Toggle section');
+		await act(async () => title.removeAttribute('style'));
+		assert.equal(button.hasAttribute('aria-label'), false);
+	});
+
 	it('names the toggle when the title text is aria-hidden', async () => {
 		const host = await render({ title: React.createElement('span', { 'aria-hidden': 'true' }, 'Activity') });
 		const button = toggle(host);

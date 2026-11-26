@@ -93,6 +93,26 @@ function omitUndefined(styles: Record<string, unknown>): Record<string, unknown>
 	return result;
 }
 
+/**
+ * Merge two plain style objects so our declarations come after the caller's. MUI's deepmerge keeps a
+ * caller key at its original position, so a caller shorthand that follows it (e.g. `background` after
+ * `backgroundColor`) would set the property again and beat our value. Caller-only keys stay first, in
+ * their order; our keys follow, with nested selectors merged the same way.
+ */
+function mergeOursLast(callerStyles: Record<string, unknown>, ourStyles: Record<string, unknown>) {
+	const result: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(callerStyles)) {
+		if (!(key in ourStyles)) {
+			result[key] = value;
+		}
+	}
+	for (const [key, value] of Object.entries(ourStyles)) {
+		const callerValue = callerStyles[key];
+		result[key] = isPlainObject(callerValue) && isPlainObject(value) ? mergeOursLast(callerValue, value) : value;
+	}
+	return result;
+}
+
 function mergeStyleResults(callerStyles: unknown, ourStyles: unknown): unknown {
 	if (
 		isPlainObject(callerStyles) &&
@@ -103,7 +123,7 @@ function mergeStyleResults(callerStyles: unknown, ourStyles: unknown): unknown {
 		!('variants' in callerStyles) &&
 		!isSerializedStyles(callerStyles)
 	) {
-		return deepmerge(callerStyles, omitUndefined(ourStyles));
+		return mergeOursLast(callerStyles, omitUndefined(ourStyles));
 	}
 	// `&&` overrides return false when the rule does not apply. Keep whichever side has styles.
 	if (callerStyles == null || callerStyles === false) {
