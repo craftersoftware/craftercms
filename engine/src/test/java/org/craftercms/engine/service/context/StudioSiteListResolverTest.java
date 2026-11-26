@@ -17,13 +17,17 @@
 package org.craftercms.engine.service.context;
 
 import com.sun.net.httpserver.HttpServer;
+import org.apache.logging.log4j.Level;
 import org.craftercms.commons.rest.ManagementToken;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,9 +37,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
 
 public class StudioSiteListResolverTest {
 
@@ -136,6 +142,65 @@ public class StudioSiteListResolverTest {
 	}
 
 	@Test
+	public void unresolvableHostNamesTheCause() {
+		assumeFalse("nonexistent.invalid resolves in this environment", resolves("nonexistent.invalid"));
+		String studioUrl = "http://nonexistent.invalid";
+		StudioSiteListResolver resolver = resolver(studioUrl, TOKEN);
+
+		StudioSiteListException error = assertThrows(StudioSiteListException.class, resolver::getSiteList);
+
+		String message = error.getMessage();
+		assertTrue(message, message.startsWith("Unable to connect to Studio: "));
+		assertTrue(message, message.contains("UnresolvedAddressException") || message.contains("ConnectException"));
+		assertConnectionFailureMessage(message, studioUrl);
+	}
+
+	@Test
+	public void closedPortNamesTheCause() throws IOException {
+		int port;
+		try (ServerSocket socket = new ServerSocket(0, 0, InetAddress.getLoopbackAddress())) {
+			port = socket.getLocalPort();
+		}
+		String studioUrl = "http://127.0.0.1:" + port;
+		StudioSiteListResolver resolver = resolver(studioUrl, TOKEN);
+
+		StudioSiteListException error = assertThrows(StudioSiteListException.class, resolver::getSiteList);
+
+		String message = error.getMessage();
+		assertTrue(message, message.startsWith("Unable to connect to Studio: ConnectException"));
+		assertConnectionFailureMessage(message, studioUrl);
+	}
+
+	@Test
+	public void successLogsTheCallAndOutcomeWithoutTheToken() {
+		StudioSiteListResolver resolver = resolver(baseUrl, TOKEN);
+
+		List<String> events;
+		try (LogCapture logs = new LogCapture(StudioSiteListResolver.class, Level.DEBUG)) {
+			resolver.getSiteList();
+			events = logs.events();
+		}
+
+		assertEquals(List.of(
+			"DEBUG Calling Studio site list GET " + baseUrl + StudioSiteListResolver.SITES_PATH,
+			"DEBUG Studio site list returned HTTP 200 with 2 sites"), events);
+	}
+
+	@Test
+	public void siteIdsAreLoggedAtTrace() {
+		StudioSiteListResolver resolver = resolver(baseUrl, TOKEN);
+
+		List<String> events;
+		try (LogCapture logs = new LogCapture(StudioSiteListResolver.class, Level.TRACE)) {
+			resolver.getSiteList();
+			events = logs.events();
+		}
+
+		assertTrue(events.toString(), events.contains("TRACE Studio site list site ids: [editorial, editorial-staging]"));
+		assertFalse(events.toString(), events.toString().contains(TOKEN));
+	}
+
+	@Test
 	public void nonJsonBodyFails() {
 		body = "<html>down</html>";
 		StudioSiteListResolver resolver = resolver(baseUrl, TOKEN);
@@ -167,6 +232,21 @@ public class StudioSiteListResolverTest {
 
 		assertNull(resolver.getSiteList());
 		assertEquals(0, requests.get());
+	}
+
+	private static boolean resolves(String host) {
+		try {
+			InetAddress.getByName(host);
+			return true;
+		} catch (UnknownHostException e) {
+			return false;
+		}
+	}
+
+	private static void assertConnectionFailureMessage(String message, String studioUrl) {
+		assertTrue(message, message.endsWith(" (url: " + studioUrl + StudioSiteListResolver.SITES_PATH + ")"));
+		assertFalse(message, message.contains("null"));
+		assertFalse(message, message.contains(TOKEN));
 	}
 
 	private static StudioSiteListResolver resolver(String studioUrl, String token) {
