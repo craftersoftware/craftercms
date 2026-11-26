@@ -247,6 +247,42 @@ export function applyNodeSelectorMoveToValues(
 	};
 }
 
+/**
+ * Root values for the document that `documentStack` starts at, with the node-selector lists of its open stacked
+ * forms patched in. An open form can hold unsaved items that the root's copy of the embedded item lacks, so the live
+ * lists are what the user sees. The stack runs shallow to deep, so a deeper form's live list is written after the
+ * stale copy its parent form holds.
+ */
+export function readValuesWithOpenForms(
+	store: JotaiStore,
+	documentStack: StableFormContextProps[],
+	rootContentType: ContentType,
+	contentTypesById: LookupTable<ContentType>
+): LookupTable<unknown> {
+	const [rootForm, ...stacked] = documentStack;
+	const rootModelId = String(rootForm.itemMeta.id);
+	let values = extractAtomValues(store, rootForm.atoms.valueByFieldId);
+	for (const form of stacked) {
+		const modelId = String(form.itemMeta?.id ?? form.props?.update?.modelId);
+		const fields = form.itemMeta?.contentType?.fields ?? {};
+		for (const [fieldId, atom] of Object.entries(form.atoms?.valueByFieldId ?? {})) {
+			// Only node-selector fields: updateModelFieldInValues writes any fieldId it is given.
+			if (fields[fieldId]?.type !== 'node-selector') continue;
+			const patched = updateModelFieldFromRoot(
+				values,
+				rootModelId,
+				rootContentType,
+				contentTypesById,
+				modelId,
+				fieldId,
+				() => nodeSelectorItems(store.get(atom))
+			);
+			if (patched) values = patched.values;
+		}
+	}
+	return values;
+}
+
 /** Value atom for `fieldId` on an open stacked form whose model is `modelId`, if any. */
 function stackedFormFieldAtom(formsStackData: StableFormContextProps[], modelId: string, fieldId: string) {
 	for (const entry of formsStackData) {
@@ -269,28 +305,11 @@ export function applyNodeSelectorMove(args: ApplyNodeSelectorMoveArgs): ApplyNod
 	const valueAtoms = rootForm.atoms?.valueByFieldId;
 	if (!valueAtoms) return null;
 
-	const sides = [valueArgs.source, valueArgs.target];
 	const stack = formsStackData && formsStackData.length > 1 ? formsStackData : null;
-	let rootValues = extractAtomValues(store, valueAtoms);
-
-	// Merge live NS lists from open stacked forms into the values tree before splicing.
-	if (stack) {
-		for (const { modelId, fieldId } of sides) {
-			if (modelId === valueArgs.rootModelId) continue;
-			const atom = stackedFormFieldAtom(stack, modelId, fieldId);
-			if (!atom) continue;
-			const patched = updateModelFieldFromRoot(
-				rootValues,
-				valueArgs.rootModelId,
-				valueArgs.rootContentType,
-				valueArgs.contentTypesById,
-				modelId,
-				fieldId,
-				() => nodeSelectorItems(store.get(atom))
-			);
-			if (patched) rootValues = patched.values;
-		}
-	}
+	// Live NS lists from open stacked forms are merged in before splicing.
+	const rootValues = stack
+		? readValuesWithOpenForms(store, stack, valueArgs.rootContentType, valueArgs.contentTypesById)
+		: extractAtomValues(store, valueAtoms);
 
 	const applied = applyNodeSelectorMoveToValues({ ...valueArgs, rootValues });
 	if (!applied) return null;

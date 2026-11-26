@@ -121,20 +121,14 @@ import {
 	isMediaContent
 } from '../../PathNavigator/utils';
 import useSelection from '../../../hooks/useSelection';
-import {
-	extractAtomValues,
-	getFormContextPath,
-	getValidationValue,
-	isFieldReadOnly,
-	showAlert
-} from '../lib/formUtils';
+import { getFormContextPath, getValidationValue, isFieldReadOnly, showAlert } from '../lib/formUtils';
 import {
 	documentFormStack,
 	embeddedItemContentTypeId,
 	enumerateNodeSelectorMoveTargets,
 	type NodeSelectorMoveTarget
 } from '../lib/nodeSelectorMoveTargets';
-import { applyNodeSelectorMove } from '../lib/applyNodeSelectorMove';
+import { applyNodeSelectorMove, readValuesWithOpenForms } from '../lib/applyNodeSelectorMove';
 import { nodeSelectorFocusRequestAtom, useNodeSelectorFocusRequest } from '../lib/nodeSelectorFocusRequest';
 import MoveToFieldDialog from '../components/MoveToFieldDialog';
 import TypeList from '../../ContentTypeManagement/components/TypeList';
@@ -802,7 +796,8 @@ function NodeSelector(props: NodeSelectorProps) {
 	/** List of possible destinations for the move dialog. Calculated when moveDialogItem and index are present. */
 	const moveDialogTargets = useMemo(() => {
 		if (moveDialogItem == null || moveDialogIndex == null) return [];
-		const rootForm = documentFormStack(formsStackData, stableForm)[0];
+		const documentStack = documentFormStack(formsStackData, stableForm);
+		const rootForm = documentStack[0];
 		const rootAtoms = rootForm?.atoms?.valueByFieldId;
 		const rootContentType = rootForm?.itemMeta?.contentType;
 		const rootModelId = rootForm?.itemMeta?.id;
@@ -815,7 +810,7 @@ function NodeSelector(props: NodeSelectorProps) {
 			itemContentTypeId,
 			source: { modelId: id, fieldId: field.id, index: moveDialogIndex },
 			rootModelId,
-			rootValues: extractAtomValues(store, rootAtoms),
+			rootValues: readValuesWithOpenForms(store, documentStack, rootContentType, contentTypes),
 			rootContentType,
 			contentTypesById: contentTypes,
 			formReadonly: readonly

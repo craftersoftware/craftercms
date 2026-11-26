@@ -21,7 +21,9 @@ import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 
-const { applyNodeSelectorMove, applyNodeSelectorMoveToValues } = await import('./applyNodeSelectorMove.ts');
+const { applyNodeSelectorMove, applyNodeSelectorMoveToValues, readValuesWithOpenForms } =
+	await import('./applyNodeSelectorMove.ts');
+const { enumerateNodeSelectorMoveTargets } = await import('./nodeSelectorMoveTargets.ts');
 const { buildContentXml } = await import('./valueSerializers.ts');
 const { createStore } = await import('jotai');
 const { createFieldAtoms, createFormStackData } = await import('./formUtils.tsx');
@@ -313,7 +315,7 @@ describe('applyNodeSelectorMove', () => {
 		}
 
 		const childForm = createFormStackData({
-			itemMeta: { path: '/site/website/index.xml', id: parent.key } as never,
+			itemMeta: { path: '/site/website/index.xml', id: parent.key, contentType: heroContentType } as never,
 			originalValues: { children_o: [] }
 		});
 		childForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
@@ -362,7 +364,7 @@ describe('applyNodeSelectorMove', () => {
 		}
 
 		const childForm = createFormStackData({
-			itemMeta: { path: '/site/website/index.xml', id: parent.key } as never,
+			itemMeta: { path: '/site/website/index.xml', id: parent.key, contentType: heroContentType } as never,
 			originalValues: { children_o: [unsaved] }
 		});
 		childForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
@@ -397,6 +399,63 @@ describe('applyNodeSelectorMove', () => {
 		);
 	});
 
+	it('counts the open stacked-form items when enumerating destinations, not just the root copy', () => {
+		const x = embeddedHero('x', 'X');
+		const a = embeddedHero('a', 'A');
+		const n = embeddedHero('n', 'N');
+		// Root copy of the parent knows only [a]; its open form has [a, n] and maxCount is 2.
+		const parent = embeddedHero('p1', 'Parent', [a]);
+		const store = createStore();
+		const rootForm = createFormStackData({
+			itemMeta: { path: '/site/website/index.xml', id: rootModelId } as never,
+			originalValues: { left_o: [parent, x], right_o: [] }
+		});
+		rootForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
+		for (const field of Object.values(pageType.fields)) {
+			const [valueAtom, validationAtom] = createFieldAtoms(field, rootForm.originalValues[field.id], {
+				current: rootForm
+			});
+			rootForm.atoms.valueByFieldId[field.id] = valueAtom;
+			rootForm.atoms.validationByFieldId[field.id] = validationAtom;
+		}
+
+		const cappedChildren: ContentTypeField = {
+			...heroContentType.fields.children_o,
+			validations: {
+				...heroContentType.fields.children_o.validations,
+				maxCount: { id: 'maxCount', level: 'required', value: 2 }
+			}
+		};
+		const cappedHeroType = { ...heroContentType, fields: { children_o: cappedChildren } };
+		const cappedTypes = { ...contentTypesById, [heroType]: cappedHeroType };
+		const childForm = createFormStackData({
+			itemMeta: { path: '/site/website/index.xml', id: parent.key, contentType: cappedHeroType } as never,
+			originalValues: { children_o: [a, n] }
+		});
+		childForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
+		const [childrenAtom, childrenValidation] = createFieldAtoms(cappedChildren, [a, n], { current: childForm });
+		childForm.atoms.valueByFieldId.children_o = childrenAtom;
+		childForm.atoms.validationByFieldId.children_o = childrenValidation;
+
+		const targets = enumerateNodeSelectorMoveTargets({
+			item: x,
+			itemContentTypeId: heroType,
+			source: { modelId: rootModelId, fieldId: 'left_o', index: 1 },
+			rootModelId,
+			rootValues: readValuesWithOpenForms(store, [rootForm, childForm], pageType, cappedTypes),
+			rootContentType: pageType,
+			contentTypesById: cappedTypes
+		});
+
+		const children = targets.find((target) => target.modelId === parent.key && target.fieldId === 'children_o');
+		assert.equal(children?.disabled, true);
+		assert.equal(children?.reason, 'maxCount');
+		assert.deepEqual(
+			children?.items.map((item) => item.key),
+			['a', 'n']
+		);
+	});
+
 	it('removes from the open stacked-form source list, not a stale root copy', () => {
 		const a = embeddedHero('a', 'A');
 		const b = embeddedHero('b', 'B');
@@ -418,7 +477,7 @@ describe('applyNodeSelectorMove', () => {
 		}
 
 		const childForm = createFormStackData({
-			itemMeta: { path: '/site/website/index.xml', id: parent.key } as never,
+			itemMeta: { path: '/site/website/index.xml', id: parent.key, contentType: heroContentType } as never,
 			originalValues: { children_o: [a, b, c] }
 		});
 		childForm.atoms = { valueByFieldId: {}, validationByFieldId: {} } as never;
