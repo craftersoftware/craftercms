@@ -29,7 +29,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { EmptyState } from '../../EmptyState';
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import InsertPositionPicker from '../../ContentTypeManagement/components/InsertPositionPicker';
 import type { NodeSelectorMoveTarget, NodeSelectorMoveTargetReason } from '../lib/nodeSelectorMoveTargets';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
@@ -71,16 +71,8 @@ export function MoveToFieldDialogBody(props: MoveToFieldDialogBodyProps) {
 	const enabledTargets = useMemo(() => targets.filter((target) => !target.disabled), [targets]);
 	const [selectedKey, setSelectedKey] = useState(() => (enabledTargets[0] ? targetKey(enabledTargets[0]) : ''));
 	const selectedTarget = targets.find((target) => targetKey(target) === selectedKey && !target.disabled) ?? null;
-	const [position, setPosition] = useState(0);
-
-	useEffect(() => {
-		if (!selectedTarget) {
-			setPosition(0);
-			return;
-		}
-		// Default to Insert last when the destination changes.
-		setPosition(selectedTarget.items.length);
-	}, [selectedTarget?.modelId, selectedTarget?.fieldId, selectedTarget?.items.length]);
+	// Insert last by default, for the first destination and whenever the destination changes.
+	const [position, setPosition] = useState(() => enabledTargets[0]?.items.length ?? 0);
 
 	const positionItems = useMemo(
 		() =>
@@ -135,7 +127,9 @@ export function MoveToFieldDialogBody(props: MoveToFieldDialogBodyProps) {
 												selected={selectedKey === key}
 												aria-pressed={selectedKey === key}
 												onClick={() => {
+													if (key === selectedKey) return;
 													setSelectedKey(key);
+													setPosition(target.items.length);
 												}}
 												sx={{ '&.Mui-selected': { backgroundImage: 'none' } }}
 											>
