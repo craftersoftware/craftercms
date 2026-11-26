@@ -31,17 +31,23 @@ export interface TimezoneDescriptor {
 	offset: string;
 }
 
-export const getTimezones = ((zoneNames) => {
-	let timeZones: TimezoneDescriptor[] = [];
-	zoneNames.forEach((name, i) => {
-		timeZones.push({
+let sortedTimezones: TimezoneDescriptor[];
+
+/**
+ * Returns the list of all timezones with their current offset, sorted by offset. The list is built on first call
+ * (not at module evaluation) since building it formats every timezone name, which is costly for something that is
+ * not needed to render the first page.
+ **/
+export const getTimezones = (): TimezoneDescriptor[] => {
+	if (!sortedTimezones) {
+		const timeZones: TimezoneDescriptor[] = moment.tz.names().map((name) => ({
 			name,
-			offset: `${moment.tz(zoneNames[i]).format('Z')}`
-		});
-	});
-	const sorted = timeZones.sort((a, b) => (parseInt(a.offset) > parseInt(b.offset) ? 1 : -1));
-	return () => sorted;
-})(moment.tz.names());
+			offset: `${moment.tz(name).format('Z')}`
+		}));
+		sortedTimezones = timeZones.sort((a, b) => (parseInt(a.offset) > parseInt(b.offset) ? 1 : -1));
+	}
+	return sortedTimezones;
+};
 
 export function asDayMonthDateTime(date: string): string {
 	const parts = getCurrentIntl().formatDateToParts(date, {
