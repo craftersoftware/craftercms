@@ -94,6 +94,12 @@ export function dashboardReady(scope: Locator): ReadyState {
 	};
 }
 
+/** The Search page, ready once its h1 title renders. Shared by the first load and the reloads that wait for the index. */
+export const searchPageReady = (scope: Locator): ReadyState => ({
+	loaded: scope.getByRole('heading', { name: 'Search', level: 1 }),
+	error: errorState(scope)
+});
+
 /**
  * The project tools list, as shown by Project Tools and the tools panel's Project Tools dialog: the "Project Tools"
  * navigation landmark holding a list whose items are tool buttons. The landmark and its list render before the tools

@@ -19,7 +19,15 @@ import { checkA11y } from './axe';
 import { verifyDashboardBaseline, verifySearchBaseline, verifyUsersBaseline } from './baseline';
 import { expect, test } from './fixtures';
 import { previewPage, project } from './env';
-import { dashboardReady, errorState, panelDestination, ReadyState, settle, siteToolsReady } from './readiness';
+import {
+	dashboardReady,
+	errorState,
+	panelDestination,
+	ReadyState,
+	searchPageReady,
+	settle,
+	siteToolsReady
+} from './readiness';
 
 // The drawer root is always laid out; the paper is what becomes hidden when the panel is closed.
 const leftPanel = (page: Page) => page.locator('.MuiDrawer-docked.MuiDrawer-anchorLeft > .MuiDrawer-paper');
@@ -124,10 +132,7 @@ test.describe('Project screens', () => {
 
 	test('search', async ({ page }, testInfo) => {
 		await page.goto('/studio/search');
-		await settle(page, 'search', {
-			loaded: page.getByRole('heading', { name: 'Search', level: 1 }),
-			error: errorState(page.locator('body'))
-		});
+		await settle(page, 'search', searchPageReady(page.locator('body')));
 		await verifySearchBaseline(page.locator('body'), testInfo);
 		await checkA11y(page, testInfo, 'search');
 	});

@@ -16,7 +16,7 @@
 
 import type { Locator, TestInfo } from '@playwright/test';
 import { captureMode } from './capture';
-import { errorState, settle, unpublishedDashlet } from './readiness';
+import { searchPageReady, settle, unpublishedDashlet } from './readiness';
 
 /** What a screen's listing shows: the pager's own total and how many rows (or cards) its first page renders. */
 export interface ListingState {
@@ -299,10 +299,7 @@ export async function settleSearch(
 		await new Promise((resolve) => setTimeout(resolve, Math.min(pollMs, remaining)));
 		const page = scope.page();
 		await page.reload();
-		await settle(page, 'search', {
-			loaded: page.getByRole('heading', { name: 'Search', level: 2 }),
-			error: errorState(page.locator('body'))
-		});
+		await settle(page, 'search', searchPageReady(page.locator('body')));
 	}
 }
 
