@@ -14,10 +14,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useState } from 'react';
-import VideoPlayer, { VideoPlayerProps } from '../VideoPlayer/VideoPlayer';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
+import type { VideoPlayerProps } from '../VideoPlayer/VideoPlayer';
 import '../../styles/async-video-player.scss';
 import { defineMessages, useIntl } from 'react-intl';
+
+// video.js is large, and it's only needed once the video is known to be playable.
+const VideoPlayer = lazy(() => import('../VideoPlayer/VideoPlayer'));
 
 interface AsyncVideoPlayerProps {
 	playerOptions: VideoPlayerProps;
@@ -59,7 +62,15 @@ function AsyncVideoPlayer(props: AsyncVideoPlayerProps) {
 	if (playable) {
 		return (
 			<section className="async-video-player">
-				<VideoPlayer {...playerOptions} />
+				<Suspense
+					fallback={
+						<div className="async-video-player--loading" style={errMessageStyle}>
+							Loading...
+						</div>
+					}
+				>
+					<VideoPlayer {...playerOptions} />
+				</Suspense>
 			</section>
 		);
 	} else {
