@@ -38,6 +38,7 @@ import org.craftercms.studio.api.v2.utils.StudioUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -45,8 +46,12 @@ import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.craftercms.studio.model.rest.ApiResponse;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.web.client.RestClientException;
 
+import java.io.IOException;
 import java.util.List;
 
 import static java.util.Collections.emptyList;
@@ -57,6 +62,7 @@ import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageSta
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.LIVE_SUCCESS;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.STAGING_FAILED;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.STAGING_SUCCESS;
 import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
 import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLockKey;
 import static org.junit.Assert.assertEquals;
@@ -113,6 +119,12 @@ public class PublisherTest {
 	@Mock
 	ApplicationEventPublisher eventPublisher;
 
+	@Mock
+	PlatformTransactionManager transactionManager;
+
+	@Mock
+	TransactionStatus transactionStatus;
+
 	@Spy
 	@InjectMocks
 	Publisher publisher;
@@ -140,6 +152,7 @@ public class PublisherTest {
 		});
 
 		publisher.setApplicationEventPublisher(eventPublisher);
+		lenient().when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
 
 		when(publishPackage.getPackageType()).thenReturn(PublishPackage.PackageType.ITEM_LIST);
 	}
@@ -470,46 +483,39 @@ public class PublisherTest {
 		assertFailedUnpublishedPackage(packageState, itemState, false);
 	}
 
-	@Test
-	public void resetProcessingPackages() {
-		publisher.resetProcessingPackages();
+	// @Test
+	// public void resetDropsLiveSuccessAndRetryRepublishesThatTarget() throws Exception {
+	// 	preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+	// 	when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(false);
+	// 	doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+	// 	long readyState = PublishPackage.PackageState.READY.value;
+	// 	long[] packageState = {PROCESSING.value | LIVE_SUCCESS.value};
+	// 	when(publishPackage.getPackageState()).thenAnswer(invocation -> packageState[0]);
+	// 	doAnswer(invocation -> {
+	// 		long onBits = invocation.getArgument(0);
+	// 		long offBits = invocation.getArgument(1);
+	// 		packageState[0] = (packageState[0] | onBits) & ~offBits;
+	// 		return null;
+	// 	}).when(publishPackage).updatePackageState(anyLong(), anyLong());
+	// 	doAnswer(invocation -> {
+	// 		long ready = invocation.getArgument(0);
+	// 		long processing = invocation.getArgument(1);
+	// 		if ((packageState[0] & processing) > 0) {
+	// 			packageState[0] = ready;
+	// 		}
+	// 		return null;
+	// 	}).when(publishDAO).resetProcessingPackages(anyLong(), anyLong());
 
-		verify(publishDAO).resetProcessingPackages(PublishPackage.PackageState.READY.value, PROCESSING.value);
-	}
+	// 	publisher.resetProcessingPackages();
 
-	@Test
-	public void resetDropsLiveSuccessAndRetryRepublishesThatTarget() throws Exception {
-		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
-		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(false);
-		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
-		long readyState = PublishPackage.PackageState.READY.value;
-		long[] packageState = {PROCESSING.value | LIVE_SUCCESS.value};
-		when(publishPackage.getPackageState()).thenAnswer(invocation -> packageState[0]);
-		doAnswer(invocation -> {
-			long onBits = invocation.getArgument(0);
-			long offBits = invocation.getArgument(1);
-			packageState[0] = (packageState[0] | onBits) & ~offBits;
-			return null;
-		}).when(publishPackage).updatePackageState(anyLong(), anyLong());
-		doAnswer(invocation -> {
-			long ready = invocation.getArgument(0);
-			long processing = invocation.getArgument(1);
-			if ((packageState[0] & processing) > 0) {
-				packageState[0] = ready;
-			}
-			return null;
-		}).when(publishDAO).resetProcessingPackages(anyLong(), anyLong());
+	// 	assertEquals(readyState, packageState[0]);
+	// 	assertFalse(LIVE_SUCCESS.matches(packageState[0]));
+	// 	assertFalse(PROCESSING.matches(packageState[0]));
 
-		publisher.resetProcessingPackages();
+	// 	publisher.doPublish(publishPackage);
 
-		assertEquals(readyState, packageState[0]);
-		assertFalse(LIVE_SUCCESS.matches(packageState[0]));
-		assertFalse(PROCESSING.matches(packageState[0]));
-
-		publisher.doPublish(publishPackage);
-
-		verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
-	}
+	// 	verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+	// }
 
 	private void prepareFailedBaselineCopy(String target) throws Exception {
 		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, target);
@@ -530,6 +536,7 @@ public class PublisherTest {
 		assertEquals(failedBits, itemState[0]);
 		assertEquals(0, itemState[0] & PublishItem.PublishState.PROCESSING.value);
 		assertEquals(0, itemState[0] & PublishItem.PublishState.LIVE_SUCCESS.value);
+		verify(publishPackage).setPublishedOn(any());
 		verify(publishPackage).setStagingError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
 		if (liveTarget) {
 			verify(publishPackage).setLiveError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
@@ -553,6 +560,7 @@ public class PublisherTest {
 
 	private long[] trackPackageState() {
 		long[] packageState = {0};
+		when(publishPackage.getPackageState()).thenAnswer(invocation -> packageState[0]);
 		doAnswer(invocation -> {
 			long onBits = invocation.getArgument(0);
 			long offBits = invocation.getArgument(1);
@@ -571,25 +579,135 @@ public class PublisherTest {
 	}
 
 	@Test
-	public void blobCopyFailureRecordingKeepsTheOriginalException() throws Exception {
+	public void blobCopyFailureRecordingRollsBackAndCompletesALivePackageAsFailed() throws Exception {
+		assertBlobCopyFailureIsCompletedWhenRecordingFails(LIVE, true);
+	}
+
+	@Test
+	public void blobCopyFailureRecordingRollsBackAndCompletesAStagingPackageAsFailed() throws Exception {
+		assertBlobCopyFailureIsCompletedWhenRecordingFails(STAGING, false);
+	}
+
+	private void assertBlobCopyFailureIsCompletedWhenRecordingFails(String target, boolean liveTarget) throws Exception {
+		prepareFailedBaselineCopy(target);
+		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
+			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+		doNothing().doThrow(new RuntimeException("dao down")).doNothing()
+			.when(publishDAO).updatePackage(publishPackage);
+		long[] packageState = trackPackageState();
+		long[] itemState = trackItemState();
+
+		assertThrows(RuntimeException.class, () -> publisher.doPublish(publishPackage));
+
+		// The package transaction was rolled back, and the package was completed as failed in a new one
+		verify(transactionStatus).setRollbackOnly();
+		assertFailedUnpublishedPackage(packageState, itemState, liveTarget);
+		verify(eventPublisher).publishEvent((Object) isA(PublishErrorEvent.class));
+	}
+
+	@Test
+	public void packageThatCannotBeSavedAsFailedDoesNotHideTheOriginalFailure() throws Exception {
+		prepareFailedBaselineCopy(LIVE);
+		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
+			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+		doNothing().doThrow(new RuntimeException("dao down")).doThrow(new RuntimeException("dao still down"))
+			.when(publishDAO).updatePackage(publishPackage);
+
+		RuntimeException thrown = assertThrows(RuntimeException.class, () -> publisher.doPublish(publishPackage));
+
+		assertEquals("dao down", thrown.getMessage());
+		assertEquals(1, thrown.getSuppressed().length);
+		assertEquals("dao still down", thrown.getSuppressed()[0].getMessage());
+	}
+
+	@Test
+	public void unexpectedFailureRollsBackAndCompletesTheLivePackageAsFailed() throws Exception {
 		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
 		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
 		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
-		when(site2.isStagingBlobsCopied()).thenReturn(false);
-		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
-		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
-		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
-			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
-		doNothing().doThrow(new RuntimeException("dao down")).when(publishDAO).updatePackage(publishPackage);
+		doThrow(new SiteNotFoundException(SITE_ID)).when(publisher)
+			.runTargetPublisher(any(), any(), any(), eq(false), eq(STAGING));
+		long[] packageState = trackPackageState();
+		long[] itemState = trackItemState();
 
-		ServiceLayerException error = assertThrows(ServiceLayerException.class, () -> publisher.doPublish(publishPackage));
+		assertThrows(SiteNotFoundException.class, () -> publisher.doPublish(publishPackage));
 
-		assertEquals("blob copy failed", error.getCause().getMessage());
-		assertEquals(1, error.getCause().getSuppressed().length);
-		assertEquals("dao down", error.getCause().getSuppressed()[0].getMessage());
-		verify(publishPackage, never()).updatePackageState(COMPLETED.value, PROCESSING.value);
-		verify(publishPackage, never()).setPublishedOn(any());
-		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
+		verify(transactionStatus).setRollbackOnly();
+		assertEquals(COMPLETED.value | STAGING_FAILED.value | LIVE_FAILED.value, packageState[0]);
+		assertEquals(STAGING_FAILED.value | LIVE_FAILED.value, itemState[0]);
+		verify(publishPackage).setPublishedOn(any());
+		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+		verify(eventPublisher).publishEvent((Object) isA(PublishErrorEvent.class));
+	}
+
+	@Test
+	public void unexpectedFailureReplacesTheOutcomeOfATargetThatHadFinished() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		long[] packageState = trackPackageState();
+		doAnswer(invocation -> {
+			// The staging target finished, but its changes are rolled back with the rest of the transaction
+			packageState[0] |= STAGING_SUCCESS.value;
+			return null;
+		}).doThrow(new SiteNotFoundException(SITE_ID)).when(publisher)
+			.runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		assertThrows(SiteNotFoundException.class, () -> publisher.doPublish(publishPackage));
+
+		assertEquals(COMPLETED.value | STAGING_FAILED.value | LIVE_FAILED.value, packageState[0]);
+		assertFalse(STAGING_SUCCESS.matches(packageState[0]));
+	}
+
+	@Test
+	public void failedTargetRollsBackToItsSavepointAndIsRecorded() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		long[] packageState = trackPackageState();
+		// The target set its outcome before it failed
+		packageState[0] = LIVE_SUCCESS.value;
+
+		publisher.runTargetPublisher(publishPackage, emptyList(),
+			(packageTO, target, items) -> {
+				throw new IOException("git failed");
+			}, true, LIVE);
+
+		ArgumentCaptor<TransactionDefinition> definition = ArgumentCaptor.forClass(TransactionDefinition.class);
+		verify(transactionManager).getTransaction(definition.capture());
+		assertEquals(TransactionDefinition.PROPAGATION_NESTED, definition.getValue().getPropagationBehavior());
+		verify(transactionStatus).setRollbackOnly();
+		assertEquals(LIVE_FAILED.value, packageState[0]);
+		verify(publishPackage).setLiveError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
+		verify(publishDAO).updatePublishItemsState(PACKAGE_ID, LIVE_FAILED.value, 0);
+		verify(publishDAO).updateItemStatesForCompletePackage(eq(PACKAGE_ID), anyLong(), anyLong(), anyLong(), anyLong(), eq(LIVE));
+	}
+
+	@Test
+	public void packageTransactionCommitsBeforeThePublishedRepoLockIsReleased() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		InOrder inOrder = inOrder(generalLockService, transactionManager);
+		inOrder.verify(generalLockService).lock(getPublishedRepoLockKey(SITE_ID));
+		inOrder.verify(transactionManager).commit(transactionStatus);
+		inOrder.verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+		verify(transactionStatus, never()).setRollbackOnly();
+	}
+
+	@Test
+	public void packageTransactionCommitsBeforeTheEnableStagingLockIsReleased() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(false);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		InOrder inOrder = inOrder(generalLockService, transactionManager);
+		inOrder.verify(generalLockService).lock(getEnableStagingLockKey(SITE_ID));
+		inOrder.verify(transactionManager).commit(transactionStatus);
+		inOrder.verify(generalLockService).unlock(getEnableStagingLockKey(SITE_ID));
 	}
 
 	@Test

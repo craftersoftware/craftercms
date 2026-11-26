@@ -28,9 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 
-import static org.craftercms.studio.api.v2.dal.Site.State.READY;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
-import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.READY;
 
 import java.beans.ConstructorProperties;
 import java.util.List;

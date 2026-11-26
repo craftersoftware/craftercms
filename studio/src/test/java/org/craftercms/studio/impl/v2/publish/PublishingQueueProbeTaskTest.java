@@ -15,11 +15,16 @@
  */
 package org.craftercms.studio.impl.v2.publish;
 
+import java.util.Map;
+
+import org.craftercms.studio.api.v2.dal.RetryingDatabaseOperationFacade;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
 import org.junit.Test;
 
-import java.util.Map;
-
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.READY;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -29,30 +34,32 @@ public class PublishingQueueProbeTaskTest {
 
 	@Test
 	public void schedulerStartResetsProcessingPackages() {
-		Publisher publisher = mock(Publisher.class);
-		PublishingQueueProbeTask task = task(publisher);
+		PublishDAO publishDAO = mock(PublishDAO.class);
+		PublishingQueueProbeTask task = task(publishDAO);
 
 		task.doExecute();
 
-		verify(publisher).resetProcessingPackages();
+		verify(publishDAO).resetProcessingPackages(READY.value, PROCESSING.value);
 	}
 
 	@Test
 	public void resetProcessingPackagesRunsOnlyOnce() {
-		Publisher publisher = mock(Publisher.class);
-		PublishingQueueProbeTask task = task(publisher);
+		PublishDAO publishDAO = mock(PublishDAO.class);
+		PublishingQueueProbeTask task = task(publishDAO);
 
 		task.doExecute();
 		task.doExecute();
 
-		verify(publisher, times(1)).resetProcessingPackages();
+		verify(publishDAO, times(1)).resetProcessingPackages(READY.value, PROCESSING.value);
 	}
 
-	private static PublishingQueueProbeTask task(Publisher publisher) {
-		PublishDAO publishDAO = mock(PublishDAO.class);
+	private static PublishingQueueProbeTask task(PublishDAO publishDAO) {
 		when(publishDAO.getNextPublishPackages()).thenReturn(Map.of());
-		PublishingQueueProbeTask task = new PublishingQueueProbeTask(publishDAO, 1);
-		task.setPublisher(publisher);
-		return task;
+		RetryingDatabaseOperationFacade retryingDatabaseOperationFacade = mock(RetryingDatabaseOperationFacade.class);
+		doAnswer(invocation -> {
+			invocation.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(retryingDatabaseOperationFacade).retry(any(Runnable.class));
+		return new PublishingQueueProbeTask(publishDAO, 1, retryingDatabaseOperationFacade);
 	}
 }
