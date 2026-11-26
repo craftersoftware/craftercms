@@ -728,6 +728,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								.map((file, i) => (
 									<ListItemButton
 										selected={file.id === selectedConfigFile?.id}
+										aria-current={file.id === selectedConfigFile?.id ? 'true' : undefined}
 										onClick={() => {
 											if (!disabledSaveButton && file.id !== selectedConfigFile?.id) {
 												showUnsavedChangesConfirm(file);

@@ -131,6 +131,9 @@ test.describe('Project screens', () => {
 		});
 		await expect.soft(nav.getByRole('note'), 'the environment banner is a note').toContainText('Environment');
 		await expect.soft(nav.getByRole('alert'), 'the environment banner must not be an alert').toHaveCount(0);
+		expect
+			.soft(await nav.locator('[aria-current="true"]').count(), 'at most one config file is the current item')
+			.toBeLessThanOrEqual(1);
 		await checkA11y(page, testInfo, 'configuration');
 	});
 
