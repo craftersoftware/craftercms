@@ -314,6 +314,10 @@ export function applyNodeSelectorMove(args: ApplyNodeSelectorMoveArgs): ApplyNod
 	const applied = applyNodeSelectorMoveToValues({ ...valueArgs, rootValues });
 	if (!applied) return null;
 
+	// The splice used the lists on screen, which can include items added or reordered in the open form
+	// and not yet saved. Those lists are written to the parent so the moved item keeps the position the author
+	// picked in that order. Cancelling the embedded form still discards its other edits. These lists remain, and
+	// Undo reverses the move against them.
 	for (const fieldId of applied.changedRootFieldIds) {
 		const atom = valueAtoms[fieldId];
 		if (atom) store.set(atom, applied.rootValues[fieldId]);
