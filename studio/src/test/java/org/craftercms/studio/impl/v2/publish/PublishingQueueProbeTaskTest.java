@@ -26,12 +26,8 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 public class PublishingQueueProbeTaskTest {
@@ -39,28 +35,13 @@ public class PublishingQueueProbeTaskTest {
 	private static final String SITE_ID = "site";
 
 	@Test
-	public void probeDoesNothingBeforeTheResetIsAttempted() {
+	public void probeRequestsQueuedPackages() {
 		PublishDAO publishDAO = mock(PublishDAO.class);
 		ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
-		ProcessingPackagesReset reset = mock(ProcessingPackagesReset.class);
-		when(reset.isResetAttempted()).thenReturn(false);
-
-		task(publishDAO, reset, eventPublisher).doExecute();
-
-		verifyNoInteractions(publishDAO);
-		verifyNoInteractions(eventPublisher);
-	}
-
-	@Test
-	public void probeRequestsQueuedPackagesOnceTheResetIsAttempted() {
-		PublishDAO publishDAO = mock(PublishDAO.class);
-		ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
-		ProcessingPackagesReset reset = mock(ProcessingPackagesReset.class);
-		when(reset.isResetAttempted()).thenReturn(true);
 		when(publishDAO.getNextPublishPackages())
 				.thenReturn(Map.of(SITE_ID, List.of(new PublishPackageId(SITE_ID, 1L), new PublishPackageId(SITE_ID, 2L))));
 
-		task(publishDAO, reset, eventPublisher).doExecute();
+		task(publishDAO, eventPublisher).doExecute();
 
 		ArgumentCaptor<RequestPublishEvent> captor = ArgumentCaptor.forClass(RequestPublishEvent.class);
 		verify(eventPublisher).publishEvent(captor.capture());
@@ -68,24 +49,8 @@ public class PublishingQueueProbeTaskTest {
 		assertEquals(List.of(1L, 2L), List.copyOf(captor.getValue().getPackageIds()));
 	}
 
-	@Test
-	public void probeNeverResetsPackages() {
-		PublishDAO publishDAO = mock(PublishDAO.class);
-		ProcessingPackagesReset reset = mock(ProcessingPackagesReset.class);
-		when(reset.isResetAttempted()).thenReturn(true);
-		when(publishDAO.getNextPublishPackages()).thenReturn(Map.of());
-		PublishingQueueProbeTask task = task(publishDAO, reset, mock(ApplicationEventPublisher.class));
-
-		task.doExecute();
-		task.doExecute();
-
-		verify(publishDAO, never()).resetProcessingPackages(anyLong(), anyLong());
-		verify(reset, never()).resetProcessingPackages();
-	}
-
-	private static PublishingQueueProbeTask task(PublishDAO publishDAO, ProcessingPackagesReset reset,
-												 ApplicationEventPublisher eventPublisher) {
-		PublishingQueueProbeTask task = new PublishingQueueProbeTask(publishDAO, 1, reset);
+	private static PublishingQueueProbeTask task(PublishDAO publishDAO, ApplicationEventPublisher eventPublisher) {
+		PublishingQueueProbeTask task = new PublishingQueueProbeTask(publishDAO, 1);
 		task.setApplicationEventPublisher(eventPublisher);
 		return task;
 	}

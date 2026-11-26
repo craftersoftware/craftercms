@@ -39,22 +39,15 @@ public class PublishingQueueProbeTask extends ThrottledJob implements Applicatio
 	private final PublishDAO publishDAO;
 	private ApplicationEventPublisher eventPublisher;
 	private final int period;
-	private final ProcessingPackagesReset processingPackagesReset;
 
-	@ConstructorProperties({"publishDAO", "period", "processingPackagesReset"})
-	public PublishingQueueProbeTask(final PublishDAO publishDAO, final int period,
-									final ProcessingPackagesReset processingPackagesReset) {
+	@ConstructorProperties({"publishDAO", "period"})
+	public PublishingQueueProbeTask(final PublishDAO publishDAO, final int period) {
 		this.publishDAO = publishDAO;
 		this.period = period;
-		this.processingPackagesReset = processingPackagesReset;
 	}
 
 	@Override
 	public void doExecute() {
-		if (!processingPackagesReset.isResetAttempted()) {
-			logger.debug("The processing publish packages reset has not been attempted yet. Skip probing the publishing queue.");
-			return;
-		}
 		publishDAO.getNextPublishPackages().forEach((siteId, packages) -> {
 			List<Long> packageIds = packages.stream()
 					.map(PublishPackageId::packageId).toList();

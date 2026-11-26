@@ -117,7 +117,6 @@ public class Publisher implements ApplicationEventPublisherAware {
 	private final ActivityStreamService activityService;
 	private final TaskManager taskManager;
 	private final Deployer deployer;
-	private final ProcessingPackagesReset processingPackagesReset;
 	private final SqlSessionTemplate batchSqlSessionTemplate;
 	/**
 	 * Sites whose staging deployer target has already been accepted. A 409 from deployer is success, so remembering
@@ -127,7 +126,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 
 	@ConstructorProperties({"siteDao", "publishDao", "auditService",
 		"contentRepository", "generalLockService", "servicesConfig", "itemTargetDAO", "transactionManager",
-		"activityService", "taskManager", "deployer", "processingPackagesReset", "batchSqlSessionTemplate"})
+		"activityService", "taskManager", "deployer", "batchSqlSessionTemplate"})
 	public Publisher(final SiteDAO siteDao, final PublishDAO publishDao,
 			 final AuditService auditService,
 			 final StudioBlobAwareContentRepository contentRepository,
@@ -138,7 +137,6 @@ public class Publisher implements ApplicationEventPublisherAware {
 			 final ActivityStreamService activityService,
 			 final TaskManager taskManager,
 			 @Qualifier("allDeployers") final Deployer deployer,
-			 final ProcessingPackagesReset processingPackagesReset,
 			 @Qualifier("batchSqlSessionTemplate") final SqlSessionTemplate batchSqlSessionTemplate) {
 		this.siteDao = siteDao;
 		this.publishDao = publishDao;
@@ -151,7 +149,6 @@ public class Publisher implements ApplicationEventPublisherAware {
 		this.activityService = activityService;
 		this.taskManager = taskManager;
 		this.deployer = deployer;
-		this.processingPackagesReset = processingPackagesReset;
 		this.batchSqlSessionTemplate = batchSqlSessionTemplate;
 	}
 
@@ -162,12 +159,6 @@ public class Publisher implements ApplicationEventPublisherAware {
 		Collection<Long> packageIds = event.getPackageIds();
 		String siteId = event.getSiteId();
 		logger.debug("Received request to publish packages '{}' for site: '{}'", packageIds, siteId);
-		if (!processingPackagesReset.isResetAttempted()) {
-			// The packages stay in the queue, the publishing queue probe requests them again once the reset is done
-			logger.info("The processing publish packages reset has not been attempted yet. Deferring the request " +
-					"to publish packages '{}' for site '{}' to the publishing queue", packageIds, siteId);
-			return;
-		}
 		Site site = siteDao.getSite(siteId);
 		if (!site.getPublishingEnabled()) {
 			logger.warn("Site '{}' is not enabled for publishing. Ignoring request to publish packages '{}'", siteId, packageIds);

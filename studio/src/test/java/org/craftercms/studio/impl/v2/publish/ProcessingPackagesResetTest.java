@@ -47,47 +47,24 @@ import static org.mockito.Mockito.verify;
 public class ProcessingPackagesResetTest {
 
 	@Test
-	public void resetIsAttemptedOnlyOnce() {
+	public void resetResetsProcessingPackagesToReady() {
 		PublishDAO publishDao = mock(PublishDAO.class);
 		ProcessingPackagesReset reset = new ProcessingPackagesReset(publishDao, runningFacade());
-		assertFalse(reset.isResetAttempted());
 
-		reset.resetProcessingPackages();
 		reset.resetProcessingPackages();
 
 		verify(publishDao, times(1)).resetProcessingPackages(READY.value, PROCESSING.value);
-		assertTrue(reset.isResetAttempted());
 	}
 
 	@Test
-	public void resetIsNotMarkedAttemptedWhileItRuns() {
-		PublishDAO publishDao = mock(PublishDAO.class);
-		RetryingDatabaseOperationFacade facade = runningFacade();
-		ProcessingPackagesReset reset = new ProcessingPackagesReset(publishDao, facade);
-		boolean[] attemptedDuringReset = {true};
-		doAnswer(invocation -> {
-			attemptedDuringReset[0] = reset.isResetAttempted();
-			return null;
-		}).when(publishDao).resetProcessingPackages(anyLong(), anyLong());
-
-		reset.resetProcessingPackages();
-
-		// A publish request handled while the reset runs is deferred by Publisher
-		assertFalse(attemptedDuringReset[0]);
-		assertTrue(reset.isResetAttempted());
-	}
-
-	@Test
-	public void failedResetIsNotRetriedAndStillMarksTheAttempt() {
+	public void failedResetIsLoggedAndNotThrown() {
 		PublishDAO publishDao = mock(PublishDAO.class);
 		doThrow(new RuntimeException("reset failed")).when(publishDao).resetProcessingPackages(anyLong(), anyLong());
 		ProcessingPackagesReset reset = new ProcessingPackagesReset(publishDao, runningFacade());
 
 		reset.resetProcessingPackages();
-		reset.resetProcessingPackages();
 
 		verify(publishDao, times(1)).resetProcessingPackages(READY.value, PROCESSING.value);
-		assertTrue(reset.isResetAttempted());
 	}
 
 	@Test
@@ -108,7 +85,6 @@ public class ProcessingPackagesResetTest {
 		PublishDAO publishDao = mock(PublishDAO.class);
 		try (GenericApplicationContext context = bootstrapContext(publishDao, steps)) {
 			BootstrapManagerImpl bootstrapManager = context.getBean(BootstrapManagerImpl.class);
-			ProcessingPackagesReset reset = context.getBean(ProcessingPackagesReset.class);
 			doAnswer(invocation -> {
 				steps.add("reset, system ready: " + bootstrapManager.isSystemReady());
 				return null;
@@ -119,7 +95,6 @@ public class ProcessingPackagesResetTest {
 
 			assertEquals(List.of("system upgrade", "reset, system ready: false", "bootstrap finished"), steps);
 			assertTrue(bootstrapManager.isSystemReady());
-			assertTrue(reset.isResetAttempted());
 			verify(publishDao, times(1)).resetProcessingPackages(READY.value, PROCESSING.value);
 		}
 	}
@@ -130,7 +105,6 @@ public class ProcessingPackagesResetTest {
 		PublishDAO publishDao = mock(PublishDAO.class);
 		try (GenericApplicationContext context = bootstrapContext(publishDao, steps)) {
 			BootstrapManagerImpl bootstrapManager = context.getBean(BootstrapManagerImpl.class);
-			ProcessingPackagesReset reset = context.getBean(ProcessingPackagesReset.class);
 			doAnswer(invocation -> {
 				steps.add("reset failed");
 				throw new RuntimeException("reset failed");
@@ -140,7 +114,6 @@ public class ProcessingPackagesResetTest {
 
 			assertEquals(List.of("system upgrade", "reset failed", "bootstrap finished"), steps);
 			assertTrue(bootstrapManager.isSystemReady());
-			assertTrue(reset.isResetAttempted());
 			verify(publishDao, times(1)).resetProcessingPackages(READY.value, PROCESSING.value);
 		}
 	}

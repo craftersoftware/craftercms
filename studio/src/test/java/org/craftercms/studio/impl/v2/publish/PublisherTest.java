@@ -134,9 +134,6 @@ public class PublisherTest {
 	TransactionStatus transactionStatus;
 
 	@Mock
-	ProcessingPackagesReset processingPackagesReset;
-
-	@Mock
 	SqlSessionTemplate batchSqlSessionTemplate;
 
 	@Spy
@@ -166,33 +163,9 @@ public class PublisherTest {
 		});
 
 		publisher.setApplicationEventPublisher(eventPublisher);
-		lenient().when(processingPackagesReset.isResetAttempted()).thenReturn(true);
 		lenient().when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
 
 		when(publishPackage.getPackageType()).thenReturn(PublishPackage.PackageType.ITEM_LIST);
-	}
-
-	@Test
-	public void publishRequestBeforeTheResetIsAttemptedIsDeferred() throws ServiceLayerException {
-		when(processingPackagesReset.isResetAttempted()).thenReturn(false);
-
-		publisher.handleRequestPublishEvent(new RequestPublishEvent(SITE_ID, PACKAGE_ID));
-
-		verify(siteDAO, never()).getSite(anyString());
-		verify(generalLockService, never()).tryLock(anyString());
-		verify(publisher, never()).lockAndPublish(anyLong(), anyLong());
-		verify(publishDAO, never()).getById(anyLong(), anyLong());
-	}
-
-	@Test
-	public void publishRequestAfterTheResetIsAttemptedIsPublished() throws ServiceLayerException {
-		when(generalLockService.tryLock(StudioUtils.getPublishingLockKey(SITE_ID))).thenReturn(true);
-		when(generalLockService.tryLock(StudioUtils.getPublishPackageLockKey(PACKAGE_ID))).thenReturn(false);
-
-		publisher.handleRequestPublishEvent(new RequestPublishEvent(SITE_ID, PACKAGE_ID));
-
-		verify(processingPackagesReset).isResetAttempted();
-		verify(publisher).lockAndPublish(SITE_NUMERIC_ID, PACKAGE_ID);
 	}
 
 	@Test

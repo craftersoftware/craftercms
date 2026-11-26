@@ -542,7 +542,6 @@
 
 	<bean id="publishingQueueProbeTask" class="org.craftercms.studio.impl.v2.publish.PublishingQueueProbeTask">
 		<constructor-arg name="period" value="#{studioConfiguration.getProperty('studio.clockJob.task.publisher.period')}"/>
-		<constructor-arg name="processingPackagesReset" ref="processingPackagesReset"/>
 	</bean>
 
 	<bean id="processingPackagesReset" class="org.craftercms.studio.impl.v2.publish.ProcessingPackagesReset">

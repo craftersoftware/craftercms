@@ -17,7 +17,6 @@
 package org.craftercms.studio.impl.v2.publish;
 
 import java.beans.ConstructorProperties;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.craftercms.studio.api.v2.dal.RetryingDatabaseOperationFacade;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
@@ -38,9 +37,10 @@ import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageSta
  * synchronously during the root application context refresh, so it also runs before the webapp accepts requests.
  * </p>
  * <p>
- * The reset is attempted only once. A failure is logged and does not stop the startup: packages that could not be
- * reset stay {@code PROCESSING}. {@link Publisher} and {@link PublishingQueueProbeTask} do nothing until the reset
- * has been attempted (see {@link #isResetAttempted()}), so no package is published before the attempt.
+ * Publishing only starts once the system is ready: publish requests come from API requests, which are not received
+ * before that, and {@link PublishingQueueProbeTask} runs from the Studio clock, which waits for the system to be
+ * ready. So no package is published before the reset is attempted. A failure is logged and does not stop the
+ * startup: packages that could not be reset stay {@code PROCESSING}.
  * </p>
  */
 public class ProcessingPackagesReset {
@@ -56,8 +56,6 @@ public class ProcessingPackagesReset {
 
 	private final PublishDAO publishDao;
 	private final RetryingDatabaseOperationFacade retryingDatabaseOperationFacade;
-	private final AtomicBoolean resetStarted = new AtomicBoolean(false);
-	private volatile boolean resetAttempted = false;
 
 	@ConstructorProperties({"publishDao", "retryingDatabaseOperationFacade"})
 	public ProcessingPackagesReset(final PublishDAO publishDao,
@@ -67,15 +65,11 @@ public class ProcessingPackagesReset {
 	}
 
 	/**
-	 * Reset the packages left {@code PROCESSING} to {@code READY}. Only the first call runs the reset.
+	 * Reset the packages left {@code PROCESSING} to {@code READY}.
 	 */
 	@Order(RESET_ORDER)
 	@EventListener(StartSystemUpgradeEvent.class)
 	public void resetProcessingPackages() {
-		if (!resetStarted.compareAndSet(false, true)) {
-			logger.debug("Processing publish packages reset was already attempted. Skipping it.");
-			return;
-		}
 		logger.info("Resetting publish packages left processing by a previous run");
 		try {
 			retryingDatabaseOperationFacade.retry(() -> publishDao.resetProcessingPackages(READY.value, PROCESSING.value));
@@ -84,15 +78,5 @@ public class ProcessingPackagesReset {
 			logger.error("Failed to reset the publish packages left processing. The reset will not be retried, " +
 					"and packages that were left processing stay in that state", e);
 		}
-		resetAttempted = true;
-	}
-
-	/**
-	 * Indicates if the reset has been attempted, whether it succeeded or failed.
-	 *
-	 * @return true once the reset attempt has finished
-	 */
-	public boolean isResetAttempted() {
-		return resetAttempted;
 	}
 }
