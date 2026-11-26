@@ -14,11 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import AddIcon from '@mui/icons-material/Add';
 import SkeletonSitesGrid from '../SitesGrid/SitesGridSkeleton';
-import CreateSiteDialog from '../CreateSiteDialog/CreateSiteDialog';
 import ListViewIcon from '@mui/icons-material/ViewStreamRounded';
 import GridViewIcon from '@mui/icons-material/GridOnRounded';
 import Tooltip from '@mui/material/Tooltip';
@@ -34,7 +33,6 @@ import { showSystemNotification } from '../../state/actions/system';
 import { fetchSites, popSite } from '../../state/actions/sites';
 import { ErrorBoundary } from '../ErrorBoundary/ErrorBoundary';
 import SitesGrid from '../SitesGrid/SitesGrid';
-import PublishingStatusDialog from '../PublishingStatusDialog';
 import GlobalAppToolbar from '../GlobalAppToolbar';
 import Button from '@mui/material/Button';
 import { getStoredGlobalMenuSiteViewPreference, setStoredGlobalMenuSiteViewPreference } from '../../utils/state';
@@ -47,7 +45,6 @@ import { useSitesBranch } from '../../hooks/useSitesBranch';
 import Paper from '@mui/material/Paper';
 import { createComponentId, getSystemLink, pushErrorDialog } from '../../utils/system';
 import { useEnhancedDialogState } from '../../hooks/useEnhancedDialogState';
-import { DuplicateSiteDialog } from '../DuplicateSiteDialog';
 import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
 import CardHeader from '@mui/material/CardHeader';
@@ -55,12 +52,18 @@ import { Typography } from '@mui/material';
 import Alert from '@mui/material/Alert';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
-import { ConfirmDialog } from '../ConfirmDialog';
 import { previewSwitch } from '../../services/security';
 import { EmptyState } from '../EmptyState';
 import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 import { ErrorState } from '../ErrorState';
+import { useOpenedOnce } from '../../hooks/useOpenedOnce';
+
+// None of these dialogs are on screen when the page loads, so their code loads the first time they open.
+const CreateSiteDialog = lazy(() => import('../CreateSiteDialog/CreateSiteDialog'));
+const PublishingStatusDialog = lazy(() => import('../PublishingStatusDialog/PublishingStatusDialog'));
+const DuplicateSiteDialog = lazy(() => import('../DuplicateSiteDialog/DuplicateSiteDialog'));
+const ConfirmDialog = lazy(() => import('../ConfirmDialog/ConfirmDialog'));
 
 const translations = defineMessages({
 	siteDeleted: {
@@ -185,6 +188,10 @@ export function SiteManagement() {
 	};
 
 	const publishingStatusDialogState = useEnhancedDialogState();
+	const mountPublishingStatusDialog = useOpenedOnce(publishingStatusDialogState.open);
+	const mountCreateSiteDialog = useOpenedOnce(openCreateSiteDialog);
+	const mountDuplicateSiteDialog = useOpenedOnce(duplicateSiteDialogState.open);
+	const mountConfirmDeleteDialog = useOpenedOnce(confirmDeleteState.open);
 
 	const handleCreateSiteClick = () => setOpenCreateSiteDialog(true);
 
@@ -288,75 +295,91 @@ export function SiteManagement() {
 					<></>
 				)}
 			</ErrorBoundary>
-			<PublishingStatusDialog
-				open={publishingStatusDialogState.open}
-				onClose={publishingStatusDialogState.onClose}
-				isMinimized={publishingStatusDialogState.isMinimized}
-				hasPendingChanges={publishingStatusDialogState.isMinimized}
-				isSubmitting={publishingStatusDialogState.isSubmitting}
-				onClosed={() => {
-					setSelectedSiteStatus(null);
-				}}
-				isFetching={false}
-				{...selectedSiteStatus}
-			/>
-			<CreateSiteDialog
-				open={openCreateSiteDialog}
-				onClose={() => setOpenCreateSiteDialog(false)}
-				onShowDuplicate={() => {
-					setIsDuplicateDialogFromCreateDialog(true);
-					duplicateSiteDialogState.onOpen();
-				}}
-			/>
-			<DuplicateSiteDialog
-				siteId={duplicateSiteId}
-				open={duplicateSiteDialogState.open}
-				onClose={() => {
-					setDuplicateSiteId(null);
-					duplicateSiteDialogState.onClose();
-				}}
-				onGoBack={isDuplicateDialogFromCreateDialog ? createSiteDialogGoBackFromDuplicate : null}
-				hasPendingChanges={duplicateSiteDialogState.hasPendingChanges}
-				isSubmitting={duplicateSiteDialogState.isSubmitting}
-				updateSubmittingOrHasPendingChanges={duplicateSiteDialogState.onSubmittingAndOrPendingChange}
-			/>
-			<ConfirmDialog
-				open={confirmDeleteState.open}
-				body={
-					<>
-						<Typography>
-							<FormattedMessage
-								defaultMessage="Confirm the permanent deletion of the “{siteId}” project."
-								values={{
-									siteId: confirmDeleteState.site?.id
-								}}
-							/>
-						</Typography>
-						<Alert severity="warning" icon={false} sx={{ mt: 2 }}>
-							<FormControlLabel
-								sx={{ textAlign: 'left' }}
-								control={
-									<Checkbox
-										color="primary"
-										checked={confirmDeleteState.checked}
-										onChange={() => setConfirmDeleteState({ checked: !confirmDeleteState.checked })}
+			{mountPublishingStatusDialog && (
+				<Suspense fallback="">
+					<PublishingStatusDialog
+						open={publishingStatusDialogState.open}
+						onClose={publishingStatusDialogState.onClose}
+						isMinimized={publishingStatusDialogState.isMinimized}
+						hasPendingChanges={publishingStatusDialogState.isMinimized}
+						isSubmitting={publishingStatusDialogState.isSubmitting}
+						onClosed={() => {
+							setSelectedSiteStatus(null);
+						}}
+						isFetching={false}
+						{...selectedSiteStatus}
+					/>
+				</Suspense>
+			)}
+			{mountCreateSiteDialog && (
+				<Suspense fallback="">
+					<CreateSiteDialog
+						open={openCreateSiteDialog}
+						onClose={() => setOpenCreateSiteDialog(false)}
+						onShowDuplicate={() => {
+							setIsDuplicateDialogFromCreateDialog(true);
+							duplicateSiteDialogState.onOpen();
+						}}
+					/>
+				</Suspense>
+			)}
+			{mountDuplicateSiteDialog && (
+				<Suspense fallback="">
+					<DuplicateSiteDialog
+						siteId={duplicateSiteId}
+						open={duplicateSiteDialogState.open}
+						onClose={() => {
+							setDuplicateSiteId(null);
+							duplicateSiteDialogState.onClose();
+						}}
+						onGoBack={isDuplicateDialogFromCreateDialog ? createSiteDialogGoBackFromDuplicate : null}
+						hasPendingChanges={duplicateSiteDialogState.hasPendingChanges}
+						isSubmitting={duplicateSiteDialogState.isSubmitting}
+						updateSubmittingOrHasPendingChanges={duplicateSiteDialogState.onSubmittingAndOrPendingChange}
+					/>
+				</Suspense>
+			)}
+			{mountConfirmDeleteDialog && (
+				<Suspense fallback="">
+					<ConfirmDialog
+						open={confirmDeleteState.open}
+						body={
+							<>
+								<Typography>
+									<FormattedMessage
+										defaultMessage="Confirm the permanent deletion of the “{siteId}” project."
+										values={{
+											siteId: confirmDeleteState.site?.id
+										}}
 									/>
-								}
-								label={
-									<FormattedMessage defaultMessage="I understand deleting a project is immediate and irreversible." />
-								}
-							/>
-						</Alert>
-					</>
-				}
-				okButtonText={<FormattedMessage defaultMessage="Delete" />}
-				disableOkButton={!confirmDeleteState.checked}
-				onOk={() => {
-					onConfirmDeleteSite(confirmDeleteState.site);
-					setConfirmDeleteState(confirmDeleteInitialState);
-				}}
-				onCancel={() => setConfirmDeleteState(confirmDeleteInitialState)}
-			/>
+								</Typography>
+								<Alert severity="warning" icon={false} sx={{ mt: 2 }}>
+									<FormControlLabel
+										sx={{ textAlign: 'left' }}
+										control={
+											<Checkbox
+												color="primary"
+												checked={confirmDeleteState.checked}
+												onChange={() => setConfirmDeleteState({ checked: !confirmDeleteState.checked })}
+											/>
+										}
+										label={
+											<FormattedMessage defaultMessage="I understand deleting a project is immediate and irreversible." />
+										}
+									/>
+								</Alert>
+							</>
+						}
+						okButtonText={<FormattedMessage defaultMessage="Delete" />}
+						disableOkButton={!confirmDeleteState.checked}
+						onOk={() => {
+							onConfirmDeleteSite(confirmDeleteState.site);
+							setConfirmDeleteState(confirmDeleteInitialState);
+						}}
+						onCancel={() => setConfirmDeleteState(confirmDeleteInitialState)}
+					/>
+				</Suspense>
+			)}
 		</Paper>
 	);
 }
