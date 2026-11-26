@@ -979,7 +979,11 @@ function NodeSelector(props: NodeSelectorProps) {
 						onClick={(e) => {
 							const index = itemMenu!.index;
 							closeItemMenu();
-							itemMenuCanEdit ? handleEditItem(e, index, false) : handleViewItem(e, index);
+							if (itemMenuCanEdit) {
+								handleEditItem(e, index, false);
+							} else {
+								handleViewItem(e, index);
+							}
 						}}
 					>
 						<ListItemText>
