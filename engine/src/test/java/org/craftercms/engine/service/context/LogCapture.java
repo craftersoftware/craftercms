@@ -16,47 +16,87 @@
 
 package org.craftercms.engine.service.context;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.config.Property;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Captures the log events of one logger while open.
+ * Captures the log events of one logger while open. The logger's configuration is restored on close.
  */
 class LogCapture extends AbstractAppender implements AutoCloseable {
 
-	private final Logger logger;
+	private static final AtomicInteger INSTANCES = new AtomicInteger();
+
+	private final LoggerContext context;
+	private final String loggerName;
+	private final LoggerConfig loggerConfig;
+	private final boolean createdLoggerConfig;
 	private final Level previousLevel;
 	private final List<String> events = new CopyOnWriteArrayList<>();
+	private final List<String> thrown = new CopyOnWriteArrayList<>();
 
 	LogCapture(Class<?> type, Level level) {
-		super("LogCapture-" + type.getSimpleName(), null, null, true, Property.EMPTY_ARRAY);
-		this.logger = (Logger) LogManager.getLogger(type);
-		this.previousLevel = logger.getLevel();
+		super("LogCapture-" + type.getSimpleName() + "-" + INSTANCES.incrementAndGet(), null, null, true,
+			Property.EMPTY_ARRAY);
+		this.context = LoggerContext.getContext(false);
+		this.loggerName = type.getName();
+		Configuration config = context.getConfiguration();
+		LoggerConfig existing = config.getLoggers().get(loggerName);
+		this.createdLoggerConfig = existing == null;
+		if (createdLoggerConfig) {
+			this.loggerConfig = new LoggerConfig(loggerName, level, true);
+			this.previousLevel = null;
+			config.addLogger(loggerName, loggerConfig);
+		} else {
+			this.loggerConfig = existing;
+			this.previousLevel = existing.getLevel();
+			existing.setLevel(level);
+		}
 		start();
-		logger.addAppender(this);
-		logger.setLevel(level);
+		loggerConfig.addAppender(this, null, null);
+		context.updateLoggers();
 	}
 
 	@Override
 	public void append(LogEvent event) {
 		events.add(event.getLevel() + " " + event.getMessage().getFormattedMessage());
+		if (event.getThrown() != null) {
+			thrown.add(ExceptionUtils.getStackTrace(event.getThrown()));
+		}
 	}
 
+	/**
+	 * Returns each event as {@code LEVEL message}.
+	 */
 	List<String> events() {
 		return List.copyOf(events);
 	}
 
+	/**
+	 * Returns every captured message plus the stack traces of logged exceptions.
+	 */
+	String allText() {
+		return String.join("\n", events) + "\n" + String.join("\n", thrown);
+	}
+
 	@Override
 	public void close() {
-		logger.removeAppender(this);
-		logger.setLevel(previousLevel);
+		loggerConfig.removeAppender(getName());
+		if (createdLoggerConfig) {
+			context.getConfiguration().removeLogger(loggerName);
+		} else {
+			loggerConfig.setLevel(previousLevel);
+		}
+		context.updateLoggers();
 		stop();
 	}
 

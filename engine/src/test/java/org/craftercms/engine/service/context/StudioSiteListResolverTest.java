@@ -157,11 +157,7 @@ public class StudioSiteListResolverTest {
 
 	@Test
 	public void closedPortNamesTheCause() throws IOException {
-		int port;
-		try (ServerSocket socket = new ServerSocket(0, 0, InetAddress.getLoopbackAddress())) {
-			port = socket.getLocalPort();
-		}
-		String studioUrl = "http://127.0.0.1:" + port;
+		String studioUrl = closedPortUrl();
 		StudioSiteListResolver resolver = resolver(studioUrl, TOKEN);
 
 		StudioSiteListException error = assertThrows(StudioSiteListException.class, resolver::getSiteList);
@@ -176,14 +172,67 @@ public class StudioSiteListResolverTest {
 		StudioSiteListResolver resolver = resolver(baseUrl, TOKEN);
 
 		List<String> events;
+		String allText;
 		try (LogCapture logs = new LogCapture(StudioSiteListResolver.class, Level.DEBUG)) {
 			resolver.getSiteList();
 			events = logs.events();
+			allText = logs.allText();
 		}
 
-		assertEquals(List.of(
-			"DEBUG Calling Studio site list GET " + baseUrl + StudioSiteListResolver.SITES_PATH,
-			"DEBUG Studio site list returned HTTP 200 with 2 sites"), events);
+		assertTrue(events.toString(),
+			events.contains("DEBUG Calling Studio site list GET " + baseUrl + StudioSiteListResolver.SITES_PATH));
+		assertTrue(events.toString(), events.contains("DEBUG Studio site list returned HTTP 200 with 2 sites"));
+		assertFalse(allText, allText.contains(TOKEN));
+	}
+
+	@Test
+	public void nonOkResponseLogsStatusButNeverTheBody() {
+		String bodyMarker = "STUDIO-401-BODY-MARKER";
+		status = 401;
+		body = "{\"response\":{\"code\":2001,\"message\":\"" + bodyMarker + "\"}}";
+		FallbackSiteListResolver resolver = new FallbackSiteListResolver(List.of(
+			resolver(baseUrl, TOKEN),
+			() -> List.of("from-s3")));
+
+		List<String> studioEvents;
+		String allText;
+		try (LogCapture studioLogs = new LogCapture(StudioSiteListResolver.class, Level.TRACE);
+			 LogCapture fallbackLogs = new LogCapture(FallbackSiteListResolver.class, Level.TRACE)) {
+			assertEquals(List.of("from-s3"), new ArrayList<>(resolver.getSiteList()));
+			studioEvents = studioLogs.events();
+			allText = studioLogs.allText() + fallbackLogs.allText();
+		}
+
+		assertEquals(1, requests.get());
+		assertTrue(studioEvents.toString(), studioEvents.contains("DEBUG Studio site list returned HTTP 401"));
+		assertFalse(allText, allText.contains(bodyMarker));
+		assertFalse(allText, allText.contains(TOKEN));
+	}
+
+	@Test
+	public void unreachableStudioLogsOneWarningWithTheCauseAndUrl() throws IOException {
+		String studioUrl = closedPortUrl();
+		FallbackSiteListResolver resolver = new FallbackSiteListResolver(List.of(
+			resolver(studioUrl, TOKEN),
+			() -> List.of("from-s3")));
+
+		List<String> fallbackEvents;
+		String allText;
+		try (LogCapture studioLogs = new LogCapture(StudioSiteListResolver.class, Level.TRACE);
+			 LogCapture fallbackLogs = new LogCapture(FallbackSiteListResolver.class, Level.TRACE)) {
+			assertEquals(List.of("from-s3"), new ArrayList<>(resolver.getSiteList()));
+			fallbackEvents = fallbackLogs.events();
+			allText = studioLogs.allText() + fallbackLogs.allText();
+		}
+
+		List<String> warnings = fallbackEvents.stream().filter(event -> event.startsWith("WARN ")).toList();
+		assertEquals(fallbackEvents.toString(), 1, warnings.size());
+		String warning = warnings.get(0);
+		assertTrue(warning, warning.startsWith(
+			"WARN Unable to list sites using StudioSiteListResolver (Unable to connect to Studio: ConnectException"));
+		assertTrue(warning, warning.endsWith("(url: " + studioUrl + StudioSiteListResolver.SITES_PATH + "))"));
+		assertFalse(warning, warning.contains("null"));
+		assertFalse(allText, allText.contains(TOKEN));
 	}
 
 	@Test
@@ -232,6 +281,14 @@ public class StudioSiteListResolverTest {
 
 		assertNull(resolver.getSiteList());
 		assertEquals(0, requests.get());
+	}
+
+	private static String closedPortUrl() throws IOException {
+		int port;
+		try (ServerSocket socket = new ServerSocket(0, 0, InetAddress.getLoopbackAddress())) {
+			port = socket.getLocalPort();
+		}
+		return "http://127.0.0.1:" + port;
 	}
 
 	private static boolean resolves(String host) {
