@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import AddIcon from '@mui/icons-material/Add';
 import SkeletonSitesGrid from '../SitesGrid/SitesGridSkeleton';
@@ -58,17 +58,24 @@ import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 import { ErrorState } from '../ErrorState';
 import { useOpenedOnce } from '../../hooks/useOpenedOnce';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
+import { LazyDialogBoundary } from '../LazyDialogBoundary';
 
-// None of these dialogs are on screen when the page loads, so their code loads the first time they open.
-const CreateSiteDialog = lazy(() => import('../CreateSiteDialog/CreateSiteDialog'));
-const PublishingStatusDialog = lazy(() => import('../PublishingStatusDialog/PublishingStatusDialog'));
-const DuplicateSiteDialog = lazy(() => import('../DuplicateSiteDialog/DuplicateSiteDialog'));
-const ConfirmDialog = lazy(() => import('../ConfirmDialog/ConfirmDialog'));
+// None of these dialogs are on screen when the page loads, so their code loads the first time they open. A failed
+// load is contained by a LazyDialogBoundary and retried the next time the dialog opens.
+const CreateSiteDialog = lazyWithRetry(() => import('../CreateSiteDialog/CreateSiteDialog'));
+const PublishingStatusDialog = lazyWithRetry(() => import('../PublishingStatusDialog/PublishingStatusDialog'));
+const DuplicateSiteDialog = lazyWithRetry(() => import('../DuplicateSiteDialog/DuplicateSiteDialog'));
+const ConfirmDialog = lazyWithRetry(() => import('../ConfirmDialog/ConfirmDialog'));
 
 const translations = defineMessages({
 	siteDeleted: {
 		id: 'sitesGrid.siteDeleted',
 		defaultMessage: 'Project deleted successfully'
+	},
+	dialogLoadFailed: {
+		id: 'sitesGrid.dialogLoadFailed',
+		defaultMessage: 'The dialog could not be loaded. Check your connection and try again.'
 	}
 });
 
@@ -193,6 +200,14 @@ export function SiteManagement() {
 	const mountDuplicateSiteDialog = useOpenedOnce(duplicateSiteDialogState.open);
 	const mountConfirmDeleteDialog = useOpenedOnce(confirmDeleteState.open);
 
+	const onDialogLoadError = (closeDialog: () => void) => (error: Error) => {
+		console.error(error);
+		closeDialog();
+		dispatch(
+			showSystemNotification({ message: formatMessage(translations.dialogLoadFailed), options: { variant: 'error' } })
+		);
+	};
+
 	const handleCreateSiteClick = () => setOpenCreateSiteDialog(true);
 
 	const hasCreateSitePermission = permissionsLookup['create_site'];
@@ -296,89 +311,119 @@ export function SiteManagement() {
 				)}
 			</ErrorBoundary>
 			{mountPublishingStatusDialog && (
-				<Suspense fallback="">
-					<PublishingStatusDialog
-						open={publishingStatusDialogState.open}
-						onClose={publishingStatusDialogState.onClose}
-						isMinimized={publishingStatusDialogState.isMinimized}
-						hasPendingChanges={publishingStatusDialogState.isMinimized}
-						isSubmitting={publishingStatusDialogState.isSubmitting}
-						onClosed={() => {
-							setSelectedSiteStatus(null);
-						}}
-						isFetching={false}
-						{...selectedSiteStatus}
-					/>
-				</Suspense>
+				<LazyDialogBoundary
+					dialog={PublishingStatusDialog}
+					open={publishingStatusDialogState.open}
+					onError={onDialogLoadError(() => {
+						publishingStatusDialogState.onClose();
+						setSelectedSiteStatus(null);
+					})}
+				>
+					<Suspense fallback="">
+						<PublishingStatusDialog
+							open={publishingStatusDialogState.open}
+							onClose={publishingStatusDialogState.onClose}
+							isMinimized={publishingStatusDialogState.isMinimized}
+							hasPendingChanges={publishingStatusDialogState.isMinimized}
+							isSubmitting={publishingStatusDialogState.isSubmitting}
+							onClosed={() => {
+								setSelectedSiteStatus(null);
+							}}
+							isFetching={false}
+							{...selectedSiteStatus}
+						/>
+					</Suspense>
+				</LazyDialogBoundary>
 			)}
 			{mountCreateSiteDialog && (
-				<Suspense fallback="">
-					<CreateSiteDialog
-						open={openCreateSiteDialog}
-						onClose={() => setOpenCreateSiteDialog(false)}
-						onShowDuplicate={() => {
-							setIsDuplicateDialogFromCreateDialog(true);
-							duplicateSiteDialogState.onOpen();
-						}}
-					/>
-				</Suspense>
+				<LazyDialogBoundary
+					dialog={CreateSiteDialog}
+					open={openCreateSiteDialog}
+					onError={onDialogLoadError(() => setOpenCreateSiteDialog(false))}
+				>
+					<Suspense fallback="">
+						<CreateSiteDialog
+							open={openCreateSiteDialog}
+							onClose={() => setOpenCreateSiteDialog(false)}
+							onShowDuplicate={() => {
+								setIsDuplicateDialogFromCreateDialog(true);
+								duplicateSiteDialogState.onOpen();
+							}}
+						/>
+					</Suspense>
+				</LazyDialogBoundary>
 			)}
 			{mountDuplicateSiteDialog && (
-				<Suspense fallback="">
-					<DuplicateSiteDialog
-						siteId={duplicateSiteId}
-						open={duplicateSiteDialogState.open}
-						onClose={() => {
-							setDuplicateSiteId(null);
-							duplicateSiteDialogState.onClose();
-						}}
-						onGoBack={isDuplicateDialogFromCreateDialog ? createSiteDialogGoBackFromDuplicate : null}
-						hasPendingChanges={duplicateSiteDialogState.hasPendingChanges}
-						isSubmitting={duplicateSiteDialogState.isSubmitting}
-						updateSubmittingOrHasPendingChanges={duplicateSiteDialogState.onSubmittingAndOrPendingChange}
-					/>
-				</Suspense>
+				<LazyDialogBoundary
+					dialog={DuplicateSiteDialog}
+					open={duplicateSiteDialogState.open}
+					onError={onDialogLoadError(() => {
+						setDuplicateSiteId(null);
+						duplicateSiteDialogState.onClose();
+					})}
+				>
+					<Suspense fallback="">
+						<DuplicateSiteDialog
+							siteId={duplicateSiteId}
+							open={duplicateSiteDialogState.open}
+							onClose={() => {
+								setDuplicateSiteId(null);
+								duplicateSiteDialogState.onClose();
+							}}
+							onGoBack={isDuplicateDialogFromCreateDialog ? createSiteDialogGoBackFromDuplicate : null}
+							hasPendingChanges={duplicateSiteDialogState.hasPendingChanges}
+							isSubmitting={duplicateSiteDialogState.isSubmitting}
+							updateSubmittingOrHasPendingChanges={duplicateSiteDialogState.onSubmittingAndOrPendingChange}
+						/>
+					</Suspense>
+				</LazyDialogBoundary>
 			)}
 			{mountConfirmDeleteDialog && (
-				<Suspense fallback="">
-					<ConfirmDialog
-						open={confirmDeleteState.open}
-						body={
-							<>
-								<Typography>
-									<FormattedMessage
-										defaultMessage="Confirm the permanent deletion of the “{siteId}” project."
-										values={{
-											siteId: confirmDeleteState.site?.id
-										}}
-									/>
-								</Typography>
-								<Alert severity="warning" icon={false} sx={{ mt: 2 }}>
-									<FormControlLabel
-										sx={{ textAlign: 'left' }}
-										control={
-											<Checkbox
-												color="primary"
-												checked={confirmDeleteState.checked}
-												onChange={() => setConfirmDeleteState({ checked: !confirmDeleteState.checked })}
-											/>
-										}
-										label={
-											<FormattedMessage defaultMessage="I understand deleting a project is immediate and irreversible." />
-										}
-									/>
-								</Alert>
-							</>
-						}
-						okButtonText={<FormattedMessage defaultMessage="Delete" />}
-						disableOkButton={!confirmDeleteState.checked}
-						onOk={() => {
-							onConfirmDeleteSite(confirmDeleteState.site);
-							setConfirmDeleteState(confirmDeleteInitialState);
-						}}
-						onCancel={() => setConfirmDeleteState(confirmDeleteInitialState)}
-					/>
-				</Suspense>
+				<LazyDialogBoundary
+					dialog={ConfirmDialog}
+					open={confirmDeleteState.open}
+					onError={onDialogLoadError(() => setConfirmDeleteState(confirmDeleteInitialState))}
+				>
+					<Suspense fallback="">
+						<ConfirmDialog
+							open={confirmDeleteState.open}
+							body={
+								<>
+									<Typography>
+										<FormattedMessage
+											defaultMessage="Confirm the permanent deletion of the “{siteId}” project."
+											values={{
+												siteId: confirmDeleteState.site?.id
+											}}
+										/>
+									</Typography>
+									<Alert severity="warning" icon={false} sx={{ mt: 2 }}>
+										<FormControlLabel
+											sx={{ textAlign: 'left' }}
+											control={
+												<Checkbox
+													color="primary"
+													checked={confirmDeleteState.checked}
+													onChange={() => setConfirmDeleteState({ checked: !confirmDeleteState.checked })}
+												/>
+											}
+											label={
+												<FormattedMessage defaultMessage="I understand deleting a project is immediate and irreversible." />
+											}
+										/>
+									</Alert>
+								</>
+							}
+							okButtonText={<FormattedMessage defaultMessage="Delete" />}
+							disableOkButton={!confirmDeleteState.checked}
+							onOk={() => {
+								onConfirmDeleteSite(confirmDeleteState.site);
+								setConfirmDeleteState(confirmDeleteInitialState);
+							}}
+							onCancel={() => setConfirmDeleteState(confirmDeleteInitialState)}
+						/>
+					</Suspense>
+				</LazyDialogBoundary>
 			)}
 		</Paper>
 	);
