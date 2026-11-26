@@ -25,7 +25,7 @@ export const translations = {
 	}),
 	policyError: defineMessage<{ readonly detail: MessageValue; readonly fileName: MessageValue }>({
 		defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
-	}),
+	})
 };
 
 export default translations;

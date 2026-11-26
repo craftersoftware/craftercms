@@ -63,7 +63,10 @@ const messages = {
 		},
 		noChanges: { defaultMessage: 'No changes detected' }
 	}),
-	requiredFileNameAndInternalName: defineMessage<{ readonly fileName: MessageValue; readonly internalName: MessageValue }>({
+	requiredFileNameAndInternalName: defineMessage<{
+		readonly fileName: MessageValue;
+		readonly internalName: MessageValue;
+	}>({
 		defaultMessage: '{fileName} and {internalName} are required to save'
 	}),
 	requiredFileName: defineMessage<{ readonly fileName: MessageValue }>({
