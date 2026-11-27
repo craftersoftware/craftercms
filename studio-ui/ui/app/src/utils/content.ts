@@ -87,6 +87,7 @@ import { nanoid } from 'nanoid';
 import { createComponentId, showContentFormAction } from './system';
 import { popCodeEditorDialog } from '../state/actions/dialogs';
 import { ImageRestrictions } from '../components/ImageEditorDialog/types';
+import { AdditionalFieldsControlLookup, isCompanionFieldTag } from './additionalFields';
 
 export function isEditableAsset(path: string) {
 	return (
@@ -245,7 +246,8 @@ export function parseContentXML(
 	path: string = null,
 	contentTypesLookup: LookupTable<ContentType>,
 	instanceLookup: LookupTable<ContentInstance>,
-	unflattenedPaths?: LookupTable<ContentInstance>
+	unflattenedPaths?: LookupTable<ContentInstance>,
+	controls?: AdditionalFieldsControlLookup
 ): ContentInstance {
 	let id = nnou(doc) ? getInnerHtml(doc.querySelector(':scope > objectId')) : null;
 	if (id === null && !/^[a-f\d]{4}(?:[a-f\d]{4}-){4}[a-f\d]{12}$/i.test((id = fileNameFromPath(path)))) {
@@ -293,16 +295,12 @@ export function parseContentXML(
 						);
 					}
 				}
-				const field = contentTypesLookup[sourceContentTypeId ?? contentTypeId]?.fields?.[tagName];
+				const contentTypeFields = contentTypesLookup[sourceContentTypeId ?? contentTypeId]?.fields;
+				const field = contentTypeFields?.[tagName];
 				if (!field) {
-					// date-time control handles the timezone field using {controlName}_tz format. So if the field without `tz` is
-					// found in the content type, we can ignore the `tz` field (and don't log an error).
-					let isTimezoneField = false;
-					if (tagName.endsWith('_tz')) {
-						const withoutTz = tagName.replace(/_tz$/, '');
-						isTimezoneField = Boolean(contentTypesLookup[sourceContentTypeId ?? contentTypeId]?.fields?.[withoutTz]);
-					}
-					if (!isTimezoneField) {
+					// Companions (e.g. `{id}_tz`, `{id}_bk`) are not content-type fields. Prefer persisted
+					// additionalFields, then control-descriptor patterns when `controls` is provided.
+					if (!isCompanionFieldTag(tagName, contentTypeFields, controls)) {
 						console.error(
 							`[parseContentXML] Field "${tagName}" was not found on "${
 								sourceContentTypeId ?? contentTypeId
@@ -315,7 +313,8 @@ export function parseContentXML(
 					field,
 					contentTypesLookup,
 					instanceLookup,
-					unflattenedPaths
+					unflattenedPaths,
+					controls
 				);
 			}
 		});
@@ -335,7 +334,8 @@ export function parseElementByContentType(
 	field: ContentTypeField,
 	contentTypesLookup: LookupTable<ContentType>,
 	instanceLookup: LookupTable<ContentInstance>,
-	unflattenedPaths?: LookupTable<ContentInstance>
+	unflattenedPaths?: LookupTable<ContentInstance>,
+	controls?: AdditionalFieldsControlLookup
 ) {
 	if (!field) {
 		return getInnerHtml(element) ?? '';
@@ -358,7 +358,8 @@ export function parseElementByContentType(
 						field.fields[fieldTagName],
 						contentTypesLookup,
 						instanceLookup,
-						unflattenedPaths
+						unflattenedPaths,
+						controls
 					);
 				});
 				array.push(repeatItem);
@@ -400,7 +401,8 @@ export function parseElementByContentType(
 								path,
 								contentTypesLookup,
 								instanceLookup,
-								unflattenedPaths
+								unflattenedPaths,
+								controls
 							);
 							array.push(instance);
 						}
@@ -437,13 +439,23 @@ export function parseElementByContentType(
 			return getInnerHtml(element) === 'true';
 		case 'numeric-input':
 			return getInnerHtmlNumber(element, parseFloat);
-		default:
-			!['transcoded-video', 'transcoded-video-picker', 'taxonomy-selector', 'video-picker'].includes(type) &&
+		default: {
+			// External plugin controls intentionally fall through to generic deserialize.
+			// Custom typing belongs on FormsEngine's valueRetriever / valueSerializer.
+			const isPluginControl = Boolean(field.properties?.plugin);
+			const isKnownDefaultFallthrough = [
+				'transcoded-video',
+				'transcoded-video-picker',
+				'taxonomy-selector',
+				'video-picker'
+			].includes(type);
+			if (!isPluginControl && !isKnownDefaultFallthrough) {
 				console.log(
 					`%c[parseElementByContentType] Missing type "${type}" on switch statement for field "${field.id}".`,
 					'color: blue',
 					element
 				);
+			}
 			try {
 				const extract: any = deserialize(element)?.[element.tagName] ?? '';
 				return extract.item ? (Array.isArray(extract.item) ? extract.item : [extract.item]) : extract;
@@ -451,6 +463,7 @@ export function parseElementByContentType(
 				console.error('[parseElementByContentType] Error deserializing element', element, e);
 				return getInnerHtml(element);
 			}
+		}
 	}
 }
 

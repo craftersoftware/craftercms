@@ -218,6 +218,7 @@ import type {
 	ResolvedDataSourceAction
 } from '../FormsEngine/dataSources/types';
 import { getField } from '../../utils/contentType';
+import { AdditionalFieldsControlLookup } from '../../utils/additionalFields';
 
 const issueDescriptorRequest = (props: {
 	site: string;
@@ -228,6 +229,7 @@ const issueDescriptorRequest = (props: {
 	dispatch: Dispatch;
 	completeActionCreator: ActionCreatorWithOptionalPayload<any>;
 	permissions: string[];
+	controls?: AdditionalFieldsControlLookup;
 }) => {
 	const {
 		site,
@@ -237,12 +239,13 @@ const issueDescriptorRequest = (props: {
 		flatten = true,
 		dispatch,
 		completeActionCreator,
-		permissions
+		permissions,
+		controls
 	} = props;
 	const hostToGuest$ = getHostToGuestBus();
 	const guestToHost$ = getGuestToHostBus();
 
-	fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes)
+	fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes, controls)
 		.pipe(
 			// If another check in comes while loading, this request should be cancelled.
 			// This may happen if navigating rapidly from one page to another (guest-side).
@@ -262,14 +265,14 @@ const issueDescriptorRequest = (props: {
 							}
 							if (!requestedSourceMapPaths.current[path]) {
 								requestedSourceMapPaths.current[path] = true;
-								requests.push(fetchContentInstance(site, path, contentTypes));
+								requests.push(fetchContentInstance(site, path, contentTypes, controls));
 							}
 						});
 					}
 				});
 				Object.keys(modelResponse.unflattenedPaths).forEach((path) => {
 					contentItemPaths.push(path);
-					requests.push(fetchContentInstance(site, path, contentTypes));
+					requests.push(fetchContentInstance(site, path, contentTypes, controls));
 				});
 				return forkJoin({
 					contentItems: fetchContentItems(site, contentItemPaths),
@@ -417,6 +420,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		guestBase,
 		rteConfig,
 		contentTypes,
+		controls: uiConfig.controls,
 		xsrfArgument,
 		hierarchyMap,
 		highlightMode,
@@ -727,6 +731,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				dispatch,
 				guestBase,
 				contentTypes,
+				controls,
 				hierarchyMap,
 				authoringBase,
 				formatMessage,
@@ -785,6 +790,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 							site: siteId,
 							path,
 							contentTypes,
+							controls: upToDateRefs.current.controls,
 							requestedSourceMapPaths,
 							dispatch,
 							completeActionCreator: fetchPrimaryGuestModelComplete,
@@ -847,6 +853,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								site: siteId,
 								path,
 								contentTypes,
+								controls: upToDateRefs.current.controls,
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchPrimaryGuestModelComplete,
@@ -863,6 +870,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								site: siteId,
 								path: payload.path,
 								contentTypes,
+								controls: upToDateRefs.current.controls,
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchGuestModelsComplete,
@@ -906,7 +914,9 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								updatedDocument,
 								parentModelId ? models[parentModelId].craftercms.path : models[modelId].craftercms.path,
 								contentTypes,
-								updatedModels
+								updatedModels,
+								undefined,
+								controls
 							);
 							dispatch(guestModelUpdated({ model: normalizeModel(updatedModels[modelId]) }));
 
@@ -914,6 +924,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								site: siteId,
 								path: path ?? models[parentModelId].craftercms.path,
 								contentTypes,
+								controls,
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchGuestModelsComplete,
@@ -1001,6 +1012,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								site: siteId,
 								path: path ?? models[parentModelId].craftercms.path,
 								contentTypes,
+								controls,
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchGuestModelsComplete,
@@ -1054,6 +1066,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								site: siteId,
 								path: newItem.path,
 								contentTypes,
+								controls,
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchGuestModelsComplete,
@@ -1149,6 +1162,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								site: siteId,
 								path: path ?? models[parentModelId].craftercms.path,
 								contentTypes,
+								controls,
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchGuestModelsComplete,

@@ -22,6 +22,7 @@ import React from 'react';
 import useItemsByPath from '../../../hooks/useItemsByPath';
 import { useVersionsDialogContext } from '../../CompareVersionsDialog/VersionsDialogContext';
 import useContentTypes from '../../../hooks/useContentTypes';
+import useSelection from '../../../hooks/useSelection';
 import { parseElementByContentType } from '../../../utils/content';
 import { fromString } from '../../../utils/xml';
 import { ViewComponentBaseProps } from '../utils';
@@ -33,8 +34,16 @@ export function NodeSelector(props: NodeSelectorViewProps) {
 	const itemsByPath = useItemsByPath();
 	const [, contextApiRef] = useVersionsDialogContext();
 	const contentTypes = useContentTypes();
+	const controls = useSelection((state) => state.uiConfig?.controls);
 	const content = xml
-		? parseElementByContentType(fromString(xml).querySelector(field.id) || null, field, contentTypes, {})
+		? parseElementByContentType(
+				fromString(xml).querySelector(field.id) || null,
+				field,
+				contentTypes,
+				{},
+				undefined,
+				controls
+			)
 		: [];
 
 	const getItemLabel = (item: ContentInstance): string => {

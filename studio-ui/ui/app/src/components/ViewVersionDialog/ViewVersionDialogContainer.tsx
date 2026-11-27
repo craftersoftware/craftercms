@@ -19,6 +19,8 @@ import DialogBody from '../DialogBody/DialogBody';
 import React, { createContext, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchContentByCommitId } from '../../services/content';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
+import { useContentTypes } from '../../hooks/useContentTypes';
+import useSelection from '../../hooks/useSelection';
 import { getContentInstanceValueFromProp, parseContentXML } from '../../utils/content';
 import { fromString } from '../../utils/xml';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
@@ -49,19 +51,21 @@ import TextView from './FieldTypesViews/TextView';
 const VersionDialogContext = createContext(null);
 
 export function ViewVersionDialogContainer(props: ViewVersionDialogContainerProps) {
-	const { version, contentTypesBranch, showXml, data: preFetchedData, error } = props;
+	const { version, showXml, data: preFetchedData, error } = props;
 	const [content, setContent] = useState<ContentInstance>(preFetchedData?.content);
 	const [xml, setXml] = useState<string>(preFetchedData?.xml);
 	const siteId = useActiveSiteId();
+	const contentTypesById = useContentTypes();
+	const controls = useSelection((state) => state.uiConfig?.controls);
 	const { formatMessage } = useIntl();
 	const contentTypeFields: ContentTypeField[] = useMemo(() => {
-		return content && (preFetchedData?.fields || contentTypesBranch?.byId[content.craftercms.contentTypeId].fields)
+		return content && (preFetchedData?.fields || contentTypesById?.[content.craftercms.contentTypeId].fields)
 			? [
-					...Object.values(preFetchedData?.fields ?? contentTypesBranch?.byId[content.craftercms.contentTypeId].fields),
+					...Object.values(preFetchedData?.fields ?? contentTypesById?.[content.craftercms.contentTypeId].fields),
 					...(content.craftercms ? getStudioContentInternalFields(formatMessage) : [])
 				]
 			: [];
-	}, [content, contentTypesBranch?.byId, formatMessage, preFetchedData?.fields]);
+	}, [content, contentTypesById, formatMessage, preFetchedData?.fields]);
 	const [{ fieldsViewState }] = useVersionsDialogContext();
 	const isViewDataReady = Boolean(content && xml);
 	const [selectedField, setSelectedField] = useState<ContentTypeField>(null);
@@ -83,11 +87,13 @@ export function ViewVersionDialogContainer(props: ViewVersionDialogContainerProp
 	useEffect(() => {
 		if (version) {
 			fetchContentByCommitId(siteId, version.path, version.versionNumber).subscribe((content) => {
-				setContent(parseContentXML(fromString(content as string), version.path, contentTypesBranch.byId, {}));
+				setContent(
+					parseContentXML(fromString(content as string), version.path, contentTypesById, {}, undefined, controls)
+				);
 				setXml(content as string);
 			});
 		}
-	}, [version, siteId, contentTypesBranch]);
+	}, [version, siteId, contentTypesById, controls]);
 
 	useEffect(() => {
 		if (contentTypeFields?.length) {

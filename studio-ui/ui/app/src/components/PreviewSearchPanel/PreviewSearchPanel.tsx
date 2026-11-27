@@ -133,6 +133,7 @@ export function PreviewSearchPanel() {
 	});
 	const dispatch = useDispatch();
 	const editMode = useSelection((state) => state.preview.editMode);
+	const controls = useSelection((state) => state.uiConfig?.controls);
 	const allowedTypesData = useSelection((state) => state.preview.guest?.allowedContentTypes);
 	const contentTypesUpdated = useSelection((state) => state.preview.guest?.contentTypesUpdated);
 	const awaitingGuestCheckIn = nou(allowedTypesData);
@@ -165,7 +166,7 @@ export function PreviewSearchPanel() {
 						const requests: Array<Observable<ContentInstance>> = [];
 						result.items.forEach((item) => {
 							if (item.type === 'Component') {
-								requests.push(fetchContentInstance(site, item.path, contentTypesLookup));
+								requests.push(fetchContentInstance(site, item.path, contentTypesLookup, controls));
 							}
 						});
 						return requests.length
@@ -199,7 +200,7 @@ export function PreviewSearchPanel() {
 					}
 				});
 		},
-		[setState, site, unMount$, contentTypesLookup, allowedTypesData]
+		[setState, site, unMount$, contentTypesLookup, allowedTypesData, controls]
 	);
 
 	useMount(() => {

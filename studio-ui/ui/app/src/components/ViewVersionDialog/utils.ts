@@ -14,8 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { EntityState } from '../../models/EntityState';
-import ContentType, { ContentTypeField } from '../../models/ContentType';
+import { ContentTypeField } from '../../models/ContentType';
 import { DialogHeaderStateAction } from '../DialogHeader';
 import { DialogHeaderActionProps } from '../DialogHeaderAction';
 import { ApiResponse } from '../../models/ApiResponse';
@@ -39,7 +38,6 @@ export interface ViewVersionDialogBaseProps {
 }
 
 export interface ViewVersionDialogProps extends ViewVersionDialogBaseProps, EnhancedDialogProps {
-	contentTypesBranch?: EntityState<ContentType>;
 	leftActions?: DialogHeaderActionProps[];
 	rightActions?: DialogHeaderActionProps[];
 }
@@ -51,8 +49,7 @@ export interface ViewVersionDialogStateProps extends ViewVersionDialogBaseProps,
 	onClosed?: StandardAction;
 }
 
-export interface ViewVersionDialogContainerProps
-	extends ViewVersionDialogBaseProps, Pick<ViewVersionDialogProps, 'contentTypesBranch'> {
+export interface ViewVersionDialogContainerProps extends ViewVersionDialogBaseProps {
 	showXml: boolean;
 }
 

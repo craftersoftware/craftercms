@@ -83,7 +83,8 @@ export default [
 						? allowedContentTypes
 						: state.preview.components.contentTypeFilter,
 					state.contentTypes.byId,
-					state.preview.components.query
+					state.preview.components.query,
+					state.uiConfig.controls
 				).pipe(map(fetchComponentsByContentTypeComplete), catchAjaxError(fetchComponentsByContentTypeFailed));
 			})
 		),
