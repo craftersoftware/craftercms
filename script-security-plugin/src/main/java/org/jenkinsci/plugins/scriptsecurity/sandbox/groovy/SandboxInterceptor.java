@@ -91,7 +91,7 @@ public final class SandboxInterceptor extends GroovyInterceptor {
 	/**
 	 * @see NumberMathModificationInfo
 	 */
-	private static final Set<String> NUMBER_MATH_NAMES = ImmutableSet.of("plus", "minus", "multiply", "div", "compareTo", "or", "and", "xor", "intdiv", "mod", "leftShift", "rightShift", "rightShiftUnsigned");
+	private static final Set<String> NUMBER_MATH_NAMES = ImmutableSet.of("plus", "minus", "multiply", "div", "compareTo", "or", "and", "xor", "intdiv", "mod", "remainder", "leftShift", "rightShift", "rightShiftUnsigned");
 
 	@Override
 	public Object onMethodCall(GroovyInterceptor.Invoker invoker, Object receiver, String method, Object... args) throws Throwable {

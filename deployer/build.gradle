@@ -34,6 +34,9 @@ ext.crafterManifestTitle = 'Crafter Deployer'
 // Override Spring Boot BOM-managed versions (matches former spring-boot/pom.xml)
 ext['log4j2.version'] = libs.versions.log4j.get()
 ext['tomcat.version'] = libs.versions.tomcat.get()
+ext['netty.version'] = libs.versions.netty.get()
+ext['jackson-bom.version'] = libs.versions.jackson3.get()
+ext['jackson-2-bom.version'] = libs.versions.jackson.asProvider().get()
 
 dependencies {
 	implementation project(':commons:utilities')

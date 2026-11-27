@@ -41,6 +41,11 @@
 ##################################################
 # HTTP Session timeout for studio (value is in minutes).
 # studio.security.sessionTimeout: 60
+# Number of times a user can extend the absolute session time limit before having to log in again.
+# An extension is used only when that limit is the one about to expire. An inactivity prompt never uses an
+# extension; Stay signed in only refreshes the activity time. A limit of 20 hours or more is not shown in the
+# warning, but Stay signed in still extends it when it is the next limit to be reached.
+# studio.security.sessionMaxExtensions: 10
 #
 # Password requirements minimum complexity
 # This is based on https://github.com/dropbox/zxcvbn

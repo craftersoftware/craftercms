@@ -25,13 +25,13 @@ import { PrimitiveAtom, useAtom } from 'jotai';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
 import { nanoid } from 'nanoid';
 import { nnou } from '../../../utils/object';
-import { getBasePath, getFileNameValueFromPath, getValidationValue, isFieldReadOnly } from '../lib/formUtils';
+import { getBasePath, getFileNameValueFromPath, getNumericValidationValue, isFieldReadOnly } from '../lib/formUtils';
 import { ensureSingleSlash } from '../../../utils/string';
 import type { Dispatch } from 'redux';
 import useLoadableAtom from '../lib/useLoadableAtom';
@@ -56,7 +56,8 @@ export function FileName(props: ControlProps<string>) {
 	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, htmlId), isValid);
 	const webUrlRoot = ensureSingleSlash(`${pathInSite.replace('/site/website', '/')}/`);
 	const dispatch = useDispatch();
-	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
+	const { formatMessage } = useIntl();
+	const maxLength = getNumericValidationValue(field.validations, 'maxLength');
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
 
 	const handleChange: OutlinedInputProps['onChange'] = (e) => {
@@ -109,8 +110,12 @@ export function FileName(props: ControlProps<string>) {
 				}
 				endAdornment={
 					!isNewForm && (
-						<Tooltip title={<FormattedMessage defaultMessage="Edit" />}>
-							<IconButton onClick={handleEdit} disabled={readonly}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Edit' })}>
+							<IconButton
+								onClick={handleEdit}
+								disabled={readonly}
+								aria-label={formatMessage({ defaultMessage: 'Edit' })}
+							>
 								<EditOutlinedIcon />
 							</IconButton>
 						</Tooltip>

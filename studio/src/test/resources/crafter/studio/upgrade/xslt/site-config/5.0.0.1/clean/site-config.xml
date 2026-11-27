@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License version 3 as published by
+  ~ the Free Software Foundation.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<site-config>
+	<version>5.0.0.1</version>
+	<custom-site-flag>keep-site-flag</custom-site-flag>
+	<display-name>Already Clean</display-name>
+	<site-urls>
+		<authoring-url>https://author.example</authoring-url>
+		<live-url>https://live.example</live-url>
+	</site-urls>
+	<repository custom-root="kept">
+		<level-descriptor>crafter-level-descriptor.level.xml</level-descriptor>
+		<patterns>
+			<pattern-group name="component">
+				<pattern>/site/components/([^&lt;]+)\.xml</pattern>
+				<pattern>/site/items/([^&lt;]+)\.xml</pattern>
+			</pattern-group>
+			<pattern-group name="rendering-template">
+				<pattern>/templates/([^&lt;"]+)\.ftl</pattern>
+				<pattern>/templates/([^&lt;"]+)\.ftlh</pattern>
+				<pattern>/templates/([^&lt;"]+)\.ftlx</pattern>
+			</pattern-group>
+			<pattern-group name="document">
+				<pattern>/documents/([^&lt;]+)\.pdf</pattern>
+			</pattern-group>
+		</patterns>
+	</repository>
+	<remoteGitBranch>production</remoteGitBranch>
+</site-config>

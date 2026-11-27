@@ -50,11 +50,14 @@ public class FallbackSiteListResolver implements SiteListResolver {
 			try {
 				Collection<String> siteNames = resolver.getSiteList();
 				if (siteNames != null) {
+					logger.debug("Site list ({} sites) supplied by {}", siteNames.size(),
+						resolver.getClass().getSimpleName());
 					return siteNames;
 				}
 				logger.debug("{} is not configured", resolver.getClass().getSimpleName());
 			} catch (RuntimeException e) {
-				logger.warn("Unable to list sites using {} ({})", resolver.getClass().getSimpleName(), e.getMessage());
+				logger.warn("Unable to list sites using {} ({})", resolver.getClass().getSimpleName(),
+					SiteListErrors.describe(e));
 				logger.debug("Site list resolver failed", e);
 				if (failure == null) {
 					failure = new IllegalStateException("Unable to list sites");

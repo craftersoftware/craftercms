@@ -15,7 +15,7 @@
  */
 
 import Box, { BoxProps } from '@mui/material/Box';
-import React, { forwardRef, useEffect, useState } from 'react';
+import React, { forwardRef, useEffect, useId, useState } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import GlobalAppToolbar from '../GlobalAppToolbar';
 import { FormControlLabel, Switch, Typography } from '@mui/material';
@@ -118,6 +118,7 @@ export function AccountManagement(props: AccountManagementProps) {
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();
 	const [anchorEl, setAnchorEl] = useState(null);
+	const projectLabelId = useId();
 	const sitesLookup = useSiteLookup();
 	const sitesIds = Object.keys(sitesLookup);
 	const [selectedSite, setSelectedSite] = useState('all');
@@ -346,10 +347,11 @@ export function AccountManagement(props: AccountManagementProps) {
 					</Typography>
 					<Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
 						<FormControl sx={{ minWidth: 200 }}>
-							<InputLabel>
+							<InputLabel id={projectLabelId}>
 								<FormattedMessage defaultMessage="Project" />
 							</InputLabel>
 							<Select
+								labelId={projectLabelId}
 								value={selectedSite}
 								label={<FormattedMessage defaultMessage="Project" />}
 								onChange={(event) => {

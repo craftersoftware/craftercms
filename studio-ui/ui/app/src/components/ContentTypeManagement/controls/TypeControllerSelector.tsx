@@ -242,14 +242,22 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 				endAdornment={
 					<>
 						{hasFile && (
-							<Tooltip title={<FormattedMessage defaultMessage="Delete Controller" />}>
-								<IconButton onClick={onDeleteController} disabled={busy}>
+							<Tooltip title={formatMessage({ defaultMessage: 'Delete Controller' })}>
+								<IconButton
+									onClick={onDeleteController}
+									disabled={busy}
+									aria-label={formatMessage({ defaultMessage: 'Delete Controller' })}
+								>
 									<DeleteOutlineRoundedIcon />
 								</IconButton>
 							</Tooltip>
 						)}
-						<Tooltip title={<FormattedMessage defaultMessage="Edit Controller" />}>
-							<IconButton onClick={onEditController} disabled={busy}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Edit Controller' })}>
+							<IconButton
+								onClick={onEditController}
+								disabled={busy}
+								aria-label={formatMessage({ defaultMessage: 'Edit Controller' })}
+							>
 								<EditRoundedIcon />
 							</IconButton>
 						</Tooltip>

@@ -40,6 +40,8 @@ import { LoadingState } from '../LoadingState';
 import Box from '@mui/material/Box';
 import { drawerClasses } from '@mui/material';
 import Tooltip from '@mui/material/Tooltip';
+import PoliteStatus from '../PoliteStatus/PoliteStatus';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 export interface SearchUIProps
 	extends
@@ -128,6 +130,28 @@ export function SearchUI(props: SearchUIProps) {
 	// endregion
 
 	const { formatMessage } = useIntl();
+	const itemsPerPageLabel = formatMessage({ id: 'pagination.itemsPerPage', defaultMessage: 'Items per page' });
+	// Built from the loaded response: `searchResults.offset` is the offset that response was requested with.
+	// `searchParameters.offset` changes as soon as the user pages, but the request starts in a later effect, so
+	// it only stands in for callers whose response carries no `offset` (plain `SearchResult`s from outside Studio).
+	// Studio's own path always sets `offset`, so it never reads the parameter. Stay silent while a search is in
+	// flight, since `searchResults` still holds the previous response until the new one lands.
+	let resultsStatus = '';
+	if (searchResults != null && !isFetching) {
+		if (searchResults.total === 0) {
+			resultsStatus = formatMessage(translations.noResults);
+		} else if (searchResults.items.length > 0) {
+			// Count the rows that are rendered, not the requested page window.
+			resultsStatus = formatMessage(translations.resultsStatus, {
+				from: (searchResults.offset ?? searchParameters.offset ?? 0) + 1,
+				to: Math.min(
+					(searchResults.offset ?? searchParameters.offset ?? 0) + searchResults.items.length,
+					searchResults.total
+				),
+				count: searchResults.total
+			});
+		}
+	}
 
 	const container = useRef(undefined);
 
@@ -137,6 +161,8 @@ export function SearchUI(props: SearchUIProps) {
 			ref={container}
 			sx={{ height: '100%', position: 'relative', background: (theme) => theme.palette.background.default }}
 		>
+			{!embedded && <SkipToMainContent />}
+			<PoliteStatus message={resultsStatus} />
 			<SiteSearchToolBar
 				onChange={handleSearchKeyword}
 				onMenuIconClick={toggleDrawer}
@@ -176,25 +202,33 @@ export function SearchUI(props: SearchUIProps) {
 				}}
 			>
 				{searchResults && searchResults.facets && (
-					<SiteSearchFilters
-						mode={mode}
-						sx={{ marginRight: '7px' }}
-						facets={searchResults.facets}
-						handleFilterChange={handleFilterChange}
-						sortBy={sortBy}
-						sortOrder={sortOrder}
-						checkedFilters={checkedFilters}
-						setCheckedFilters={onCheckedFiltersChanges}
-						clearFilters={clearFilters}
-						handleClearClick={clearFilter}
-						selectedPath={selectedPath}
-						setSelectedPath={onSelectedPathChanges}
-					/>
+					<Box
+						component={embedded ? 'div' : 'aside'}
+						aria-label={embedded ? undefined : formatMessage({ id: 'words.filters', defaultMessage: 'Filters' })}
+					>
+						<SiteSearchFilters
+							mode={mode}
+							embedded={embedded}
+							sx={{ marginRight: '7px' }}
+							facets={searchResults.facets}
+							handleFilterChange={handleFilterChange}
+							sortBy={sortBy}
+							sortOrder={sortOrder}
+							checkedFilters={checkedFilters}
+							setCheckedFilters={onCheckedFiltersChanges}
+							clearFilters={clearFilters}
+							handleClearClick={clearFilter}
+							selectedPath={selectedPath}
+							setSelectedPath={onSelectedPathChanges}
+						/>
+					</Box>
 				)}
 			</Drawer>
 			<Box
 				component="section"
+				{...(!embedded ? { component: 'main', id: STUDIO_MAIN_CONTENT_ID, tabIndex: -1 } : undefined)}
 				sx={[
+					!embedded && mainLandmarkSx,
 					(theme) => ({
 						height: 'calc(100% - 65px)', // 100% - toolbar height
 						margin: 'auto',
@@ -232,8 +266,19 @@ export function SearchUI(props: SearchUIProps) {
 						borderBottom: `1px solid ${theme.palette.divider}`
 					})}
 				>
-					<Tooltip title={<FormattedMessage id="search.selectAll" defaultMessage="Select all on this page" />}>
-						<Checkbox checked={areAllSelected} onChange={(e) => handleSelectAll(e.target.checked)} />
+					<Tooltip
+						describeChild
+						title={<FormattedMessage id="search.selectAll" defaultMessage="Select all on this page" />}
+					>
+						<Checkbox
+							checked={areAllSelected}
+							onChange={(e) => handleSelectAll(e.target.checked)}
+							slotProps={{
+								input: {
+									'aria-label': formatMessage({ id: 'search.selectAll', defaultMessage: 'Select all on this page' })
+								}
+							}}
+						/>
 					</Tooltip>
 					<TablePagination
 						rowsPerPageOptions={[9, 15, 21]}
@@ -292,6 +337,22 @@ export function SearchUI(props: SearchUIProps) {
 						rowsPerPage={searchParameters.limit}
 						page={Math.ceil(searchParameters.offset / searchParameters.limit)}
 						slotProps={{
+							select: {
+								// TablePagination points the combobox and the open listbox at its (here empty) label through
+								// aria-labelledby. Those references are dropped and the name goes straight on both elements.
+								SelectDisplayProps: {
+									'aria-label': itemsPerPageLabel,
+									'aria-labelledby': undefined
+								},
+								MenuProps: {
+									slotProps: {
+										list: {
+											'aria-label': itemsPerPageLabel,
+											'aria-labelledby': undefined
+										}
+									}
+								}
+							},
 							actions: {
 								previousButton: {
 									'aria-label': formatMessage(translations.previousPage),
@@ -309,7 +370,7 @@ export function SearchUI(props: SearchUIProps) {
 				</Box>
 				<Box component="section" sx={{ flexGrow: 1, padding: '25px 30px', overflowY: 'scroll', position: 'relative' }}>
 					{error ? (
-						<ApiResponseErrorState error={error} />
+						<ApiResponseErrorState error={error} titleComponent={embedded ? undefined : 'h2'} />
 					) : (
 						<Grid
 							container
@@ -394,6 +455,7 @@ export function SearchUI(props: SearchUIProps) {
 										))
 									) : (
 										<EmptyState
+											titleComponent={embedded ? undefined : 'h2'}
 											title={formatMessage(translations.noResults)}
 											subtitle={formatMessage(translations.changeQuery)}
 										/>

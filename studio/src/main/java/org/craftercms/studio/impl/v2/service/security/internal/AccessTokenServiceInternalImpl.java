@@ -57,6 +57,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.beans.ConstructorProperties;
 import java.security.Key;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -95,6 +96,17 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	private static final String CRAFTER_SITE_COOKIE_NAME = "crafterSite";
 	private static final String JWE_ALGORITHM_HEADER_VALUE = PBES2_HS512_A256KW;
 	private static final String JWE_ENCRYPTION_METHOD_HEADER_VALUE = AES_256_CBC_HMAC_SHA_512;
+	/**
+	 * Time limits of this length (in minutes) or longer are not reported to the UI for a warning (WCAG 2.1 SC 2.2.1).
+	 * The extension decision does not use this cutoff: a longer absolute limit is still restarted when it is the one
+	 * reached next.
+	 */
+	private static final int SESSION_WARNING_MAX_MINUTES = 20 * 60;
+	/**
+	 * When the two limits fall within this many seconds, the absolute session limit is the one reached next.
+	 * Extending that limit restarts both clocks, so a slightly earlier inactivity limit is not a separate warning.
+	 */
+	private static final long SESSION_LIMITS_TOLERANCE_SECONDS = 60;
 
 	/**
 	 * The issuer for generation access tokens
@@ -136,6 +148,11 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	 */
 	protected final int inactivityTimeout;
 
+	/**
+	 * Maximum number of times a user can extend the session timeout before logging in again
+	 */
+	protected final int sessionMaxExtensions;
+
 	private NamedCookieManager refreshTokenCookieManager;
 	private NamedCookieManager previewCookieManager;
 
@@ -158,12 +175,12 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	protected final TextEncryptor previewTokenEncryptor;
 
 	@ConstructorProperties({"issuer", "validIssuers", "accessTokenExpiration", "signPassword", "encryptPassword",
-		"sessionTimeout", "inactivityTimeout", "securityDao", "instanceService", "auditService",
+		"sessionTimeout", "inactivityTimeout", "sessionMaxExtensions", "securityDao", "instanceService", "auditService",
 		"studioConfiguration", "siteService", "retryingDatabaseOperationFacade", "systemStatusProvider",
 		"previewTokenEncryptor", "userService"})
 	public AccessTokenServiceInternalImpl(String issuer, String[] validIssuers, int accessTokenExpiration,
 										  String signPassword, String encryptPassword, int sessionTimeout,
-										  int inactivityTimeout, SecurityDAO securityDao,
+										  int inactivityTimeout, int sessionMaxExtensions, SecurityDAO securityDao,
 										  InstanceService instanceService, AuditService auditService,
 										  StudioConfiguration studioConfiguration, SitesService siteService,
 										  RetryingDatabaseOperationFacade retryingDatabaseOperationFacade,
@@ -176,6 +193,7 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		this.encryptPassword = encryptPassword;
 		this.sessionTimeout = sessionTimeout;
 		this.inactivityTimeout = inactivityTimeout;
+		this.sessionMaxExtensions = sessionMaxExtensions;
 		this.securityDao = securityDao;
 		this.instanceService = instanceService;
 		this.auditService = auditService;
@@ -223,6 +241,98 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 
 		retryingDatabaseOperationFacade.retry(() -> securityDao.upsertRefreshToken(userId, refreshToken));
 		refreshTokenCookieManager.addCookie(refreshToken, response);
+	}
+
+	@Override
+	public void resetSessionExtensions(Authentication auth) {
+		var userId = getUserId(auth);
+		retryingDatabaseOperationFacade.retry(() -> securityDao.resetSessionExtensions(userId));
+	}
+
+	/**
+	 * Refreshes the inactivity time. Restarts the absolute session time ({@code refresh_token.created_on}) and uses
+	 * one extension only when that limit is the one reached next, including when it is 20 hours or longer. An
+	 * inactivity prompt does not consume an extension. The 20 hour cutoff applies only to the warning.
+	 */
+	protected void extendSession(Authentication auth) {
+		var userId = getUserId(auth);
+		// Read both limits before refreshing activity. The activity cache is what the inactivity limit is read from,
+		// and the decision is about the limit that is about to be reached, not the limit after the refresh.
+		// The absolute deadline is the configured one. A limit of 20 hours or more is omitted from the warning only.
+		var sessionLimit = getConfiguredSessionLimitExpiration(userId);
+		var inactivityLimit = getInactivityExpiration(userId);
+		updateUserActivity(auth);
+		if (isSessionLimitNext(sessionLimit, inactivityLimit)) {
+			int updated = retryingDatabaseOperationFacade.retry(() -> securityDao.extendSession(userId, sessionMaxExtensions));
+			if (updated == 0) {
+				logger.debug("User '{}' can't extend the session any more", auth.getName());
+			}
+		}
+	}
+
+	/**
+	 * The session deadline reported to the UI. Limits of {@link #SESSION_WARNING_MAX_MINUTES} or longer are omitted
+	 * (WCAG 2.1 SC 2.2.1). {@link #extendSession} uses {@link #getConfiguredSessionLimitExpiration} instead, so a
+	 * longer limit can still be extended when it is the one reached next.
+	 *
+	 * @return the moment, or null if the limit is 20 hours or longer or the user has no refresh token
+	 */
+	protected Instant getSessionLimitExpiration(long userId) {
+		if (sessionTimeout >= SESSION_WARNING_MAX_MINUTES) {
+			return null;
+		}
+		return getConfiguredSessionLimitExpiration(userId);
+	}
+
+	/**
+	 * The absolute session deadline from the configured timeout, including a limit of
+	 * {@link #SESSION_WARNING_MAX_MINUTES} or more.
+	 *
+	 * @return the moment, or null if the user has no refresh token
+	 */
+	protected Instant getConfiguredSessionLimitExpiration(long userId) {
+		// The clean up deletes the tokens that are older than the timeout in whole minutes
+		Long expirationSeconds = securityDao.getRefreshTokenExpiration(userId, sessionTimeout + 1);
+		return expirationSeconds != null ? Instant.ofEpochSecond(expirationSeconds) : null;
+	}
+
+	/**
+	 * Gets the earliest moment at which the refresh token of the user can be deleted because of inactivity.
+	 *
+	 * @return the moment, or null if the limit is 20 hours or longer or there is no recorded activity
+	 */
+	protected Instant getInactivityExpiration(long userId) {
+		if (inactivityTimeout >= SESSION_WARNING_MAX_MINUTES) {
+			return null;
+		}
+		Instant lastActivity = userActivity.getIfPresent(userId);
+		return lastActivity != null ? lastActivity.plus(inactivityTimeout + 1L, MINUTES) : null;
+	}
+
+	/**
+	 * The absolute session limit is the one reached next unless there is no session limit, or the inactivity limit
+	 * plus {@link #SESSION_LIMITS_TOLERANCE_SECONDS} is reached first. {@link #canExtendSession} uses this comparison
+	 * on the warning deadlines; {@link #extendSession} uses it on the configured absolute deadline.
+	 */
+	protected boolean isSessionLimitNext(Instant sessionLimit, Instant inactivityLimit) {
+		if (sessionLimit == null) {
+			return false;
+		}
+		return inactivityLimit == null ||
+			!inactivityLimit.plusSeconds(SESSION_LIMITS_TOLERANCE_SECONDS).isBefore(sessionLimit);
+	}
+
+	/**
+	 * Indicates if choosing to stay signed in would move the moment at which the session expires. It would not when
+	 * the absolute session limit is the next one reached and the user has used all the extensions. An inactivity
+	 * limit that is reached first can always be extended, because that only refreshes the activity time.
+	 */
+	protected boolean canExtendSession(long userId, Instant sessionLimit, Instant inactivityLimit) {
+		if (!isSessionLimitNext(sessionLimit, inactivityLimit)) {
+			return true;
+		}
+		Integer extensions = securityDao.getSessionExtensions(userId);
+		return extensions == null || extensions < sessionMaxExtensions;
 	}
 
 	@Override
@@ -297,7 +407,8 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	}
 
 	@Override
-	public AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response) throws ServiceLayerException {
+	public AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response,
+									boolean extendSession) throws ServiceLayerException {
 		logger.debug("Create tokens for '{}'", auth.getName());
 		var issuedAt = now();
 		var expireAt = issuedAt.plus(accessTokenExpiration, MINUTES);
@@ -305,11 +416,29 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		String token = createToken(issuedAt, expireAt, auth.getName(), null);
 
 		updateRefreshToken(auth, response);
+		if (extendSession) {
+			extendSession(auth);
+		}
 		refreshPreviewCookie(auth, request, response, true);
 
 		var accessToken = new AccessToken();
 		accessToken.setToken(token);
 		accessToken.setExpiresAt(expireAt);
+		// Seconds remaining are counted on this clock so the UI can count down without comparing these instants to
+		// the client clock (WCAG 2.1 SC 2.2.1). Truncating to whole seconds opens the warning at most a second early.
+		var responseTime = now();
+		accessToken.setExpiresIn(secondsRemaining(expireAt, responseTime));
+		var userId = getUserId(auth);
+		// Warning values. A limit of 20 hours or more is omitted here and from canExtendSession, so the button matches
+		// the warning. Extending uses the configured deadline instead.
+		var sessionLimit = getSessionLimitExpiration(userId);
+		var inactivityLimit = getInactivityExpiration(userId);
+		if (sessionLimit != null || inactivityLimit != null) {
+			accessToken.setSessionExpiresAt(sessionLimit == null || (inactivityLimit != null &&
+				inactivityLimit.isBefore(sessionLimit)) ? inactivityLimit : sessionLimit);
+		}
+		accessToken.setSessionExpiresIn(secondsRemaining(accessToken.getSessionExpiresAt(), responseTime));
+		accessToken.setCanExtendSession(canExtendSession(userId, sessionLimit, inactivityLimit));
 
 		return accessToken;
 	}
@@ -447,6 +576,16 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 
 	protected long getUserId(Authentication auth) {
 		return ((User) auth.getPrincipal()).getId();
+	}
+
+	/**
+	 * Whole seconds from {@code from} until {@code until}, never negative. Null when there is no moment to count down to.
+	 */
+	private static Long secondsRemaining(Instant until, Instant from) {
+		if (until == null) {
+			return null;
+		}
+		return Math.max(0L, Duration.between(from, until).getSeconds());
 	}
 
 	protected String createToken(Instant issuedAt, Instant expiresAt, String username, Long id)

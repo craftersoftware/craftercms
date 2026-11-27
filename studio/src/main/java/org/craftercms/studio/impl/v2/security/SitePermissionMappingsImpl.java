@@ -29,7 +29,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.ADMIN_NORMALIZED_ROLE;
 import org.craftercms.studio.api.v2.dal.Group;
-import org.craftercms.studio.api.v2.dal.publish.PublishItem;
+import org.craftercms.studio.api.v2.dal.publish.PathActionPair;
 import org.craftercms.studio.api.v2.dal.security.NormalizedGroup;
 import org.craftercms.studio.api.v2.dal.security.NormalizedRole;
 import static org.craftercms.studio.api.v2.dal.security.NormalizedRole.WILDCARD_ROLE;
@@ -88,14 +88,14 @@ public class SitePermissionMappingsImpl implements SitePermissionMappings {
 
 	@Override
 	public long getPublishPackageAvailableActions(String username, List<Group> groups,
-			Collection<PublishItem> publishItems, boolean isSystemAdmin) {
+			Collection<PathActionPair> publishPackagePaths, boolean isSystemAdmin) {
 		long result = 0;
 		// List is empty for initial publish
-		if (isEmpty(publishItems)) {
+		if (isEmpty(publishPackagePaths)) {
 			Collection<String> siteWidePermissions = getSiteWidePermissions(username, groups, isSystemAdmin);
 			result = PublishPackageAvailableActions.mapPermissionsToPackageAvailableActions(siteWidePermissions);
 		} else {
-			result = publishItems.stream()
+			result = publishPackagePaths.stream()
 					.map(pi -> getUserPermissions(username, groups, pi.getPath(), isSystemAdmin))
 					.map(PublishPackageAvailableActions::mapPermissionsToPackageAvailableActions)
 					.reduce((a, b) -> a & b).orElse(0L);

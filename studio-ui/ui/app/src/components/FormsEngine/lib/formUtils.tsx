@@ -75,9 +75,10 @@ import type { FormsEngineProps } from '../FormsEngine';
 import usePreviousValue from '../../../hooks/usePreviousValue';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import useActiveUser from '../../../hooks/useActiveUser';
-import { areAllPairsEqual } from '../../../utils/array';
+import { areAllPairsEqual, asArray } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
 import { buildContentXml } from './valueSerializers';
+import { isInternalNameFilled } from './minimumSaveRequirements';
 import {
 	createFormVisibilityAtoms,
 	fieldVisibility,
@@ -102,7 +103,7 @@ import {
 import { createComponentId } from '../../../utils/system';
 import { showErrorDialog } from '../../../state/actions/dialogs';
 import { ensureSingleSlash } from '../../../utils/string';
-import { createObjectGroupId, isPagePath } from '../../../utils/path';
+import { createObjectGroupId, getFileNameFromPath, isPagePath } from '../../../utils/path';
 import { nnou, nou } from '../../../utils/object';
 import {
 	postUnlockKeepalive,
@@ -115,6 +116,35 @@ import {
 } from './unlockOnClose';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
+
+/**
+ * Value written to the `<folder-name>` element on save. Matches FE1 and the backend copy-collision
+ * path: the page folder slug for content-as-folder paths (`about`; home → `''`), empty otherwise.
+ **/
+export function folderNameElementForXml(path: string): string {
+	return isPagePath(path) ? getFileNameValueFromPath(path, true) : '';
+}
+
+/**
+ * Path-derived `<file-name>` / `<folder-name>` for a repository save XML copy. Matches FE1/XB/blueprints:
+ * basename with extension (`index.xml`, `foo.xml`) and the page folder slug (empty for home / non-pages).
+ * Spread onto a copy for `buildContentXml`; leave the form's UI slug on `values`.
+ **/
+export function xmlFileNamesForPath(path: string) {
+	return {
+		[XmlKeys.fileName]: getFileNameFromPath(path),
+		[XmlKeys.folderName]: folderNameElementForXml(path)
+	};
+}
+
+/**
+ * `<file-name>` for an embedded component save. Keeps the stored element (as FE1's auto-filename does)
+ * and falls back to `{objectId}.xml` only when it has none. Callers that merge `values` (e.g. NodeSelector)
+ * assign this onto `values` in place before `buildContentXml`.
+ **/
+export function embeddedFileName(objectId: string, stored?: string | null): string {
+	return stored || `${objectId}.xml`;
+}
 
 /**
  * Returns the scroll container for the form's container.
@@ -973,29 +1003,56 @@ export function commitFormVisibility(
 }
 
 /**
+ * File name a form opens with. {@link setFieldAtoms} and {@link withPathFileName} both use this.
+ * A real path uses the path-derived name. Create (`path === ''`) keeps `value` only when it is the content
+ * type's non-empty default. Any other create name starts blank.
+ */
+export function openedFileName(path: string, value: unknown, defaultValue: unknown): string {
+	if (path === '' && typeof defaultValue === 'string' && defaultValue !== '' && value === defaultValue) {
+		return defaultValue;
+	}
+	return fileNameFromItemPath(path);
+}
+
+/**
  * The values a form opened with, for `originalValues`. Rollback writes them back, so the `file-name` entry is the
  * path-derived name {@link setFieldAtoms} starts the field from, not the XML element. Otherwise rolling back an
  * untouched form would rename the item.
  *
- * Same rule as `setFieldAtoms`: only a form that has an item path is normalized. `path` is `''` for a create form,
- * and `undefined`/`null` for a nested scope such as a repeat item form, whose `file-name` field, if it has one, is its
- * own value and is returned as is. Values with no `file-name` are returned as is too.
+ * Same rule as `setFieldAtoms` ({@link openedFileName}). A real item path uses the path-derived name. Create
+ * (`path === ''`) keeps the file-name only when it equals `fileNameDefault`. `undefined`/`null` is a nested scope
+ * such as a repeat item form and keeps the file-name it was given. Values with no `file-name` are returned as is.
  */
 export function withPathFileName(
 	values: LookupTable<unknown>,
 	atoms: Pick<FormsEngineAtoms, 'fileName'> | null | undefined,
-	path?: string | null
+	path?: string | null,
+	fileNameDefault?: unknown
 ): LookupTable<unknown> {
-	return atoms?.fileName && path != null && XmlKeys.fileName in values
-		? { ...values, [XmlKeys.fileName]: fileNameFromItemPath(path) }
-		: values;
+	if (!atoms?.fileName || path == null || !(XmlKeys.fileName in values)) return values;
+	const current = values[XmlKeys.fileName];
+	const next = openedFileName(path, current, fileNameDefault);
+	return next === current ? values : { ...values, [XmlKeys.fileName]: next };
+}
+
+/**
+ * File name a new item opens with. The content type's file-name default, when it has one.
+ * Pages leave this blank so the author types the URL. Section defaults is readonly and supplies
+ * `crafter-level-descriptor.level`; without it the create form cannot be saved.
+ */
+export function newItemFileName(
+	contentType: { fields?: LookupTable<ContentTypeField> } | null | undefined
+): string | undefined {
+	const value = contentType?.fields?.[XmlKeys.fileName]?.defaultValue;
+	return typeof value === 'string' && value !== '' ? value : undefined;
 }
 
 /**
  * Creates the value and validity atoms for a field and sets them on to the target object.
  *
  * @param itemPath - Full path of the item being edited. Only the `file-name` field reads it, to start its value
- * from the same name {@link createFileNameAtom} derives. Omit it for a form with no path yet (create).
+ * from {@link openedFileName}, the same rule as {@link withPathFileName}. `''` (create) starts blank unless
+ * `value` is the field's default. A missing path keeps `value`.
  **/
 export function setFieldAtoms(
 	stableFormContextRef: RefObject<StableFormContextProps>,
@@ -1050,13 +1107,18 @@ export function setFieldAtoms(
 	// after a rename done outside the form, or when the element is missing.
 	// `fileNameValidator` validates only the field's own value (#9327 removed `fileName` from the validator
 	// context), so the value must start from the path. Starting from the XML would validate a name that save
-	// never uses.
-	// Decision: the path wins. On edit the form shows and validates the path-derived name. Save leaves `file-name`
-	// out of the XML it builds, so a differing XML element is omitted on the next save. The backend writes it
-	// again only on a copy collision.
-	// Only a form with an item path starts here. A nested scope (repeat item) passes none and keeps its value.
-	const initialValue =
-		fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null ? fileNameFromItemPath(itemPath) : value;
+	// never uses for the path.
+	// Decision: the path wins for the form. On edit the form shows and validates the path-derived slug.
+	// Save writes `<file-name>` / `<folder-name>` from the path (via {@link xmlFileNamesForPath}),
+	// matching FE1, while the form atom keeps the slug. The backend still rewrites both names on a
+	// copy collision.
+	// A real item path wins, including the home page (blank). Create passes `''`: the stored value is dropped so
+	// the field matches the dedicated file-name atom, which starts blank, except a content-type default
+	// (section defaults uses `crafter-level-descriptor.level`). A repeat item passes no path and keeps `value`.
+	let initialValue = value;
+	if (fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null) {
+		initialValue = openedFileName(itemPath, value, field.defaultValue);
+	}
 	const [valueAtom, validityAtom] = createFieldAtoms(field, initialValue, stableFormContextRef, validatorsData);
 	atomsTarget.valueByFieldId[fieldId] = valueAtom;
 	atomsTarget.validationByFieldId[fieldId] = validityAtom;
@@ -1084,13 +1146,17 @@ export type SystemPropsObject = Pick<
 /** System props written by {@link createObjectWithSystemProps} (excludes optional nav/disabled fields). */
 export type CreatedSystemPropsObject = Omit<
 	SystemPropsObject,
-	XmlKeys.disabled | XmlKeys.placeInNav | XmlKeys.navLabel
->;
+	XmlKeys.disabled | XmlKeys.placeInNav | XmlKeys.navLabel | XmlKeys.internalName
+> &
+	Partial<Pick<SystemPropsObject, XmlKeys.internalName>>;
 
 /**
  * Creates an object with all the base content item system props (objectId, content-type, etc.)
  * Assigns the supplied values if provided.
  * Does not include `disabled`, `placeInNav`, or `navLabel`.
+ * `internal-name` is written when the type defines that field (empty when no value was supplied).
+ * A type without the field gets the element only when a non-blank value was supplied. An empty
+ * name is never invented for that type, and no label is derived from the file name or the type title.
  **/
 export function createObjectWithSystemProps(
 	contentType: ContentType,
@@ -1101,7 +1167,6 @@ export function createObjectWithSystemProps(
 	const contentObject: CreatedSystemPropsObject = {
 		[XmlKeys.modelId]: objectId,
 		[XmlKeys.groupId]: mixin?.[XmlKeys.groupId] ?? createObjectGroupId(objectId),
-		[XmlKeys.internalName]: mixin?.[XmlKeys.internalName] ?? '',
 		[XmlKeys.contentTypeId]: contentType.id,
 		[XmlKeys.displayTemplate]: contentType.displayTemplate ?? '',
 		[XmlKeys.templateNotRequired]: contentType.displayTemplate ? 'false' : 'true',
@@ -1112,6 +1177,12 @@ export function createObjectWithSystemProps(
 		[XmlKeys.dateModifiedDt]: mixin?.[XmlKeys.dateModifiedDt] ?? dateIsoString,
 		[XmlKeys.savedAsDraft]: mixin?.[XmlKeys.savedAsDraft] ?? 'false'
 	};
+	const suppliedName = mixin?.[XmlKeys.internalName];
+	if (contentType.fields?.[XmlKeys.internalName]) {
+		contentObject[XmlKeys.internalName] = suppliedName ?? '';
+	} else if (isInternalNameFilled(suppliedName)) {
+		contentObject[XmlKeys.internalName] = suppliedName as string;
+	}
 	return contentObject;
 }
 
@@ -1123,13 +1194,19 @@ export function complementValuesWithSystemProps(
 	contentType: ContentType,
 	saveAsDraft: boolean
 ): void {
-	const systemProps = createObjectWithSystemProps(contentType, {
+	const definesInternalName = Boolean(contentType.fields?.[XmlKeys.internalName]);
+	const mixin: Partial<SystemPropsObject> = {
 		[XmlKeys.modelId]: id,
-		[XmlKeys.internalName]: values[XmlKeys.internalName] as string,
 		[XmlKeys.dateCreated]: getParsedField(contentObject, XmlKeys.dateCreated) as string,
 		[XmlKeys.dateCreatedDt]: getParsedField(contentObject, XmlKeys.dateCreatedDt) as string,
 		[XmlKeys.savedAsDraft]: saveAsDraft
-	});
+	};
+	// A type that defines the field keeps today's empty default. A type that does not only carries
+	// a name that is already on the values object. Nothing here invents one.
+	if (definesInternalName || isInternalNameFilled(values[XmlKeys.internalName])) {
+		mixin[XmlKeys.internalName] = values[XmlKeys.internalName] as string;
+	}
+	const systemProps = createObjectWithSystemProps(contentType, mixin);
 
 	// Do not overwrite any existing value.
 	preservedElements.forEach((key) => {
@@ -1137,6 +1214,16 @@ export function complementValuesWithSystemProps(
 			values[key] = contentObject[key];
 		}
 	});
+	// The form has no atom for a field the type does not define, so the original element would
+	// otherwise be dropped. Copy it, including an empty element. An absent element stays absent.
+	if (
+		!definesInternalName &&
+		!(XmlKeys.internalName in values) &&
+		contentObject != null &&
+		XmlKeys.internalName in contentObject
+	) {
+		values[XmlKeys.internalName] = contentObject[XmlKeys.internalName];
+	}
 	for (const key in systemProps) {
 		if (!(key in values)) {
 			values[key] = systemProps[key];
@@ -1491,6 +1578,35 @@ export function getNodeIndex(element: Element): number {
 	return index;
 }
 
+/**
+ * Resolves the path used as `fullParentPath` for `{parentPath}` / `{parentPath[n]}` macros.
+ * Prefers the live ContentItem path, then the form update path, then `pathInSite`. Nested embedded creates
+ * have neither an item nor an update path; their `pathInSite` is the macro-processed `create.path`, which
+ * the parent form set to its own context path, so it carries the root item's path down the stack.
+ */
+export function getFormContextPath(args: {
+	item?: { path?: string } | null;
+	updatePath?: string | null;
+	pathInSite?: string | null;
+}): string | undefined {
+	return args.item?.path ?? args.updatePath ?? args.pathInSite ?? undefined;
+}
+
+/**
+ * Reads an embedded component out of a parent field value at `index`.
+ * Parent `contentObject` may be XML-deserialized (`{ item: [{ component }] }`) or in-session form
+ * values (a `NodeSelectorItem[]`). Returns undefined when neither shape yields a component.
+ */
+export function embeddedComponentFromParentField(fieldValue: unknown, index: number): LookupTable<unknown> | undefined {
+	// Form values: NodeSelectorItem[]. XML-deserialized: { item } (one object or an array).
+	const items = Array.isArray(fieldValue)
+		? fieldValue
+		: fieldValue && typeof fieldValue === 'object' && 'item' in fieldValue
+			? asArray((fieldValue as { item: unknown }).item)
+			: undefined;
+	return (items?.[index] as { component?: LookupTable<unknown> } | undefined)?.component;
+}
+
 export function prepareEmbeddedItemForm(props: {
 	username: string;
 	contentType: ContentType;
@@ -1588,11 +1704,14 @@ export function prepareEmbeddedItemForm(props: {
 	if (element) {
 		const fieldId = element.parentElement.parentElement.tagName; // <root><fieldId><item><component/></item></fieldId></root>, so (component.parentElement = item).parentElement = fieldId
 		const index = getNodeIndex(element.parentElement); // Get the position of the `item` tag
-		contentObject = (
-			getParsedField(parentStackData.itemMeta.contentObject, fieldId) as {
-				item: Array<{ component: LookupTable<unknown> }>;
-			}
-		).item[index].component;
+
+		//  For in-session parents, contentXml is rebuilt from form values (so the nested modelId is found),
+		//  but contentObject stays form-shaped (NodeSelectorItem[]). embeddedComponentFromParentField is
+		//  used to get the component from the parent field with the correct form, since prepareEmbeddedItemForm
+		// always expects XML shape.
+		contentObject =
+			embeddedComponentFromParentField(getParsedField(parentStackData.itemMeta.contentObject, fieldId), index) ??
+			update.values;
 		contentXml = element.outerHTML;
 	} else {
 		// Created (or edited) in-session; not yet serialized into parent contentXml
@@ -1615,7 +1734,7 @@ export function prepareEmbeddedItemForm(props: {
 	};
 }
 
-export { getPropertyValue, getValidationValue } from './fieldPropertyUtils';
+export { getPropertyValue, getValidationValue, getNumericValidationValue } from './fieldPropertyUtils';
 
 /**
  * Determines if a field is read-only based on the form's read-only state or the field's properties.

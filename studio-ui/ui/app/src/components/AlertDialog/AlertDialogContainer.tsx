@@ -27,11 +27,17 @@ import { nnou } from '../../utils/object';
 
 export function AlertDialogContainer(props: AlertDialogContainerProps) {
 	const { onClosed, body, title, children, imageUrl = questionGraphicUrl, buttons, sxs } = props;
+	const fallbackId = React.useId();
+	const {
+		titleId = `${fallbackId}-title`,
+		bodyId = `${fallbackId}-body`,
+		bodyTextId = `${fallbackId}-body-text`
+	} = props;
 	useUnmount(onClosed);
 	return (
 		<>
 			<DialogContent
-				id="alertDialogBody"
+				id={bodyId}
 				sx={{
 					textAlign: 'center',
 					padding: '40px 20px 25px !important',
@@ -53,6 +59,7 @@ export function AlertDialogContainer(props: AlertDialogContainerProps) {
 				)}
 				{title && (
 					<Typography
+						id={titleId}
 						variant="body1"
 						component="h2"
 						sx={{
@@ -64,7 +71,7 @@ export function AlertDialogContainer(props: AlertDialogContainerProps) {
 					</Typography>
 				)}
 				{body && (
-					<DialogContentText color="textPrimary" variant="body2">
+					<DialogContentText id={bodyTextId} color="textPrimary" variant="body2">
 						{body}
 					</DialogContentText>
 				)}

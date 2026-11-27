@@ -15,7 +15,7 @@
  */
 
 import * as React from 'react';
-import { ReactNode, useMemo, useRef } from 'react';
+import { ReactNode, useId, useMemo, useRef } from 'react';
 import { useOnClose } from '../../hooks/useOnClose';
 import MuiDialog, { DialogProps as MuiDialogProps } from '@mui/material/Dialog';
 import { useUnmount } from '../../hooks/useUnmount';
@@ -40,6 +40,26 @@ export interface EnhancedDialogProps extends Omit<MuiDialogProps, 'title'>, Enha
 	dialogHeaderProps?: Partial<DialogHeaderProps>;
 }
 
+type PaperSlotProps = NonNullable<NonNullable<MuiDialogProps['slotProps']>['paper']>;
+type DialogLabellingProps = Pick<MuiDialogProps, 'aria-label' | 'aria-labelledby'>;
+
+/**
+ * Adds the dialog's labelling props to the caller's paper slot. The caller's own props win, so a slot that
+ * already names the dialog keeps its name. A function slot is resolved first, so its label is seen too.
+ */
+function withPaperProps(
+	paper: PaperSlotProps,
+	getProps: (resolvedPaper?: DialogLabellingProps) => DialogLabellingProps
+): PaperSlotProps {
+	if (typeof paper === 'function') {
+		return (ownerState) => {
+			const resolved = paper(ownerState);
+			return { ...getProps(resolved), ...resolved };
+		};
+	}
+	return { ...getProps(paper), ...paper };
+}
+
 export function EnhancedDialog(props: EnhancedDialogProps) {
 	// region const { ... } = props
 	const {
@@ -58,11 +78,49 @@ export function EnhancedDialog(props: EnhancedDialogProps) {
 		children,
 		dialogHeaderProps,
 		omitHeader = false,
+		'aria-label': ariaLabel,
+		'aria-labelledby': ariaLabelledBy,
+		slotProps,
 		onFullScreen,
 		onCancelFullScreen,
 		...dialogProps
 	} = props;
 	// endregion
+	const id = useId();
+	const titleId = dialogHeaderProps?.titleId ?? dialogHeaderProps?.titleTypographyProps?.id ?? `${id}-title`;
+	const headerTitle = title ?? dialogHeaderProps?.title;
+	// Naming the dialog by its title only works while the title element holds text, so a dialog whose header
+	// is omitted or has no title is left unnamed instead of pointing at an element that is not rendered.
+	const hasTitle = headerTitle != null && typeof headerTitle !== 'boolean' && headerTitle !== '';
+	const canUseTitle = !omitHeader && hasTitle;
+	// MUI hands its aria-labelledby to its DialogContext, where a MUI DialogTitle (e.g. the one plugins get as
+	// `craftercms.components.DialogTitle`) takes its id from. That id must not be the DialogHeader's title id,
+	// or a DialogTitle in a dialog with a header would duplicate it.
+	const muiTitleId = `${id}-dialog-title`;
+	// MUI puts a top-level aria-label on the root instead of the element with the role, so a caller's name is
+	// read from either place and lands on the paper, next to aria-labelledby.
+	const getLabelling = (paper?: DialogLabellingProps) => {
+		const callerLabel = ariaLabel || paper?.['aria-label'];
+		const callerLabelledBy = ariaLabelledBy || paper?.['aria-labelledby'];
+		// An omitted header with no caller label keeps MUI's own reference, so a DialogTitle rendered by the
+		// caller still names the dialog.
+		const labelledBy =
+			callerLabelledBy ?? (callerLabel ? undefined : canUseTitle ? titleId : omitHeader ? muiTitleId : undefined);
+		return { callerLabel, labelledBy };
+	};
+	const staticPaper = typeof slotProps?.paper === 'function' ? undefined : slotProps?.paper;
+	const dialogLabelledBy = ariaLabelledBy || staticPaper?.['aria-labelledby'] || muiTitleId;
+	const getPaperOverrides = (paper?: DialogLabellingProps) => {
+		const { callerLabel, labelledBy } = getLabelling(paper);
+		const overrides: DialogLabellingProps = {};
+		if (labelledBy !== dialogLabelledBy) overrides['aria-labelledby'] = labelledBy;
+		if (callerLabel) overrides['aria-label'] = callerLabel;
+		return overrides;
+	};
+	const resolvedSlotProps: MuiDialogProps['slotProps'] =
+		typeof slotProps?.paper === 'function' || Object.keys(getPaperOverrides(staticPaper)).length
+			? { ...slotProps, paper: withPaperProps(slotProps?.paper, getPaperOverrides) }
+			: slotProps;
 	const onClose = useOnClose({
 		onClose(e, reason) {
 			if (hasPendingChanges) {
@@ -106,12 +164,15 @@ export function EnhancedDialog(props: EnhancedDialogProps) {
 				maxWidth="md"
 				fullScreen={isFullScreen}
 				{...dialogProps}
+				aria-labelledby={dialogLabelledBy}
+				slotProps={resolvedSlotProps}
 				onClose={onClose}
 			>
 				{!omitHeader && (
 					<DialogHeader
 						{...dialogHeaderProps}
-						title={title ?? dialogHeaderProps?.title}
+						titleId={titleId}
+						title={headerTitle}
 						subtitle={subtitle ?? dialogHeaderProps?.subtitle}
 						disabled={isSubmitting}
 						onMinimizeButtonClick={onMinimize}

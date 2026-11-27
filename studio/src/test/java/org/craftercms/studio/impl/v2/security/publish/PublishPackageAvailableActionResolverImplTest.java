@@ -116,7 +116,7 @@ public class PublishPackageAvailableActionResolverImplTest {
 	public void submitterAndPeerReviewFilterTheBitmap() throws ServiceLayerException, UserNotFoundException {
 		when(userService.getUserGroups(-1, CURRENT_USER)).thenReturn(List.of());
 		when(userService.isSystemAdmin(CURRENT_USER)).thenReturn(false);
-		when(publishDao.getPublishItems(SITE_ID, PACKAGE_ID)).thenReturn(List.of());
+		when(publishDao.getPublishPackagePaths(SITE_ID, PACKAGE_ID, null)).thenReturn(List.of());
 		when(permissionMappingProvider.getPermissionMappings(SITE_ID)).thenReturn(permissionMappings);
 
 		try (MockedStatic<SecurityUtils> security = mockStatic(SecurityUtils.class)) {

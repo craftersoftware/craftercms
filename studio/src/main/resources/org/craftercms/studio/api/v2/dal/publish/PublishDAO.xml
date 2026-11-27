@@ -40,6 +40,8 @@
 
 	<resultMap id="PublishItemMapWithMetadata" type="org.craftercms.studio.api.v2.dal.publish.PublishItemWithMetadata"
 		   autoMapping="true">
+		<!-- item_id is also the association column, so auto-mapping skips it -->
+		<result property="itemId" column="item_id"/>
 		<association property="itemTargets" column="item_id"
 			     select="org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO.getByItemId"/>
 		<association property="itemMetadata" columnPrefix="meta_" resultMap="org.craftercms.studio.api.v2.dal.ItemDAO.LightItemMetadataMap"/>
@@ -301,7 +303,7 @@
 		<include refid="org.craftercms.studio.api.v2.dal.DAOUtils.paginate"/>
 	</select>
 
-	<select id="getUserRequestedPaths">
+	<select id="getPublishPackagePaths">
 		SELECT pi.path as path, pi.action as action
 		FROM publish_item pi
 			INNER JOIN publish_package pp
@@ -309,14 +311,16 @@
 			INNER JOIN site s ON pp.site_id = s.id
 		WHERE s.site_id = #{siteId}
 		  AND pp.id = #{packageId}
-		  AND pi.user_requested = 1
+		  <if test="userRequested != null">
+		    AND pi.user_requested = #{userRequested}
+		  </if>
 	</select>
 
 	<select id="getMatchingPublishItemCount">
 		SELECT COUNT(1)
 		FROM (
 		<bind name="state" value="null"/>
-		<bind name="includeMetadata" value="false"/>
+		<bind name="includeMetadata" value="true"/>
 		<include refid="getPublishItemsQuery"/>
 		) AS tbl
 	</select>
@@ -329,21 +333,26 @@
 	</select>
 
 	<sql id="getPublishItemsQuery">
-		SELECT pi.*, ipi.item_id
+		SELECT pi.*,
+		<choose>
+			<when test="includeMetadata">COALESCE(ipi.item_id, i.id)</when>
+			<otherwise>ipi.item_id</otherwise>
+		</choose> AS item_id
 		<if test="includeMetadata">, i.label as meta_label, i.system_type as meta_system_type, i.mime_type as meta_mime_type</if>
 		FROM publish_item pi
 		INNER JOIN publish_package pp ON pi.package_id = pp.id
 		INNER JOIN site s ON pp.site_id = s.id
 		LEFT OUTER JOIN item_publish_item ipi ON pi.id = ipi.publish_item_id
 		<if test="includeMetadata">
-			INNER JOIN item i ON ipi.item_id = i.id
+			LEFT OUTER JOIN item i ON i.id = ipi.item_id
+				OR (ipi.item_id IS NULL AND i.site_id = s.id AND i.path = pi.path)
 		</if>
 		WHERE pi.package_id = #{packageId}
 		AND s.site_id = #{siteId}
 
 		<if test="includeMetadata">
 			<if test="path != null">
-				AND i.path RLIKE #{path}
+				AND COALESCE(i.path, pi.path) RLIKE #{path}
 			</if>
 			<if test="systemTypes != null">
 				AND i.system_type IN
@@ -388,6 +397,8 @@
 	<select id="getPackageForItems" resultMap="PublishPackageMap">
 		<bind name="includeChildren" value="false"/>
 		<bind name="target" value="null"/>
+		<bind name="submitter" value="null"/>
+		<bind name="reviewer" value="null"/>
 		<include refid="getAllPackagesForFilters"/>
 		<include refid="packagePathsFilter"/>
 		ORDER BY pp.schedule ASC LIMIT 1
@@ -420,6 +431,12 @@
 		SELECT pp.*
 		FROM publish_package pp
 		INNER JOIN site s ON pp.site_id = s.id
+		<if test="submitter != null">
+			INNER JOIN user u_submitter ON pp.submitter_id = u_submitter.id
+		</if>
+		<if test="reviewer != null">
+			INNER JOIN user u_reviewer ON pp.reviewer_id = u_reviewer.id
+		</if>
 		WHERE s.site_id = #{siteId}
 		<if test="packageState != null">
 			AND (pp.package_state &amp; #{packageState}) > 0
@@ -433,19 +450,19 @@
 				#{approvalState}
 			</foreach>
 		</if>
+		<if test="submitter != null">
+			AND u_submitter.username = #{submitter}
+		</if>
+		<if test="reviewer != null">
+			AND u_reviewer.username = #{reviewer}
+		</if>
 	</sql>
 
 	<select id="getItemPackagesInternal" resultMap="PublishPackageMap">
+		<bind name="submitter" value="null"/>
+		<bind name="reviewer" value="null"/>
 		<include refid="getAllPackagesForFilters"/>
 		<include refid="packagePathsFilter"/>
-	</select>
-
-	<select id="getItemPackagesCount">
-		SELECT COUNT(1)
-		FROM (
-		<include refid="getAllPackagesForFilters"/>
-		<include refid="packagePathsFilter"/>
-		) AS tbl
 	</select>
 
 	<select id="getNumberOfPublishes">

@@ -57,9 +57,22 @@ export interface OpenItemKeys<T> {
 /**
  * Where `item` is in `items` now. The same object wins. An item an edit replaced is found by its carried key.
  * -1 when the item is no longer there.
+ * `near` is where the caller saw the item (a row's index, a form's launch index). One object can be in the array more
+ * than once, so while that slot still holds the item it wins over the first match.
  * Lives here, free of imports, so the item-form helpers and their tests need no loader. `repeatItemKeys.ts` re-exports it.
  */
-export function findRepeatItemIndex<T>(items: readonly T[], item: T, keys: Pick<OpenItemKeys<T>, 'keyOf'>): number {
+export function findRepeatItemIndex<T>(
+	items: readonly T[],
+	item: T,
+	keys: Pick<OpenItemKeys<T>, 'keyOf'>,
+	near?: number
+): number {
+	if (near !== undefined && near >= 0 && near < items.length) {
+		const candidate = items[near];
+		if (candidate === item) return near;
+		const key = keys.keyOf(item);
+		if (key !== undefined && keys.keyOf(candidate) === key) return near;
+	}
 	const index = items.indexOf(item);
 	if (index !== -1) return index;
 	const key = keys.keyOf(item);
@@ -82,7 +95,7 @@ export function currentRepeatItemIndex<T>(
 ): number | undefined {
 	if (launchIndex === undefined) return undefined;
 	if (launchItem === undefined || !keys) return launchIndex;
-	return findRepeatItemIndex(items, launchItem, keys);
+	return findRepeatItemIndex(items, launchItem, keys, launchIndex);
 }
 
 /**

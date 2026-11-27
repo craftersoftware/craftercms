@@ -16,7 +16,7 @@
 
 <#if (envConfig.role! == 'admin' || envConfig.role! == 'developer')>
 	<!doctype html>
-	<html xmlns="http://www.w3.org/1999/xhtml">
+	<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 	<head>
 		<#include "/templates/web/common/page-fragments/head.ftl" />
 

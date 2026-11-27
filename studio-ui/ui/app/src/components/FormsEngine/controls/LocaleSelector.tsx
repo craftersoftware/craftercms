@@ -117,6 +117,7 @@ export function LocaleSelector(props: LocaleSelectorProps) {
 			) : (
 				<Select
 					value={value}
+					labelId={labelId}
 					onChange={handleChange}
 					autoFocus={autoFocus}
 					disabled={readonly}

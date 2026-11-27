@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Representative 4.5–4.7 ui.xml: version 4.5.0.0, top-level widgets, a nested content-types
+  ~ tool reference, and custom configuration that must survive the upgrade.
+  -->
+<siteUi>
+    <version>4.5.0.0</version>
+    <widget id="craftercms.components.Preview" initialEditModeOn="true" initialHighlightMode="all"/>
+    <widget id="craftercms.components.PathNavigatorTree">
+        <configuration>
+            <label>Pages</label>
+            <label id="pathNavigatorTree.components" defaultMessage="Components"/>
+            <label>Site Pages</label>
+        </configuration>
+    </widget>
+    <widget id="craftercms.components.TinyMCE">
+        <configuration>
+            <setups>
+                <setup id="generic">
+                    <tinymceOptions><![CDATA[
+                {
+                    "toolbar1": "blocks | bold",
+                    "media_live_embeds": true,
+                    "autoresize_on_init": false,
+                    "autoresize_bottom_margin": 0
+                }
+            ]]></tinymceOptions>
+                </setup>
+            </setups>
+        </configuration>
+    </widget>
+    <widget id="craftercms.components.CustomSiteWidget">
+        <configuration>
+            <keep>custom-value</keep>
+        </configuration>
+    </widget>
+    <references>
+        <reference id="craftercms.siteTools">
+            <tools>
+                <tool>
+                    <title id="dropTargetsMessages.contentTypes" defaultMessage="Content Types"/>
+                    <url>content-types</url>
+                    <widget id="craftercms.components.ContentTypeManagement"/>
+                </tool>
+                <tool>
+                    <title id="acme.customTool" defaultMessage="Custom Tool"/>
+                    <url>custom-tool</url>
+                    <widget id="acme.components.CustomTool">
+                        <configuration>
+                            <option>keep-me</option>
+                        </configuration>
+                    </widget>
+                </tool>
+            </tools>
+        </reference>
+    </references>
+</siteUi>

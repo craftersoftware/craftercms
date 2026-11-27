@@ -42,19 +42,19 @@ import {
 	DescriptorContentType,
 	editTypeTemplate,
 	getFieldFromType,
-	getPropertiesAndValidationsFromDescriptor,
 	getSectionFromType,
 	getDataSourceSiblingIds,
+	extractPluginLocatorFromConfigEntry,
 	getFieldIdSet,
+	getNewFieldFromDescriptor,
 	getSiblingFieldIds,
 	isComposedPath,
 	typeForNextArtefactForm,
 	NEW_DATASOURCE_ID,
 	NEW_FIELD_ID,
 	prepareSerializeToXmlTypeObject,
+	resolveFieldControlDescriptor,
 	reverseTypeFieldValuesObject,
-	systemFieldsIdsMap,
-	systemFieldsTypesMap,
 	TYPE_TEMPLATE_BASE_PATH,
 	TypePropsToEdit,
 	typePropsToEdit
@@ -78,7 +78,7 @@ import EditTypeViewLayout, { EditAppLayoutProps } from './EditTypeViewLayout';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { JotaiStore } from '../../FormsEngine/types';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { createLookupTable, nnou, pluckProps, reversePluckProps } from '../../../utils/object';
 import Box, { BoxProps } from '@mui/material/Box';
 import useEnhancedDialogContext from '../../EnhancedDialog/useEnhancedDialogContext';
@@ -99,10 +99,12 @@ import { getRootPath } from '../../../utils/path';
 import { showHistoryDialog } from '../../../state/actions/dialogs';
 import { XmlViewerDialog } from './XmlViewerDialog';
 import {
+	assignCreatedTypeTemplate,
 	createTypeWorkingCopy,
 	deleteDataSourceFromType,
 	insertDataSourceIntoType,
-	reorderTypeSections
+	reorderTypeSections,
+	typeTemplatePathFromCreatedItem
 } from './editTypeWorkingCopy';
 import useEnhancedDialogState from '../../../hooks/useEnhancedDialogState';
 import { XmlDiffDialog } from './XmlDiffDialog';
@@ -116,12 +118,8 @@ import { fetchContentTypes } from '../../../state/actions/preview';
 import useSelection from '../../../hooks/useSelection';
 import { getXmlBuilder, valueSerializersLookup } from '../../FormsEngine/lib/valueSerializers';
 import { pushErrorDialog } from '../../../utils/system';
-import {
-	contentTypeCreated,
-	contentTypeDeleted,
-	emitSystemEvent,
-	showSystemNotification
-} from '../../../state/actions/system';
+import { contentTypeDeleted, emitSystemEvent, showSystemNotification } from '../../../state/actions/system';
+import { editTypeSaveSuccessActions } from './editTypeSaveSystemEvent';
 import { extractErrorPayload } from '../../../utils/ajax';
 import Typography from '@mui/material/Typography';
 import { AjaxError } from 'rxjs/ajax';
@@ -187,6 +185,21 @@ interface EditAppContextProps {
 	 **/
 	validationSeq: number;
 }
+
+const messages = defineMessages({
+	noFieldControlDescriptor: {
+		defaultMessage: 'No control descriptor found for field "{name}" of type "{type}"'
+	},
+	noDataSourceControlDescriptor: {
+		defaultMessage: 'No control descriptor found for data source "{title}" of type "{type}"'
+	},
+	noFieldTypeDescriptor: {
+		defaultMessage: 'No control descriptor found for field type "{fieldType}"'
+	},
+	noDataSourceDescriptor: {
+		defaultMessage: 'No data source descriptor found for type "{dataSourceType}"'
+	}
+});
 
 export interface ContentTypeManagementConfig {
 	controls: LookupTable<{ descriptor?: DescriptorContentType; icon: { id: string }; id: string }>;
@@ -464,10 +477,17 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// are preserved (e.g. selecting a parent after editing one of its children).
 		const fieldForForm = getFieldFromType(typeForForm, resolvedFieldIdPath) ?? field;
 
-		const controlDescriptor =
-			controlDescriptors[fieldForForm.type as BuiltInControlType] ?? config.controls?.[fieldForForm.type]?.descriptor;
+		const controlDescriptor = resolveFieldControlDescriptor(
+			fieldForForm,
+			controlDescriptors[fieldForForm.type as BuiltInControlType] ?? config.controls?.[fieldForForm.type]?.descriptor
+		);
 		if (!controlDescriptor)
-			return showAlert(`No control descriptor found for field "${fieldForForm.name}" of type "${fieldForForm.type}"`);
+			return showAlert(
+				formatMessage(messages.noFieldControlDescriptor, {
+					name: fieldForForm.name,
+					type: fieldForForm.type
+				})
+			);
 
 		// Adding data sources to the virtual type to ensure they are available for rendering in the dataSourceSelector.
 		const virtualType = createVirtualTypeForField(
@@ -540,7 +560,12 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const dataSourceDescriptor =
 			dataSourceDescriptors[dataSource.type] ?? config.dataSources?.[dataSource.type]?.descriptor;
 		if (!dataSourceDescriptor)
-			return showAlert(`No control descriptor found for field "${dataSource.title}" of type "${dataSource.type}"`);
+			return showAlert(
+				formatMessage(messages.noDataSourceControlDescriptor, {
+					title: dataSource.title,
+					type: dataSource.type
+				})
+			);
 
 		const virtualType = createVirtualTypeForDataSource(dataSourceDescriptor, formatMessage);
 		handleArtefactSelected(
@@ -613,14 +638,29 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 					editTypeTemplate(templatePath, dispatch);
 				} else {
 					createTypeTemplate(TYPE_TEMPLATE_BASE_PATH, dispatch, (item) => {
-						editTypeTemplate(`${item.path}/${item.fileName}`, dispatch);
+						const path = typeTemplatePathFromCreatedItem(item);
+						setType((current) => assignCreatedTypeTemplate(current, item));
+
+						// Sync open type-properties form so TemplateSelector shows the path
+						// and commit doesn't overwrite with the old empty atom value.
+						const { activeFormContext, selectedField, selectedSection, selectedDataSource } = stateRef.current;
+						if (openRef.current && !selectedField && !selectedSection && !selectedDataSource) {
+							const templateAtom = activeFormContext?.atoms?.valueByFieldId?.displayTemplate as
+								PrimitiveAtom<unknown> | undefined;
+							if (templateAtom && jotai.get(templateAtom) !== path) {
+								jotai.set(templateAtom, path);
+							}
+						}
+						onUpdateHasPendingChanges(true);
+
+						editTypeTemplate(path, dispatch);
 					});
 				}
 				break;
 			}
 			case 'deleted':
 				onUpdateHasPendingChanges(false);
-				dispatch(batchActions([emitSystemEvent(contentTypeDeleted()), fetchContentTypes()]));
+				dispatch(batchActions([emitSystemEvent(contentTypeDeleted({ contentTypeId: type.id })), fetchContentTypes()]));
 				onExit?.();
 				break;
 		}
@@ -661,8 +701,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						typeToSave,
 						formEngine.ignorePostfixFields,
 						(field) =>
-							(controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor)
-								?.metadata?.suffixes
+							resolveFieldControlDescriptor(
+								field,
+								controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor
+							)?.metadata?.suffixes
 					);
 					if (postfixViolations.length) {
 						showAlert({
@@ -715,13 +757,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							setContentItemReloadToken((token) => token + 1);
 						}
 						dispatch(
-							batchActions([
-								...(isNew ? [emitSystemEvent(contentTypeCreated())] : []),
-								fetchContentTypes(),
-								showSystemNotification({
-									message: formatMessage({ defaultMessage: 'Save successful.' })
-								})
-							])
+							batchActions(
+								editTypeSaveSuccessActions(isNew, typeToSave.id, formatMessage({ defaultMessage: 'Save successful.' }))
+							)
 						);
 						if (action === 'saveAndClose') {
 							if (postSubmitEdits) {
@@ -843,7 +881,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const configEntry = config.controls?.[fieldType];
 		const descriptor = controlDescriptors[fieldType] ?? configEntry?.descriptor;
 		if (!descriptor) {
-			showAlert(`No control descriptor found for field type "${fieldType}"`);
+			showAlert(formatMessage(messages.noFieldTypeDescriptor, { fieldType }));
 			return;
 		}
 		// Commit open form first so a prior draft is no longer keyed as `{NEW}` before we add another.
@@ -887,16 +925,16 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		handleFieldSelected(newFieldPath, newField, sectionId, nextType);
 	};
 	const handleInsertDataSource = (dataSourceType: string, position: number) => {
+		setOpenDataSourceInserter(false);
 		const configEntry = config.dataSources?.[dataSourceType];
 		const descriptor = dataSourceDescriptors[dataSourceType] ?? configEntry?.descriptor;
 		if (!descriptor) {
-			showAlert(`No data source descriptor found for type "${dataSourceType}"`);
+			showAlert(formatMessage(messages.noDataSourceDescriptor, { dataSourceType }));
 			return;
 		}
 
 		const newDataSource = getNewDataSourceFromDescriptor(dataSourceType, descriptor, configEntry);
 
-		setOpenDataSourceInserter(false);
 		setType((currentType) => insertDataSourceIntoType(currentType, newDataSource, position));
 		onUpdateHasPendingChanges(true);
 		handleDataSourceSelected(newDataSource);
@@ -950,6 +988,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			<TypeControllerFlagContext.Provider value={typeControllerFlagContext}>
 				{createElement(TypeBuilderFormsEngine, {
 					...fieldFormViewProps,
+					// Keep `type` current so delete-confirmation can list fields that still reference a data source.
+					type,
 					isPanelReady: drawerOpenTransitionEnded,
 					onOpenInsertFieldDialog,
 					performCurrentFormErrorCheckAndWarning
@@ -1503,7 +1543,10 @@ function updateTypeFromFieldUpdate(
 	if (!state.selectedField) return;
 
 	const fieldType = state.selectedField.type;
-	const descriptor = configDescriptors?.[fieldType] ?? controlDescriptors[fieldType];
+	const descriptor = resolveFieldControlDescriptor(
+		state.selectedField,
+		configDescriptors?.[fieldType] ?? controlDescriptors[fieldType]
+	);
 	if (isComposedPath(fieldIdPath)) {
 		// When the field is not on the root level (composed fieldIdPath), the field is under another field, where each
 		// field contains a lookupTable of fields. In that screnario sections should not be updated.
@@ -1698,37 +1741,6 @@ function parseConfigPlugins(
 	return createLookupTable(parsedPlugins);
 }
 
-function getNewFieldFromDescriptor(
-	fieldType: string,
-	descriptor: DescriptorContentType,
-	configEntry?: { plugin?: FormDefinitionPlugin; descriptor?: DescriptorContentType }
-): NewContentTypeField {
-	const newField: NewContentTypeField = {
-		NEW: true,
-		id: systemFieldsIdsMap[fieldType] ?? null,
-		name: '',
-		helpText: '',
-		description: '',
-		type: systemFieldsTypesMap[fieldType] ?? fieldType,
-		validations: {},
-		defaultValue: '',
-		properties: {}
-	};
-	if (!descriptor) return newField;
-
-	if (descriptor.id === 'repeat') newField.fields = {};
-	const { properties, validations } = getPropertiesAndValidationsFromDescriptor(descriptor);
-
-	newField.properties = properties;
-	newField.validations = validations;
-	const plugin = extractPluginLocatorFromConfigEntry(configEntry);
-	if (plugin) {
-		Object.assign(newField.properties, { plugin });
-	}
-
-	return newField;
-}
-
 function getNewDataSourceFromDescriptor(
 	dataSourceType: string,
 	descriptor: DescriptorContentType,
@@ -1757,31 +1769,6 @@ function getNewDataSourceFromDescriptor(
 	}
 
 	return newDataSource;
-}
-
-function extractPluginLocatorFromConfigEntry(
-	configEntry?: { plugin?: FormDefinitionPlugin | Record<string, unknown> } & Record<string, unknown>
-): FormDefinitionPlugin | undefined {
-	if (!configEntry?.plugin || typeof configEntry.plugin !== 'object') return undefined;
-	const raw = configEntry.plugin as Record<string, unknown>;
-	// ui.xml attribute form: <plugin id type name fileName />; form-definition uses pluginId/filename.
-	const type = raw.type;
-	const name = raw.name;
-	const filename = raw.filename ?? raw.fileName ?? raw.file;
-	const pluginId = raw.pluginId ?? raw.id;
-	if (
-		typeof type === 'string' &&
-		typeof name === 'string' &&
-		typeof filename === 'string' &&
-		typeof pluginId === 'string' &&
-		type &&
-		name &&
-		filename &&
-		pluginId
-	) {
-		return { type, name, filename, pluginId };
-	}
-	return undefined;
 }
 
 function reorderSectionFields(

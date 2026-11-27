@@ -97,16 +97,9 @@ export function dispatchItems(store: ItemsStore, change: (items: ItemsByPath) =>
 	});
 }
 
-// The test build doesn't add message ids, so derive them from the default message.
-const baseIntl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
-const intl = {
-	...baseIntl,
-	formatMessage: ((descriptor: { id?: string; defaultMessage?: string }, values?: Record<string, unknown>) =>
-		baseIntl.formatMessage(
-			{ ...descriptor, id: descriptor.id ?? String(descriptor.defaultMessage) } as never,
-			values as never
-		)) as never
-};
+// The real createIntl, not createTestIntl: the shared helper makes up an id for a descriptor that has none, which
+// hides a message the app would throw on. Here a missing id fails the test.
+const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
 
 const mounted: Array<() => void> = [];
 
@@ -136,6 +129,7 @@ export async function mountTree(store: ItemsStore, tree: React.ReactElement): Pr
 }
 
 export function unmountAll() {
+	pushFormCalls.length = 0;
 	mounted.splice(0).forEach((unmount) => unmount());
 }
 
@@ -191,7 +185,16 @@ export function createEntry(fieldIds: string[]) {
 
 export type Entry = ReturnType<typeof createEntry>;
 
-const stableGlobal = { formsStackData: [], api: { pushForm() {} } };
+/** What the controls passed to `api.pushForm`, cleared by `unmountAll`. */
+export const pushFormCalls: Array<{ readonly?: boolean }> = [];
+const stableGlobal = {
+	formsStackData: [],
+	api: {
+		pushForm(props: { readonly?: boolean }) {
+			pushFormCalls.push(props);
+		}
+	}
+};
 const formApi = { rollbackField() {} } as never;
 
 /**
@@ -204,23 +207,27 @@ export function FormHost(props: {
 	itemKey?: string | null;
 	sourceMap?: Record<string, string>;
 	counts?: Record<string, number>;
+	/** A create form has no stored item. The host still renders, so children can see that missing item. */
+	create?: boolean;
 	children: React.ReactNode;
 }) {
-	const { entry, itemKey = formPath, sourceMap = null, counts } = props;
+	const { entry, itemKey = formPath, sourceMap = null, counts, create = false } = props;
 	const entryRef = React.useRef(entry);
 	const [ready, setReady] = React.useState(true);
 	if (counts) {
 		counts.host = (counts.host ?? 0) + 1;
 		if (!ready) counts.notReady = (counts.notReady ?? 0) + 1;
 	}
-	const hasLiveItem = useFormItemGate({ itemKey, create: false, repeat: false, setReady });
+	const hasLiveItem = useFormItemGate({ itemKey, create, repeat: false, setReady });
 	// The prep effect makes the form ready again once the item it needs is stored.
 	React.useEffect(() => {
 		if (hasLiveItem) setReady(true);
 	}, [hasLiveItem]);
 	useFormEntryProvisioning(entryRef, { itemKey, siteId, formsApi: stableGlobal.api });
 	const itemMeta = React.useMemo(() => ({ ...entry.itemMeta, sourceMap }), [entry, sourceMap]);
-	if (!ready || !hasLiveItem) return React.createElement('p', { 'data-testid': 'not-ready' }, 'Please wait');
+	// Create has no content item yet. Other forms wait until the item is stored.
+	if (!create && (!ready || !hasLiveItem))
+		return React.createElement('p', { 'data-testid': 'not-ready' }, 'Please wait');
 	return React.createElement(
 		StableGlobalContext.Provider,
 		{ value: stableGlobal as never },

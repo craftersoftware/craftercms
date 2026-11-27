@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,14 +14,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { get, getGlobalHeaders, postJSON } from '../utils/ajax';
+import { get, getGlobalHeaders, post, postJSON } from '../utils/ajax';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { Observable, of, from } from 'rxjs';
 import { User } from '../models/User';
-import { AjaxError } from 'rxjs/ajax';
+import { AjaxError, AjaxResponse } from 'rxjs/ajax';
 import { Credentials } from '../models/Credentials';
 import { Api2ResponseFormat, ApiResponse } from '../models/ApiResponse';
 import { toQueryString } from '../utils/object';
+import { XSRF_TOKEN_HEADER_NAME } from '../utils/constants';
 
 interface FetchSSOLogoutUrlResponse {
 	logoutUrl: string;
@@ -100,15 +101,55 @@ export function validatePasswordResetToken(token: string): Observable<boolean> {
 	);
 }
 
-export type ObtainAuthTokenResponse = { expiresAt: number; token: string };
+export type ObtainAuthTokenResponse = {
+	expiresAt: number;
+	/**
+	 * Seconds until `expiresAt`, counted on the server clock. Absent on an older server; callers then fall back to
+	 * `expiresAt`.
+	 */
+	expiresIn?: number;
+	token: string;
+	/** Earliest time at which the session may expire, absent if there are no time limits shorter than 20 hours. */
+	sessionExpiresAt?: number;
+	/**
+	 * Seconds until `sessionExpiresAt`, counted on the server clock. Absent when there is nothing to warn about, or
+	 * on an older server; callers then fall back to `sessionExpiresAt`.
+	 */
+	sessionExpiresIn?: number;
+	/** Whether staying signed in would move the session expiry. */
+	canExtendSession?: boolean;
+};
 
+/**
+ * Gets new tokens. `sessionExpiresAt` is the earliest time at which the session may expire (absent if there are no time
+ * limits shorter than 20 hours) and `canExtendSession` tells if staying signed in would move it. `expiresIn` and
+ * `sessionExpiresIn` are the seconds remaining on the server clock.
+ **/
 export function obtainAuthToken(): Observable<ObtainAuthTokenResponse> {
-	return get<ObtainAuthTokenResponse>('/studio/refresh.json').pipe(
-		map((response) => {
-			const auth = response?.response;
-			return { token: auth.token, expiresAt: new Date(auth.expiresAt).getTime() };
-		})
+	return get<ObtainAuthTokenResponse>('/studio/refresh.json').pipe(map(toAuthTokenResponse));
+}
+
+/**
+ * Gets new tokens and extends the limit the user is being warned about. An inactivity warning only refreshes the
+ * activity time; the absolute session limit is restarted, and one extension used, only when that limit is the one
+ * about to expire. Unlike the token refresh, this is a POST as it changes state, so it requires the XSRF token.
+ **/
+export function extendSession(xsrfToken: string): Observable<ObtainAuthTokenResponse> {
+	return post<ObtainAuthTokenResponse>('/studio/refresh.json', null, { [XSRF_TOKEN_HEADER_NAME]: xsrfToken }).pipe(
+		map(toAuthTokenResponse)
 	);
+}
+
+function toAuthTokenResponse(response: AjaxResponse<ObtainAuthTokenResponse>): ObtainAuthTokenResponse {
+	const auth = response?.response;
+	return {
+		token: auth.token,
+		expiresAt: new Date(auth.expiresAt).getTime(),
+		expiresIn: auth.expiresIn,
+		sessionExpiresAt: auth.sessionExpiresAt ? new Date(auth.sessionExpiresAt).getTime() : null,
+		sessionExpiresIn: auth.sessionExpiresIn,
+		canExtendSession: auth.canExtendSession
+	};
 }
 
 export type FetchAuthTypeResponse = 'db' | 'ldap' | 'auth_headers' | 'saml';

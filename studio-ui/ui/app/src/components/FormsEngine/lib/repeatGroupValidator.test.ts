@@ -381,18 +381,18 @@ describe('fileNameValidator', () => {
 	// Max length is measured on the name after applyContentNameRules. Special characters that strip away do not count.
 	it('rejects a name longer than maxLength after content-name normalization', async () => {
 		const limited = fileNameField(false, 5);
-		const tooLong = await validateFieldValue(limited, '', nameMeta(aboutPath, 'abcdef'));
+		const tooLong = await validateFieldValue(limited, 'abcdef', nameMeta(aboutPath));
 		assert.equal(tooLong.isValid, false);
 		assert.deepEqual(tooLong.messages.map(messageOf), [
 			{ text: 'The value is greater than the allowed maximum ({maxLength}).', values: { maxLength: 5 } }
 		]);
 
 		// Same path as the atom, so uniqueness is skipped.
-		const withinLimit = await validateFieldValue(limited, '', nameMeta(aboutPath, 'about'));
+		const withinLimit = await validateFieldValue(limited, 'about', nameMeta(aboutPath));
 		assert.equal(withinLimit.isValid, true);
 
 		// "ab!!!c" normalizes to "abc" (length 3). Omit siteId so uniqueness is not attempted.
-		const afterRules = await validateFieldValue(limited, '', { ...nameMeta(aboutPath, 'ab!!!c'), siteId: undefined });
+		const afterRules = await validateFieldValue(limited, 'ab!!!c', { ...nameMeta(aboutPath), siteId: undefined });
 		assert.equal(afterRules.isValid, true);
 	});
 });

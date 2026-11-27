@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Stock English text is localized only when the element has no id.
+  ~ An existing id keeps its defaultMessage and text.
+  -->
+<siteUi>
+    <widget id="craftercms.components.PathNavigatorTree">
+        <configuration>
+            <label>Pages</label>
+            <label id="acme.pages" defaultMessage="Project pages">Pages</label>
+            <label id="pathNavigatorTree.components" defaultMessage="Custom components">Components</label>
+            <label id="pathNavigatorTree.items" defaultMessage="Items"/>
+            <label>Site Pages</label>
+        </configuration>
+    </widget>
+    <widget id="craftercms.components.PreviewAudiencesPanel">
+        <configuration>
+            <name>Segment</name>
+            <name id="acme.segment" defaultMessage="Audience">Segment</name>
+            <name id="previewAudiencesPanel.nameLabel" defaultMessage="Display name">Name</name>
+            <label>Guy</label>
+            <label id="acme.guy" defaultMessage="Person">Guy</label>
+            <helpText>Setting the segment will change content targeting to the audience selected.</helpText>
+            <helpText id="acme.help" defaultMessage="Custom targeting note">Setting the segment will change content targeting to the audience selected.</helpText>
+            <name>Nickname</name>
+        </configuration>
+    </widget>
+</siteUi>

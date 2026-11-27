@@ -1,0 +1,88 @@
+// Single source for the code-editor keyboard styles.
+// studio-ui/scripts/build-editor-keyboard.mjs compiles this partial into
+// editorKeyboardFallbackCss.ts. Runtime code injects that CSS only when
+// tinymce-ace.css is not already linked. Do not copy these rules into JS.
+
+@import 'focus-ring';
+
+// The hint bar colours, named once. The React editors use the MUI theme instead.
+$code-editor-hint-background: #f4f4f5;
+$code-editor-hint-text: #333333;
+$code-editor-hint-border: #d0d0d0;
+$code-editor-hint-background-dark: #252526;
+$code-editor-hint-text-dark: #e6e6e6;
+$code-editor-hint-border-dark: #3c3c3c;
+
+// The hint is the aria-describedby target of the Ace scroller and textarea. It is visually
+// hidden until the scroller or gutter (the editor's tab stops) has focus, then overlays the
+// bottom edge so the editor does not change size. It is hidden again while typing in the
+// textarea. The `.tox-dialog .ace_editor *` rules in tinymce-ace.scss would restyle it, so the
+// font and white-space declarations are !important.
+.ace_editor > .craftercms-code-editor-hint,
+.tox-dialog .ace_editor > .craftercms-code-editor-hint {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	white-space: nowrap !important;
+}
+
+.ace_editor:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint,
+.tox-dialog .ace_editor:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint {
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 25;
+	box-sizing: border-box;
+	width: auto;
+	height: auto;
+	margin: 0;
+	padding: 4px 8px;
+	overflow: visible;
+	clip: auto;
+	clip-path: none;
+	pointer-events: none;
+	font-family:
+		system-ui,
+		-apple-system,
+		'Segoe UI',
+		sans-serif !important;
+	font-size: 12px !important;
+	font-weight: 400 !important;
+	line-height: 20px !important;
+	white-space: normal !important;
+	background: $code-editor-hint-background;
+	color: $code-editor-hint-text;
+	border-top: 1px solid $code-editor-hint-border;
+}
+
+.ace_editor.ace_dark:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint {
+	background: $code-editor-hint-background-dark;
+	color: $code-editor-hint-text-dark;
+	border-top-color: $code-editor-hint-border-dark;
+}
+
+// Ace's own scroller outline is replaced by the shared ring, drawn on an overlay under the text
+// layer so the text and the scrollbar stay on top of it. ::before leaves ::after to Ace's
+// scrolled-left shadow. An outline, rather than a box-shadow, also survives forced colours.
+.ace_scroller.ace_keyboard-focus:focus,
+.ace_gutter.ace_keyboard-focus:focus {
+	outline: none;
+}
+
+.ace_scroller.ace_keyboard-focus:focus::before,
+.ace_gutter.ace_keyboard-focus:focus::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	box-sizing: border-box;
+	pointer-events: none;
+	z-index: 20;
+	// `.ace_dark` is set by Ace on the container of every dark theme (tomorrow_night, nord_dark).
+	@include focus-ring($inset: true, $dark: '.ace_dark');
+}

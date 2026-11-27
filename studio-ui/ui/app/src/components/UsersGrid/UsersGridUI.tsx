@@ -25,7 +25,7 @@ import Avatar from '@mui/material/Avatar';
 import User from '../../models/User';
 import { PagedArray } from '../../models/PagedArray';
 import Pagination from '../Pagination';
-import GlobalAppGridRow from '../GlobalAppGridRow';
+import GlobalAppGridRow, { GlobalAppGridRowAction } from '../GlobalAppGridRow';
 import GlobalAppGridCell from '../GlobalAppGridCell';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -84,7 +84,7 @@ export function UsersGridUI(props: UsersGridUIProps) {
 									}
 									label={
 										<Typography variant="subtitle2">
-											<FormattedMessage defaultMessage="Show disabled users" />
+											<FormattedMessage defaultMessage="Show Disabled Users" />
 										</Typography>
 									}
 									labelPlacement="start"
@@ -103,7 +103,9 @@ export function UsersGridUI(props: UsersGridUIProps) {
 										</Avatar>
 									</GlobalAppGridCell>
 									<GlobalAppGridCell align="left" className="pl20 width20">
-										{user.firstName} {user.lastName}
+										<GlobalAppGridRowAction>
+											{user.firstName} {user.lastName}
+										</GlobalAppGridRowAction>
 									</GlobalAppGridCell>
 									<GlobalAppGridCell align="left" className="width20">
 										<Typography variant="body2" noWrap title={user.username}>

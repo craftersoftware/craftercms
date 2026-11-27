@@ -50,7 +50,7 @@ export function LauncherOpenerButton(props: LauncherOpenerButtonProps) {
 	const dispatch = useDispatch();
 	const onMenuClick = () => dispatch(showLauncher({ anchor: `#${id}`, ...launcherProps }));
 	return (
-		<Tooltip title={formatMessage(messages.menu)}>
+		<Tooltip title={formatMessage(messages.menu)} describeChild>
 			<IconButton
 				id={id}
 				aria-label={formatMessage(messages.openDrawer)}

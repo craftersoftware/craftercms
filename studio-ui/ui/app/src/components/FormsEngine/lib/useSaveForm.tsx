@@ -30,13 +30,16 @@ import {
 	commitFormVisibility,
 	complementValuesWithSystemProps,
 	composePathForType,
+	embeddedFileName,
 	EMPTY_CHANGED_FIELD_IDS,
 	extractAtomValues,
 	getBasePath,
 	getFileNameValueFromPath,
 	readInvalidFieldIds,
-	showAlert
+	showAlert,
+	xmlFileNamesForPath
 } from './formUtils';
+import { buildContentXml } from './valueSerializers';
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
 import { contentFormSaveAction } from '../../../utils/contentFormLaunch';
 import { applySaveGate, childFields, draftFlagAfterBeforeSave, repositorySaveFollowUp } from './formVisibility';
@@ -53,11 +56,16 @@ import {
 import { AjaxError, AjaxResponse } from 'rxjs/ajax';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { buildContentXml } from './valueSerializers';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
-import { checkMinimumSaveRequirementsFulfilled, isInternalNameValid } from './validators';
-import { cancelPackages } from '../../../services/workflow';
+import { checkMinimumSaveRequirementsFulfilled } from './validators';
+import {
+	contentTypeDefinesInternalName,
+	embeddedMinimumSaveAlert,
+	fullFormMinimumSaveAlert,
+	isBlankCreateFileName
+} from './minimumSaveRequirements';
+import { cancelPackages, fetchAffectedPackages } from '../../../services/workflow';
 import { switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
 import { createComponentId, pushConfirmDialog } from '../../../utils/system';
@@ -386,23 +394,29 @@ export function useSaveForm(props: UseSaveFormProps) {
 				});
 
 				complementValuesWithSystemProps(id, values, contentObject, contentType, saveAsDraft);
-				const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
-				const xml = buildContentXml(valuesWithoutFileName, contentTypesById);
+				const hasInternalNameField = contentTypeDefinesInternalName(contentType);
 				// Embedded handled here. If true, execution ends inside if statement.
 				if (isEmbedded) {
 					// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
 					// Same safety net as the full form below, for a stacked embedded form too.
-					if (!isInternalNameValid(values)) {
+					// Internal name is required only when this type defines the field.
+					const embeddedAlert = embeddedMinimumSaveAlert(
+						formatMessage,
+						contentType.fields,
+						values[XmlKeys.internalName],
+						hasInternalNameField
+					);
+					if (embeddedAlert) {
 						setIsSubmitting(false);
-						return showAlert({
-							dispatch,
-							message: formatMessage(
-								{ defaultMessage: '{internalName} is required to save content.' },
-								{ internalName: contentType.fields[XmlKeys.internalName].name }
-							)
-						});
+						return showAlert({ dispatch, message: embeddedAlert });
 					}
 
+					// Parents (e.g. NodeSelector) merge `values` into the in-memory component, not `xml`/`dom`.
+					// Mutate in place so relevance WeakMap association is kept for stacked commits.
+					// Do not read `file-name` from form values: stacked embeds delete it at bootstrap, and a
+					// top-level embed may seed a path-derived slug. Use the component's stored element.
+					values[XmlKeys.fileName] = embeddedFileName(id, contentObject?.[XmlKeys.fileName] as string);
+					const xml = buildContentXml(values, contentTypesById);
 					const dom = fromString(xml);
 
 					// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
@@ -427,10 +441,16 @@ export function useSaveForm(props: UseSaveFormProps) {
 					const saveEmbeddedContent = (cancelPackagesComment: string = '') => {
 						const writeService$ = updateEmbeddedComponent(siteId, path, id, xml, { comment: versionComment });
 						const saveOrCancel$ = affectedPackages?.length
-							? cancelPackages(siteId, {
-									packageIds: affectedPackages.map((pkg) => pkg.id),
-									comment: cancelPackagesComment
-								}).pipe(switchMap(() => writeService$))
+							? fetchAffectedPackages(siteId, path).pipe(
+									switchMap((pkgs) =>
+										pkgs?.length
+											? cancelPackages(siteId, {
+													packageIds: pkgs.map((pkg) => pkg.id),
+													comment: cancelPackagesComment
+												}).pipe(switchMap(() => writeService$))
+											: writeService$
+									)
+								)
 							: writeService$;
 
 						saveOrCancel$.subscribe({
@@ -484,6 +504,18 @@ export function useSaveForm(props: UseSaveFormProps) {
 					}
 					return 'saved';
 				}
+				// A type with no file-name field has no validity atom, so the check below treats the name as
+				// valid. A blank name would compose `<folder>/index.xml` or `<folder>/.xml`. Refuse it first.
+				if (isBlankCreateFileName({ isCreateMode, isEmbedded, fileName: currentFileName })) {
+					setIsSubmitting(false);
+					const msg = fullFormMinimumSaveAlert(formatMessage, contentType.fields, {
+						fileNameValid: false,
+						internalName: values[XmlKeys.internalName],
+						hasInternalNameField
+					});
+					if (msg) showAlert({ dispatch, message: msg });
+					return;
+				}
 				let path: string;
 				let renamePath: string;
 				const isRename = !isCreateMode && currentFileName !== initialFileName;
@@ -498,6 +530,9 @@ export function useSaveForm(props: UseSaveFormProps) {
 						path = itemPath;
 					}
 				}
+
+				// Keep `values` as the UI slug; only the XML copy gets the path basename (`index.xml`, `foo.xml`).
+				const xml = buildContentXml({ ...values, ...xmlFileNamesForPath(path) }, contentTypesById);
 
 				const saveActionCallbacks = {
 					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
@@ -537,22 +572,24 @@ export function useSaveForm(props: UseSaveFormProps) {
 				// Validate minimum requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
 				// The Save card disables itself on the same rule (minimumSaveRequirements). This stays for a read that is
 				// a moment behind, and for a value `onBeforeSave` changed.
+				// A type with no file-name field has no validity atom. Do not read that missing atom.
+				const fileNameValidationAtom = stableFormContext.atoms.validationByFieldId[XmlKeys.fileName];
+				const fileNameValidation = fileNameValidationAtom ? jotai.get(fileNameValidationAtom) : undefined;
 				const minimumRequirementsFullfilled = await checkMinimumSaveRequirementsFulfilled(
-					jotai.get(stableFormContext.atoms.validationByFieldId[XmlKeys['fileName']]),
-					values
+					fileNameValidation,
+					values,
+					hasInternalNameField
 				);
 				if (!minimumRequirementsFullfilled) {
-					setIsSubmitting(false);
-					return showAlert({
-						dispatch,
-						message: formatMessage(
-							{ defaultMessage: 'You need a valid {fileName} and {internalName} at a minimum to save content.' },
-							{
-								fileName: contentType.fields[XmlKeys.fileName].name,
-								internalName: contentType.fields[XmlKeys.internalName].name
-							}
-						)
+					const fileNameValid = fileNameValidation ? (await fileNameValidation).isValid : true;
+					const msg = fullFormMinimumSaveAlert(formatMessage, contentType.fields, {
+						fileNameValid,
+						internalName: values[XmlKeys.internalName],
+						hasInternalNameField
 					});
+					setIsSubmitting(false);
+					if (msg) showAlert({ dispatch, message: msg });
+					return;
 				}
 
 				// TODO: write-content url on FE1 sends phase, path, fileName, contentType QSAs. Important?
@@ -561,13 +598,15 @@ export function useSaveForm(props: UseSaveFormProps) {
 						? moveAndUpdateContent(siteId, itemPath, path, xml)
 						: writeContent(siteId, path, xml, { comment: versionComment });
 					const saveOrCancel$ = affectedPackages?.length
-						? cancelPackages(siteId, {
-								packageIds: affectedPackages.map((pkg) => pkg.id),
-								comment: cancelPackagesComment
-							}).pipe(
-								switchMap(() => {
-									return saveOrMoveService$;
-								})
+						? fetchAffectedPackages(siteId, itemPath).pipe(
+								switchMap((pkgs) =>
+									pkgs?.length
+										? cancelPackages(siteId, {
+												packageIds: pkgs.map((pkg) => pkg.id),
+												comment: cancelPackagesComment
+											}).pipe(switchMap(() => saveOrMoveService$))
+										: saveOrMoveService$
+								)
 							)
 						: saveOrMoveService$;
 
