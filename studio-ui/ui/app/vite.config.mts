@@ -49,11 +49,40 @@ export default defineConfig(({ mode }) => ({
 		include: ['@mui/material']
   },
   build: {
-    minify: false,
+    minify: true,
     outDir: '../../static-assets/app',
     emptyOutDir: true,
     sourcemap: true,
-    rollupOptions: {
+    rolldownOptions: {
+      output: {
+        // Without manual groups, Rolldown emits one tiny chunk per MUI component, per rxjs operator, etc. Studio is often
+        // served over plain HTTP/1.1, where browsers fetch ~6 files at a time per origin, so the hundreds of files on the
+        // startup path cost many round trips. These groups collapse vendor code that is always needed at startup
+        // (`craftercms.libs` pulls in all of React, MUI and rxjs) into a few files.
+        // Do not add a catch-all group for app code (`src/**`) or for `node_modules` in general: it drags lazily loaded
+        // code (monaco, graphiql, data grid...) onto the startup path and can create cyclic chunks that break startup.
+        codeSplitting: {
+          groups: [
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 40 },
+            {
+              name: 'mui',
+              // Intentionally excludes @mui/icons-material (thousands of modules, ~6 MB) and the @mui/x-* packages,
+              // which are lazily loaded.
+              test: /node_modules[\\/](@mui[\\/](material|system|utils|styled-engine|private-theming)|@emotion|@popperjs|react-transition-group)[\\/]/,
+              priority: 30
+            },
+            { name: 'rxjs', test: /node_modules[\\/](rxjs|redux-observable)[\\/]/, priority: 20 },
+            // Only icons referenced by more than one chunk (i.e. icons statically imported by app code). Icons
+            // only referenced by the lazy icon registry stay in their own on-demand chunks.
+            {
+              name: 'icons',
+              test: /node_modules[\\/]@mui[\\/]icons-material[\\/]/,
+              minShareCount: 2,
+              priority: 10
+            }
+          ]
+        }
+      },
       input: {
         main: 'index.html',
         login: 'pages/login.html',
