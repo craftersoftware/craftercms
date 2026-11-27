@@ -96,6 +96,13 @@ function VersionListItem(props: VersionListItemProps) {
 				}
 			}}
 			onBlur={() => setTooltipOpen(false)}
+			onKeyDown={(e) => {
+				// The tooltip isn't focusable, so let keyboard users scroll a long comment from the row.
+				const tooltip = tooltipRef.current;
+				if (!tooltipOpen || !tooltip || (e.key !== 'PageDown' && e.key !== 'PageUp')) return;
+				e.preventDefault();
+				tooltip.scrollTop += (e.key === 'PageDown' ? 1 : -1) * tooltip.clientHeight * 0.9;
+			}}
 			sx={{ padding: '15px 48px 15px 20px' }}
 			className={isSelected && 'selected'}
 			secondaryAction={
@@ -160,6 +167,7 @@ function VersionListItem(props: VersionListItemProps) {
 									ref: tooltipRef,
 									sx: {
 										maxWidth: 400,
+										maxHeight: '40vh',
 										overflow: 'auto',
 										whiteSpace: 'pre-wrap',
 										wordBreak: 'break-word'
