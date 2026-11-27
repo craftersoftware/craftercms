@@ -50,8 +50,23 @@ Object.defineProperty(window.HTMLElement.prototype, 'scrollWidth', {
 	}
 });
 
+// jsdom has no layout either: a tooltip holding over 400 characters overflows its 40vh box.
+Object.defineProperty(window.HTMLElement.prototype, 'scrollHeight', {
+	configurable: true,
+	get(this: HTMLElement) {
+		return this.classList.contains('MuiTooltip-tooltip') && this.textContent.length > 400 ? 300 : 0;
+	}
+});
+Object.defineProperty(window.HTMLElement.prototype, 'clientHeight', {
+	configurable: true,
+	get(this: HTMLElement) {
+		return this.classList.contains('MuiTooltip-tooltip') ? 100 : 0;
+	}
+});
+
 const longComment = `${'A very long version comment that does not fit on a single line. '.repeat(10)}The end.`;
 const shortComment = 'Fix the hero';
+const mediumComment = 'A version comment that is cut off in the row but fits in the tooltip.';
 
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
 afterEach(async () => {
@@ -174,6 +189,14 @@ describe('version list comment tooltip', () => {
 		assert.ok(tooltip, 'tooltip');
 		assert.equal(tooltip.textContent, longComment);
 		assert.equal(row.getAttribute('aria-keyshortcuts'), 'PageUp PageDown');
+	});
+
+	it('does not announce PageUp/PageDown when the full comment fits in the tooltip', async () => {
+		const host = await render(mediumComment);
+		const row = getRow(host);
+		await focusViaKeyboard(row);
+		assert.ok(document.querySelector('[role="tooltip"]'), 'tooltip');
+		assert.equal(row.getAttribute('aria-keyshortcuts'), null);
 	});
 
 	it('does not open the tooltip for a comment that fits', async () => {
