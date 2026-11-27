@@ -561,7 +561,7 @@ public class S3ContentStoreAdapter extends AbstractCachedFileBasedContentStoreAd
 		String folderPrefix = context.getKey();
 		String path = CS.removeStart(stripStart(key, DELIMITER), stripStart(folderPrefix, DELIMITER));
 		// Patterns are relative to the site root and start with a single delimiter, with or without a base key
-		path = DELIMITER + stripStart(path, DELIMITER);
+		path = CS.prependIfMissing(path, DELIMITER);
 
 		if (!RegexUtils.matchesAny(path, cacheAllowedPaths)) {
 			return false;
