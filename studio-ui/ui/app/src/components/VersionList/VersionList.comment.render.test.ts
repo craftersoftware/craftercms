@@ -1,0 +1,278 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * The version comment is shown in a MUI tooltip so the full text can be read when the row truncates it.
+ */
+
+import '../../../test/stringListDomSetup.mjs';
+import '../../../test/registerTsLoader.mjs';
+import assert from 'node:assert/strict';
+import { afterEach, describe, it } from 'node:test';
+
+const React = await import('react');
+const { act } = await import('react');
+const { createRoot } = await import('react-dom/client');
+const { RawIntlProvider, createIntl } = await import('react-intl');
+const { Provider } = await import('react-redux');
+const { configureStore } = await import('@reduxjs/toolkit');
+const { VersionList } = await import('./VersionList.tsx');
+
+const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
+const formattedDates: string[] = [];
+const formatDateToParts = intl.formatDateToParts.bind(intl);
+intl.formatDateToParts = ((value, options) => {
+	formattedDates.push(new Date(value as string).toISOString());
+	return formatDateToParts(value, options);
+}) as typeof intl.formatDateToParts;
+const store = configureStore({
+	reducer: { uiConfig: (state = { locale: { localeCode: 'en-US', dateTimeFormatOptions: { hour12: true } } }) => state }
+});
+
+// jsdom has no layout, so report the comment as truncated (scrollWidth > clientWidth) to pass the component's gate.
+Object.defineProperty(window.HTMLElement.prototype, 'scrollWidth', {
+	configurable: true,
+	get(this: HTMLElement) {
+		return this.classList.contains('MuiListItemText-secondary') && this.textContent.length > 40 ? 500 : 0;
+	}
+});
+
+// jsdom has no layout either: a tooltip holding over 400 characters overflows its 40vh box.
+Object.defineProperty(window.HTMLElement.prototype, 'scrollHeight', {
+	configurable: true,
+	get(this: HTMLElement) {
+		return this.classList.contains('MuiTooltip-tooltip') && this.textContent.length > 400 ? 300 : 0;
+	}
+});
+Object.defineProperty(window.HTMLElement.prototype, 'clientHeight', {
+	configurable: true,
+	get(this: HTMLElement) {
+		return this.classList.contains('MuiTooltip-tooltip') ? 100 : 0;
+	}
+});
+
+const longComment = `${'A very long version comment that does not fit on a single line. '.repeat(10)}The end.`;
+const shortComment = 'Fix the hero';
+const mediumComment = 'A version comment that is cut off in the row but fits in the tooltip.';
+
+const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
+afterEach(async () => {
+	await act(async () => {
+		for (const { unmount, host } of mounted.splice(0)) {
+			unmount();
+			host.remove();
+		}
+	});
+});
+
+const makeVersion = (versionNumber: string, comment: string, modifiedDate = '2026-03-04T15:00:00.000Z') => ({
+	versionNumber,
+	modifiedDate,
+	comment,
+	author: { username: 'ada' },
+	committer: 'ada',
+	oldPath: '',
+	path: '/site/website/index.xml',
+	revertible: true
+});
+
+async function render(
+	comment: string,
+	onItemClick: (version: unknown) => void = () => {},
+	versions = [makeVersion('2', comment)]
+) {
+	const host = document.createElement('div');
+	document.body.appendChild(host);
+	const root = createRoot(host);
+	mounted.push({ unmount: () => root.unmount(), host });
+	await act(async () => {
+		root.render(
+			React.createElement(
+				Provider,
+				{ store },
+				React.createElement(
+					RawIntlProvider,
+					{ value: intl },
+					React.createElement(VersionList, {
+						versions,
+						selected: [],
+						onItemClick
+					} as never)
+				)
+			)
+		);
+	});
+	return host;
+}
+
+// MUI waits `enterDelay` (100ms by default) before opening the tooltip.
+async function wait(ms = 250) {
+	await act(async () => {
+		await new Promise((resolve) => setTimeout(resolve, ms));
+	});
+}
+
+function getRow(host: HTMLElement) {
+	const row = host.querySelector<HTMLElement>('.MuiListItemButton-root');
+	assert.ok(row, 'version row');
+	return row;
+}
+
+function getCommentTarget(host: HTMLElement) {
+	const target = Array.from(host.querySelectorAll<HTMLElement>('span')).find((el) => el.textContent === longComment);
+	assert.ok(target, 'comment element');
+	return target;
+}
+
+async function hover(el: HTMLElement) {
+	await act(async () => {
+		el.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+	});
+	await wait();
+}
+
+async function focusViaKeyboard(el: HTMLElement) {
+	await act(async () => {
+		// MUI only opens the tooltip on focus-visible, which jsdom infers from a prior keyboard event.
+		document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+		el.focus();
+	});
+	await wait();
+}
+
+describe('version list comment tooltip', () => {
+	it('shows the full text of a truncated comment in the tooltip', async () => {
+		const host = await render(longComment);
+		assert.equal(document.querySelector('[role="tooltip"]'), null, 'no tooltip before interaction');
+		await hover(getCommentTarget(host));
+		const tooltip = document.querySelector('[role="tooltip"]');
+		assert.ok(tooltip, 'tooltip');
+		assert.equal(tooltip.textContent, longComment);
+	});
+
+	it('does not call onItemClick when clicking inside the tooltip', async () => {
+		const clicks: unknown[] = [];
+		const host = await render(longComment, (version) => clicks.push(version));
+		await hover(getCommentTarget(host));
+		const tooltip = document.querySelector<HTMLElement>('[role="tooltip"]');
+		assert.ok(tooltip, 'tooltip');
+		await act(async () => {
+			tooltip.firstElementChild?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+		});
+		assert.equal(clicks.length, 0, 'onItemClick was called from a click inside the tooltip');
+		// Sanity check: clicking the row itself still selects the version.
+		await act(async () => {
+			getRow(host).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+		});
+		assert.equal(clicks.length, 1);
+	});
+
+	it('opens the tooltip when the row receives keyboard focus', async () => {
+		const host = await render(longComment);
+		const row = getRow(host);
+		assert.equal(row.getAttribute('aria-keyshortcuts'), null);
+		await focusViaKeyboard(row);
+		const tooltip = document.querySelector('[role="tooltip"]');
+		assert.ok(tooltip, 'tooltip');
+		assert.equal(tooltip.textContent, longComment);
+		assert.equal(row.getAttribute('aria-keyshortcuts'), 'PageUp PageDown');
+	});
+
+	it('does not announce PageUp/PageDown when the full comment fits in the tooltip', async () => {
+		const host = await render(mediumComment);
+		const row = getRow(host);
+		await focusViaKeyboard(row);
+		assert.ok(document.querySelector('[role="tooltip"]'), 'tooltip');
+		assert.equal(row.getAttribute('aria-keyshortcuts'), null);
+	});
+
+	it('does not open the tooltip for a comment that fits', async () => {
+		const host = await render(shortComment);
+		const comment = Array.from(host.querySelectorAll<HTMLElement>('span')).find(
+			(el) => el.textContent === shortComment
+		);
+		assert.ok(comment, 'comment element');
+		await hover(comment);
+		assert.equal(document.querySelector('[role="tooltip"]'), null, 'hover opened the tooltip');
+		await focusViaKeyboard(getRow(host));
+		assert.equal(document.querySelector('[role="tooltip"]'), null, 'keyboard focus opened the tooltip');
+		assert.equal(getRow(host).getAttribute('aria-keyshortcuts'), null);
+	});
+	it('does not ripple the row on mousedown inside the tooltip', async () => {
+		const host = await render(longComment);
+		await hover(getCommentTarget(host));
+		const tooltip = document.querySelector<HTMLElement>('[role="tooltip"]');
+		assert.ok(tooltip, 'tooltip');
+		await act(async () => {
+			tooltip.firstElementChild?.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true }));
+		});
+		assert.equal(host.querySelectorAll('.MuiTouchRipple-child').length, 0, 'the row rippled');
+	});
+
+	it('scrolls a long comment with PageDown/PageUp and leaves the keys alone when it fits', async () => {
+		const host = await render(longComment);
+		const row = getRow(host);
+		await focusViaKeyboard(row);
+		const tooltip = document.querySelector<HTMLElement>('.MuiTooltip-tooltip');
+		assert.ok(tooltip, 'tooltip');
+		// jsdom has no layout: give the tooltip a 100px viewport over 300px of content.
+		let scrollTop = 0;
+		let scrollHeight = 300;
+		Object.defineProperty(tooltip, 'clientHeight', { configurable: true, get: () => 100 });
+		Object.defineProperty(tooltip, 'scrollHeight', { configurable: true, get: () => scrollHeight });
+		Object.defineProperty(tooltip, 'scrollTop', {
+			configurable: true,
+			get: () => scrollTop,
+			set: (value: number) => {
+				scrollTop = Math.max(0, Math.min(value, scrollHeight - 100));
+			}
+		});
+		const press = (key: string) => {
+			const event = new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+			act(() => {
+				row.dispatchEvent(event);
+			});
+			return event.defaultPrevented;
+		};
+		assert.equal(press('PageDown'), true, 'PageDown scrolls the tooltip');
+		assert.equal(scrollTop, 90);
+		assert.equal(press('PageUp'), true, 'PageUp scrolls the tooltip back');
+		assert.equal(scrollTop, 0);
+		assert.equal(press('PageUp'), false, 'PageUp at the top is left to the dialog');
+		scrollHeight = 100;
+		assert.equal(press('PageDown'), false, 'PageDown is left to the dialog when the comment fits');
+	});
+
+	it('does not re-render other rows when one row opens its tooltip', async () => {
+		const otherDate = '2026-03-03T15:00:00.000Z';
+		const host = await render(longComment, () => {}, [
+			makeVersion('2', longComment),
+			makeVersion('1', 'Other', otherDate)
+		]);
+		formattedDates.length = 0;
+		await hover(getCommentTarget(host));
+		assert.ok(document.querySelector('[role="tooltip"]'), 'tooltip');
+		assert.equal(formattedDates.filter((date) => date === otherDate).length, 0, 'the other row re-rendered');
+	});
+
+	it('renders no tooltip for an empty comment', async () => {
+		const host = await render('');
+		await focusViaKeyboard(getRow(host));
+		const el = host.querySelector('.MuiListItemText-secondary');
+		assert.equal(el, null, 'no secondary text');
+		assert.equal(document.querySelector('[role="tooltip"]'), null);
+	});
+});

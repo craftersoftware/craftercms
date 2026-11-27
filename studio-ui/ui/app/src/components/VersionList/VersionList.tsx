@@ -15,12 +15,13 @@
  */
 
 import { FormattedDateParts, FormattedMessage, FormattedTime, useIntl } from 'react-intl';
-import React, { useId } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import MoreVertIcon from '@mui/icons-material/MoreVertRounded';
+import Tooltip from '@mui/material/Tooltip';
 import { ItemHistoryEntry } from '../../models/Version';
 import palette from '../../styles/palette';
 import GlobalState from '../../models/GlobalState';
@@ -56,6 +57,152 @@ export function AsDayMonthDateTime(props: FancyFormattedDateProps) {
 	);
 }
 
+const isTruncated = (el: Element | null) => Boolean(el && el.scrollWidth > el.clientWidth);
+
+interface VersionListItemProps {
+	version: ItemHistoryEntry;
+	labelId: string;
+	isSelected: boolean;
+	isCurrent: boolean;
+	isLast: boolean;
+	isSelectMode: boolean;
+	locale?: GlobalState['uiConfig']['locale'];
+	onItemClick(version: ItemHistoryEntry): void;
+	onOpenMenu?(anchorEl: Element, version: ItemHistoryEntry, isCurrent: boolean, lastOne: boolean): void;
+}
+
+// Owns the tooltip's open state so hovering or focusing a row only re-renders that row.
+function VersionListItem(props: VersionListItemProps) {
+	const { version, labelId, isSelected, isCurrent, isLast, isSelectMode, locale, onItemClick, onOpenMenu } = props;
+	const { formatMessage } = useIntl();
+	const [tooltipOpen, setTooltipOpen] = useState(false);
+	// Only announce PageUp/PageDown when the tooltip actually overflows; most truncated comments still fit in 40vh.
+	const [tooltipScrollable, setTooltipScrollable] = useState(false);
+	const tooltipRef = useRef<HTMLDivElement>(null);
+	return (
+		<ListItemButton
+			component={ListItem}
+			divider={!isLast}
+			onClick={() => onItemClick(version)}
+			onFocus={(e) => {
+				// Tooltip's own focus handling only covers its (non-focusable) child, so open it when the row is
+				// focused via keyboard.
+				if (e.target !== e.currentTarget) return;
+				if (
+					e.currentTarget.matches(':focus-visible') &&
+					isTruncated(e.currentTarget.querySelector('.MuiListItemText-secondary'))
+				) {
+					setTooltipOpen(true);
+				}
+			}}
+			onBlur={() => {
+				setTooltipOpen(false);
+				setTooltipScrollable(false);
+			}}
+			aria-keyshortcuts={tooltipScrollable ? 'PageUp PageDown' : undefined}
+			onKeyDown={(e) => {
+				// The tooltip isn't focusable, so scroll a long comment from the row. Leave the key to the dialog when it can't move.
+				const tooltip = tooltipRef.current;
+				if (!tooltipOpen || !tooltip || (e.key !== 'PageDown' && e.key !== 'PageUp')) return;
+				const down = e.key === 'PageDown';
+				if (
+					down ? Math.ceil(tooltip.scrollTop + tooltip.clientHeight) >= tooltip.scrollHeight : tooltip.scrollTop <= 0
+				) {
+					return;
+				}
+				e.preventDefault();
+				tooltip.scrollTop += (down ? 0.9 : -0.9) * tooltip.clientHeight;
+			}}
+			sx={{ padding: '15px 48px 15px 20px' }}
+			className={isSelected && 'selected'}
+			secondaryAction={
+				onOpenMenu || isSelectMode ? (
+					<>
+						{isSelectMode && <Checkbox checked={isSelected} slotProps={{ input: { 'aria-labelledby': labelId } }} />}
+						{!isSelectMode && onOpenMenu && (
+							<IconButton
+								edge="end"
+								size="large"
+								onClick={(e) => {
+									e.stopPropagation();
+									onOpenMenu(e.currentTarget, version, isCurrent, isLast);
+								}}
+								aria-label={formatMessage({ defaultMessage: 'Options' })}
+							>
+								<MoreVertIcon />
+							</IconButton>
+						)}
+					</>
+				) : null
+			}
+		>
+			<ListItemText
+				sx={{ margin: 0 }}
+				slotProps={{
+					primary: { id: labelId, sx: { display: 'flex', alignItems: 'center' } },
+					secondary: { sx: { whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' } }
+				}}
+				primary={
+					<>
+						<AsDayMonthDateTime date={version.modifiedDate} locale={locale} />
+						{isCurrent && (
+							<Chip
+								label={<FormattedMessage id="historyDialog.current" defaultMessage="current" />}
+								sx={{
+									padding: '1px',
+									backgroundColor: palette.green.main,
+									height: 'auto',
+									color: palette.white,
+									marginLeft: '10px'
+								}}
+							/>
+						)}
+					</>
+				}
+				secondary={
+					version.comment ? (
+						<Tooltip
+							describeChild
+							title={version.comment}
+							open={tooltipOpen}
+							onOpen={(e) => {
+								if (isTruncated((e.target as Element).closest('.MuiListItemText-secondary'))) {
+									setTooltipOpen(true);
+								}
+							}}
+							onClose={() => {
+								setTooltipOpen(false);
+								setTooltipScrollable(false);
+							}}
+							slotProps={{
+								popper: { onClick: (e) => e.stopPropagation(), onMouseDown: (e) => e.stopPropagation() },
+								tooltip: {
+									ref: tooltipRef,
+									sx: {
+										maxWidth: 400,
+										maxHeight: '40vh',
+										overflow: 'auto',
+										whiteSpace: 'pre-wrap',
+										wordBreak: 'break-word'
+									}
+								},
+								transition: {
+									onEntered: () => {
+										const tooltip = tooltipRef.current;
+										setTooltipScrollable(Boolean(tooltip && tooltip.scrollHeight > tooltip.clientHeight));
+									}
+								}
+							}}
+						>
+							<span>{version.comment}</span>
+						</Tooltip>
+					) : null
+				}
+			/>
+		</ListItemButton>
+	);
+}
+
 interface VersionListProps {
 	versions: ItemHistoryEntry[];
 	selected?: string[];
@@ -69,7 +216,6 @@ export function VersionList(props: VersionListProps) {
 	const { versions, onOpenMenu, onItemClick, current, selected, isSelectMode = false } = props;
 	const locale = useSelection<GlobalState['uiConfig']['locale']>((state) => state.uiConfig.locale);
 	const selectedLookup = createPresenceTable(selected);
-	const { formatMessage } = useIntl();
 	const versionLabelId = useId();
 	return (
 		<List
@@ -81,73 +227,20 @@ export function VersionList(props: VersionListProps) {
 			}}
 			disablePadding
 		>
-			{versions.map((version: ItemHistoryEntry, i: number) => {
-				const isSelected = Boolean(selectedLookup[version.versionNumber]);
-				const labelId = `${versionLabelId}-${i}`;
-				return (
-					<ListItemButton
-						key={version.versionNumber}
-						component={ListItem}
-						divider={versions.length - 1 !== i}
-						onClick={() => onItemClick(version)}
-						sx={{ padding: '15px 48px 15px 20px' }}
-						className={isSelected && 'selected'}
-						secondaryAction={
-							onOpenMenu || isSelectMode ? (
-								<>
-									{isSelectMode && (
-										<Checkbox checked={isSelected} slotProps={{ input: { 'aria-labelledby': labelId } }} />
-									)}
-									{!isSelectMode && onOpenMenu && (
-										<IconButton
-											edge="end"
-											size="large"
-											onClick={(e) => {
-												e.stopPropagation();
-												onOpenMenu(
-													e.currentTarget,
-													version,
-													current === version.versionNumber,
-													versions.length === i + 1
-												);
-											}}
-											aria-label={formatMessage({ defaultMessage: 'Options' })}
-										>
-											<MoreVertIcon />
-										</IconButton>
-									)}
-								</>
-							) : null
-						}
-					>
-						<ListItemText
-							sx={{ margin: 0 }}
-							slotProps={{
-								primary: { id: labelId, sx: { display: 'flex', alignItems: 'center' } },
-								secondary: { sx: { whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' } }
-							}}
-							primary={
-								<>
-									<AsDayMonthDateTime date={version.modifiedDate} locale={locale} />
-									{current === version.versionNumber && (
-										<Chip
-											label={<FormattedMessage id="historyDialog.current" defaultMessage="current" />}
-											sx={{
-												padding: '1px',
-												backgroundColor: palette.green.main,
-												height: 'auto',
-												color: palette.white,
-												marginLeft: '10px'
-											}}
-										/>
-									)}
-								</>
-							}
-							secondary={version.comment}
-						/>
-					</ListItemButton>
-				);
-			})}
+			{versions.map((version: ItemHistoryEntry, i: number) => (
+				<VersionListItem
+					key={version.versionNumber}
+					version={version}
+					labelId={`${versionLabelId}-${i}`}
+					isSelected={Boolean(selectedLookup[version.versionNumber])}
+					isCurrent={current === version.versionNumber}
+					isLast={versions.length === i + 1}
+					isSelectMode={isSelectMode}
+					locale={locale}
+					onItemClick={onItemClick}
+					onOpenMenu={onOpenMenu}
+				/>
+			))}
 		</List>
 	);
 }
