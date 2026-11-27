@@ -97,11 +97,17 @@ function VersionListItem(props: VersionListItemProps) {
 			}}
 			onBlur={() => setTooltipOpen(false)}
 			onKeyDown={(e) => {
-				// The tooltip isn't focusable, so let keyboard users scroll a long comment from the row.
+				// The tooltip isn't focusable, so scroll a long comment from the row. Leave the key to the dialog when it can't move.
 				const tooltip = tooltipRef.current;
 				if (!tooltipOpen || !tooltip || (e.key !== 'PageDown' && e.key !== 'PageUp')) return;
+				const down = e.key === 'PageDown';
+				if (
+					down ? Math.ceil(tooltip.scrollTop + tooltip.clientHeight) >= tooltip.scrollHeight : tooltip.scrollTop <= 0
+				) {
+					return;
+				}
 				e.preventDefault();
-				tooltip.scrollTop += (e.key === 'PageDown' ? 1 : -1) * tooltip.clientHeight * 0.9;
+				tooltip.scrollTop += (down ? 0.9 : -0.9) * tooltip.clientHeight;
 			}}
 			sx={{ padding: '15px 48px 15px 20px' }}
 			className={isSelected && 'selected'}
