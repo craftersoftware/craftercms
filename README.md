@@ -26,6 +26,8 @@ This repository is for developers interested in contributing to CrafterCMS, cust
 **WARNING:** CrafterCMS source code development and building is
 _only_ supported on Unix based systems. If you want to use CrafterCMS in Windows, use [Docker](https://craftercms.com/docs/current/by-role/system-admin/installation.html#docker) or install Windows Subsystem for Linux (WSL) by following the instructions [here](https://docs.microsoft.com/en-us/windows/wsl/install) then use the WSL 2 terminal for all the commands below.
 
+**NOTE:** Crafter Studio uses its own embedded MariaDB database. External databases are deprecated and unsupported: Studio refuses to start against one unless `studio.db.allowExternal: true` is set, and that setting will be removed in a future release.
+
 # 1. Initial Setup
 
 Please make sure your system meets the prerequisites:
