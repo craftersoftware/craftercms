@@ -36,6 +36,14 @@ const store = configureStore({
 	reducer: { uiConfig: (state = { locale: { localeCode: 'en-US', dateTimeFormatOptions: { hour12: true } } }) => state }
 });
 
+// jsdom has no layout, so report the comment as truncated (scrollWidth > clientWidth) to pass the component's gate.
+Object.defineProperty(window.HTMLElement.prototype, 'scrollWidth', {
+	configurable: true,
+	get(this: HTMLElement) {
+		return this.classList.contains('MuiListItemText-secondary') && this.textContent.length > 40 ? 500 : 0;
+	}
+});
+
 const longComment = `${'A very long version comment that does not fit on a single line. '.repeat(10)}The end.`;
 const shortComment = 'Fix the hero';
 
