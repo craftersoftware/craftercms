@@ -253,31 +253,20 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		if (site && environment !== UNDEFINED) {
 			fetchSiteConfigurationFiles(site, environment).subscribe({
 				next(files) {
-					setFiles(files.map((file) => ({ ...file, id: `${file.module}/${file.path}` })));
+					const configFiles = files.map((file) => ({ ...file, id: `${file.module}/${file.path}` }));
+					setFiles(configFiles);
+					if (selectedConfigFileId) {
+						setSelectedConfigFile(
+							(current) => current ?? configFiles.find((f) => f.id === selectedConfigFileId) ?? null
+						);
+					}
 				},
 				error({ response }) {
 					dispatch(pushErrorDialog({ props: { error: response.response } }));
 				}
 			});
 		}
-	}, [environment, site, dispatch]);
-
-	// Tracks the requested selectedConfigFileId that has already been handled, so the selection is applied only once
-	// and an empty selection (e.g. after onCancel) is not overridden, keeping the file picker open.
-	const appliedSelectedConfigFileIdRef = useRef<string>(null);
-	useEffect(() => {
-		if (!selectedConfigFileId || !files?.length || appliedSelectedConfigFileIdRef.current === selectedConfigFileId) {
-			return;
-		}
-		appliedSelectedConfigFileIdRef.current = selectedConfigFileId;
-		if (refs.current.selectedConfigFile) {
-			return;
-		}
-		const file = files.find((f) => f.id === selectedConfigFileId);
-		if (file) {
-			setSelectedConfigFile(file);
-		}
-	}, [files, selectedConfigFileId, refs]);
+	}, [environment, site, dispatch, selectedConfigFileId]);
 
 	useEffect(() => {
 		if (selectedConfigFile && environment) {
