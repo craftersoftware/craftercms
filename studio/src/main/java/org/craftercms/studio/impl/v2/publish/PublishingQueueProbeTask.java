@@ -21,8 +21,6 @@ import org.craftercms.studio.api.v2.dal.publish.PublishPackageId;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
 import org.craftercms.studio.api.v2.job.ThrottledJob;
 import org.jspecify.annotations.NonNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 
@@ -33,9 +31,6 @@ import java.util.List;
  * Task to probe the publishing queue and trigger events for each site.
  */
 public class PublishingQueueProbeTask extends ThrottledJob implements ApplicationEventPublisherAware {
-
-	private static final Logger logger = LoggerFactory.getLogger(PublishingQueueProbeTask.class);
-
 	private final PublishDAO publishDAO;
 	private ApplicationEventPublisher eventPublisher;
 	private final int period;
@@ -50,7 +45,7 @@ public class PublishingQueueProbeTask extends ThrottledJob implements Applicatio
 	public void doExecute() {
 		publishDAO.getNextPublishPackages().forEach((siteId, packages) -> {
 			List<Long> packageIds = packages.stream()
-					.map(PublishPackageId::packageId).toList();
+				.map(PublishPackageId::packageId).toList();
 			eventPublisher.publishEvent(new RequestPublishEvent(siteId, packageIds));
 		});
 	}
