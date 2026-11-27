@@ -93,8 +93,18 @@ public class WorkflowServiceInternalImpl implements WorkflowService, Application
 	}
 
 	@Override
+	public int getItemStatesTotal(String siteId, Long states) {
+		return getItemStatesTotal(siteId, null, states);
+	}
+
+	@Override
 	public List<ContentItem> getItemsByStates(String siteId, String path, Long states, int offset, int limit) throws SiteNotFoundException {
 		return itemService.getItemsByStates(siteId, path, states, null, null, offset, limit);
+	}
+
+	@Override
+	public List<ContentItem> getItemsByStates(String siteId, Long states, int offset, int limit) throws SiteNotFoundException {
+		return getItemsByStates(siteId, null, states, offset, limit);
 	}
 
 	@Override

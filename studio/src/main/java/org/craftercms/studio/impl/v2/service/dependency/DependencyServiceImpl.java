@@ -51,6 +51,7 @@ public class DependencyServiceImpl implements DependencyService {
 	}
 
 	@Override
+	@RequireSiteExists
 	@RequireSiteReady
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public Collection<LightItem> getSoftDependencies(@SiteId String siteId,

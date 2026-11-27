@@ -41,6 +41,16 @@ public interface WorkflowService {
 	int getItemStatesTotal(String siteId, String path, Long states) throws SiteNotFoundException;
 
 	/**
+	 * Get the total number of item states for the whole site.
+	 * No path filter is applied. Permission is checked for the site, not for a content path.
+	 *
+	 * @param siteId site identifier
+	 * @param states states mask to filter items by state
+	 * @return number of records
+	 */
+	int getItemStatesTotal(String siteId, Long states) throws SiteNotFoundException;
+
+	/**
 	 * Get items matching the given filters by path regex and states mask
 	 *
 	 * @param siteId site identifier
@@ -51,6 +61,18 @@ public interface WorkflowService {
 	 * @return list of sandbox items
 	 */
 	List<ContentItem> getItemsByStates(String siteId, String path, Long states, int offset, int limit) throws SiteNotFoundException;
+
+	/**
+	 * Get item states for the whole site.
+	 * No path filter is applied. Permission is checked for the site, not for a content path.
+	 *
+	 * @param siteId site identifier
+	 * @param states states mask to filter items by state
+	 * @param offset offset for the first record in result set
+	 * @param limit  number of item states records to return
+	 * @return list of sandbox items
+	 */
+	List<ContentItem> getItemsByStates(String siteId, Long states, int offset, int limit) throws SiteNotFoundException;
 
 	/**
 	 * Update item state flags for given items

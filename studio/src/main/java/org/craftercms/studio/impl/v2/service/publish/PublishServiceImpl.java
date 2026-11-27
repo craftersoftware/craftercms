@@ -96,6 +96,7 @@ public class PublishServiceImpl implements PublishService {
 	}
 
 	@Override
+	@RequireSiteExists
 	@RequireSiteReady
 	// Notice that here we just validate the user is a member of the site. The actual permission checking will
 	// need to be done in the publish service once the package is entirely calculated.
@@ -108,6 +109,7 @@ public class PublishServiceImpl implements PublishService {
 	}
 
 	@Override
+	@RequireSiteExists
 	@RequireSiteReady
 	// Notice that here we just validate the user is a member of the site. The actual permission checking will
 	// need to be done in the publish service once the package is entirely calculated.
@@ -212,6 +214,7 @@ public class PublishServiceImpl implements PublishService {
 
 	@Override
 	@RequireSiteExists
+	@RequirePackageExists
 	@PackageSubmitter
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public void updatePublishPackage(@SiteId String site, @PackageId long packageId, Instant schedule,

@@ -6274,7 +6274,7 @@ paths:
                                                       canApprove: false
                                                       canRequestPublish: true
                 '400':
-                    $ref: '#/components/responses/BadRequest'
+                    $ref: '#/components/responses/InvalidPublishTarget'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
                 '403':
@@ -6570,7 +6570,7 @@ paths:
                 '403':
                     $ref: '#/components/responses/Forbidden'
                 '404':
-                    $ref: '#/components/responses/NotFound'
+                    $ref: '#/components/responses/PublishPackageNotFound'
                 '409':
                     $ref: '#/components/responses/InvalidPackageState'
                 '500':
@@ -6765,13 +6765,13 @@ paths:
                                                       canApprove: false
                                                       canRequestPublish: true
                 '400':
-                    $ref: '#/components/responses/BadRequest'
+                    $ref: '#/components/responses/InvalidPublishTarget'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
                 '403':
                     $ref: '#/components/responses/Forbidden'
                 '404':
-                    $ref: '#/components/responses/NotFound'
+                    $ref: '#/components/responses/PublishPackageNotFound'
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
@@ -8035,7 +8035,10 @@ paths:
                         type: string
                 -   name: path
                     in: query
-                    description: path regex
+                    description: |
+                        Optional regular expression used to filter items by path.
+                        When omitted, no path filter is applied and item states for the whole site are returned.
+                        A blank value or a regular expression that does not compile returns 400.
                     required: false
                     schema:
                         type: string
@@ -8306,7 +8309,10 @@ paths:
             summary: Approve request publish submission
             description: |
                     Module: Studio <br>
-                    Required permission "publish_review"
+                    Required permission "publish_review" <br>
+                    Returns 404 with ApiResponse code 7007 when a package ID does not exist. If peer review is enabled for
+                    the site, package IDs are checked before any permission check. Otherwise they are checked after the
+                    "publish_review" permission check, so a 403 from that check takes precedence.
             operationId: workflowApprove
             parameters:
                 -   name: siteId
@@ -8364,7 +8370,7 @@ paths:
                 '403':
                     $ref: '#/components/responses/Forbidden'
                 '404':
-                    $ref: '#/components/responses/NotFound'
+                    $ref: '#/components/responses/PublishPackageNotFound'
                 '409':
                     $ref: '#/components/responses/InvalidPackageState'
                 '500':
@@ -8786,6 +8792,8 @@ components:
                   * `CODE:` 7002, `MESSAGE:` Content already locked, `REMEDIAL ACTION:` The user that locked the item or the administrator must unlock the item first
                   * `CODE:` 7003, `MESSAGE:` Content already unlocked, `REMEDIAL ACTION:` The item is already unlocked
                   * `CODE:` 7004, `MESSAGE:` Paste destination folder is invalid (did you paste the item onto itself?), `REMEDIAL ACTION:` Try pasting the content to a different folder
+                  * `CODE:` 7007, `MESSAGE:` Publish package not found, `REMEDIAL ACTION:` Check if you sent in the right Publish Package Id
+                  * `CODE:` 7011, `MESSAGE:` Invalid publish target, `REMEDIAL ACTION:` Check if you sent in the right publish target
                   * `CODE:` 8000, `MESSAGE:` Publishing is disabled, `REMEDIAL ACTION:` Advise the user to enable publishing
                   * `CODE:` 9000, `MESSAGE:` Search is unreachable, `REMEDIAL ACTION:` Advise the user that the search engine is not reachable
                   * `CODE:` 10000, `MESSAGE:` LoV not found, `REMEDIAL ACTION:` Check if you sent in the right LoV Id
@@ -11405,6 +11413,33 @@ components:
                                 type: integer
                                 format: int64
                                 description: id of the publish package
+        PublishPackageNotFound:
+            description: Site or publish package not found. An unknown publish package returns ApiResponse code 7007 and the id of the package
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            response:
+                                $ref: '#/components/schemas/ApiResponse'
+                            package:
+                                type: integer
+                                format: int64
+                                description: id of the publish package
+        InvalidPublishTarget:
+            description: Invalid request. A publishing target that is not valid for the site returns ApiResponse code 7011 and the valid targets
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            response:
+                                $ref: '#/components/schemas/ApiResponse'
+                            validTargets:
+                                type: array
+                                items:
+                                    type: string
+                                description: publishing targets that are valid for the site
         BadRequest:
             description: Invalid request
             content:
