@@ -87,19 +87,25 @@ public class StudioSiteListResolver implements SiteListResolver {
 			return null;
 		}
 
+		URI uri = URI.create(studioUrl + SITES_PATH);
 		HttpRequest request = HttpRequest.newBuilder()
-			.uri(URI.create(studioUrl + SITES_PATH))
+			.uri(uri)
 			.header(ManagementToken.HEADER_NAME, managementToken)
 			.header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
 			.GET()
 			.build();
 
+		logger.debug("Calling Studio site list GET {}", uri);
 		HttpResponse<String> response = send(request);
 
 		if (response.statusCode() != 200) {
+			logger.debug("Studio site list returned HTTP {}", response.statusCode());
 			throw new StudioSiteListException("Studio site list returned HTTP " + response.statusCode());
 		}
-		return parseSites(response.body());
+		List<String> siteIds = parseSites(response.body());
+		logger.debug("Studio site list returned HTTP {} with {} sites", response.statusCode(), siteIds.size());
+		logger.trace("Studio site list site ids: {}", siteIds);
+		return siteIds;
 	}
 
 	/**
@@ -129,7 +135,8 @@ public class StudioSiteListResolver implements SiteListResolver {
 			if (cause instanceof RuntimeException runtime) {
 				throw runtime;
 			}
-			throw new StudioSiteListException("Unable to call Studio site list: " + cause.getMessage(), cause);
+			throw new StudioSiteListException("Unable to connect to Studio: " + SiteListErrors.describe(cause)
+				+ " (url: " + request.uri() + ")", cause);
 		} finally {
 			if (!response.isDone()) {
 				response.cancel(true);
