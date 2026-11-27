@@ -32,6 +32,7 @@ const { RawIntlProvider, createIntl } = await import('react-intl');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { SearchUI } = await import('./SearchUI.tsx');
+const { STUDIO_MAIN_CONTENT_ID } = await import('../SkipToMainContent/mainLandmark.ts');
 
 // The real createIntl, so a message without an id fails the test instead of getting one made up.
 const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
@@ -264,5 +265,137 @@ describe('search results status', () => {
 	it('announces the range for the last short page itself', async () => {
 		const { host } = await mount({ searchParameters: { limit: 9, offset: 30 }, searchResults: page(30, 4) });
 		assert.equal(status(host), '31-34 of 34 results');
+	});
+});
+
+describe('search page landmarks', () => {
+	const showHideFilters = (host: HTMLElement) =>
+		host.querySelector<HTMLElement>('button[aria-label="Show/hide filters"]');
+	const skipButton = (host: HTMLElement) =>
+		Array.from(host.querySelectorAll<HTMLElement>('button')).find((b) => b.textContent === 'Skip to main content');
+
+	it('is a page with one main, a skip link and an h1 when not embedded', async () => {
+		const { host } = await mount({ mode: 'default', embedded: false });
+		const mains = host.querySelectorAll('main');
+		assert.equal(mains.length, 1);
+		const main = mains[0];
+		assert.equal(main.id, STUDIO_MAIN_CONTENT_ID);
+		assert.equal(main.getAttribute('tabindex'), '-1');
+		const firstFocusable = host.querySelector<HTMLElement>('button, input, a[href], [tabindex]:not([tabindex="-1"])');
+		assert.ok(firstFocusable, 'nothing focusable was rendered');
+		assert.equal(firstFocusable.tagName, 'BUTTON');
+		assert.equal(firstFocusable.textContent, 'Skip to main content');
+		const h1s = host.querySelectorAll('h1');
+		assert.equal(h1s.length, 1);
+		assert.equal(h1s[0].textContent, 'Search');
+		assert.equal(
+			Array.from(host.querySelectorAll('h2')).some((h) => h.textContent === 'Search'),
+			false,
+			'the Search title is still an h2'
+		);
+		assert.ok(main.contains(selectAllInput(host)), 'the results bar is not inside main');
+		const toggle = showHideFilters(host);
+		assert.ok(toggle, 'the show/hide filters button is missing');
+		assert.equal(main.contains(toggle), false, 'the filters toggle is inside main');
+	});
+
+	it('moves focus to main when the skip link is activated', async () => {
+		const { host } = await mount({ mode: 'default', embedded: false });
+		const skip = skipButton(host);
+		assert.ok(skip, 'the skip link is missing');
+		await act(async () => {
+			skip.click();
+		});
+		assert.equal(document.activeElement, host.querySelector('main'));
+	});
+
+	it('adds no landmark, skip link or h1 when embedded in default mode', async () => {
+		const { host } = await mount({ mode: 'default', embedded: true });
+		assert.equal(host.querySelectorAll('main').length, 0);
+		assert.equal(skipButton(host), undefined);
+		assert.equal(host.querySelectorAll('h1').length, 0);
+	});
+
+	it('adds no landmark or skip link and keeps the title an h2 in select mode', async () => {
+		const { host } = await mount({ mode: 'select', embedded: true });
+		assert.equal(host.querySelectorAll('main').length, 0);
+		assert.equal(skipButton(host), undefined);
+		assert.equal(host.querySelectorAll('h1').length, 0);
+		const title = Array.from(host.querySelectorAll('h2')).find((h) => h.textContent === 'Search');
+		assert.ok(title, 'the Search title is not an h2');
+	});
+
+	describe('filters landmark', () => {
+		const facets = [{ name: 'content-type', range: false, date: false, multiple: true, values: { page: 3 } }];
+		const open = { drawerOpen: true, searchResults: { items: [], total: 0, facets, offset: 0 } };
+
+		it('puts the filters in a "Filters" complementary landmark on the standalone page', async () => {
+			const { host } = await mount({ mode: 'default', embedded: false, ...open });
+			const asides = host.querySelectorAll('aside');
+			assert.equal(asides.length, 1);
+			assert.equal(asides[0].getAttribute('aria-label'), 'Filters');
+			assert.ok(asides[0].querySelector('h2'), 'the filters are not inside the landmark');
+			assert.equal(host.querySelector('main')?.contains(asides[0]), false, 'the filters landmark is inside main');
+		});
+
+		it('adds no landmark around the filters when embedded', async () => {
+			const { host } = await mount({ mode: 'default', embedded: true, ...open });
+			assert.equal(host.querySelectorAll('aside').length, 0);
+			assert.equal(host.querySelectorAll('[aria-label="Filters"]').length, 0);
+		});
+	});
+
+	describe('heading levels', () => {
+		const facets = [{ name: 'content-type', range: false, date: false, multiple: true, values: { page: 3 } }];
+		const headings = (host: HTMLElement) =>
+			Array.from(host.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')).map((h) => ({
+				level: Number(h.tagName[1]),
+				text: h.textContent
+			}));
+		const errorResponse = { code: 500, message: 'Boom' };
+
+		it('does not skip a level after the h1 on the standalone page', async () => {
+			const { host } = await mount({
+				mode: 'default',
+				embedded: false,
+				drawerOpen: true,
+				searchResults: { items: [], total: 0, facets, offset: 0 }
+			});
+			const found = headings(host);
+			assert.deepEqual(
+				found.map((h) => h.text),
+				['Search', 'Sort By', 'Path', 'Content Type', 'No Results Were Found.']
+			);
+			assert.deepEqual(
+				found.map((h) => h.level),
+				[1, 2, 2, 2, 2]
+			);
+		});
+
+		it('makes the standalone error state an h2', async () => {
+			const { host } = await mount({ mode: 'default', embedded: false, error: errorResponse });
+			assert.deepEqual(
+				headings(host).find((h) => h.text?.startsWith('Error')),
+				{ level: 2, text: 'Error 500' }
+			);
+		});
+
+		it('keeps h3 for the accordion titles, empty state and error state when embedded', async () => {
+			const filters = await mount({
+				mode: 'default',
+				embedded: true,
+				drawerOpen: true,
+				searchResults: { items: [], total: 0, facets, offset: 0 }
+			});
+			assert.deepEqual(
+				headings(filters.host).map((h) => h.level),
+				[3, 3, 3, 3]
+			);
+			const failed = await mount({ mode: 'default', embedded: true, error: errorResponse });
+			assert.deepEqual(
+				headings(failed.host).find((h) => h.text?.startsWith('Error')),
+				{ level: 3, text: 'Error 500' }
+			);
+		});
 	});
 });

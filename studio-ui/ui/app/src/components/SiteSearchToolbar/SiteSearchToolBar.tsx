@@ -72,7 +72,7 @@ export function SiteSearchToolBar(props: SiteSearchToolBarProps) {
 					/>
 				</Tooltip>
 				{showTitle && (
-					<Typography variant="h5" component="h2" color="textPrimary">
+					<Typography variant="h5" component={embedded ? 'h2' : 'h1'} color="textPrimary">
 						{formatMessage(translations.search)}
 					</Typography>
 				)}

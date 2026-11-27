@@ -41,6 +41,7 @@ import Box from '@mui/material/Box';
 import { drawerClasses } from '@mui/material';
 import Tooltip from '@mui/material/Tooltip';
 import PoliteStatus from '../PoliteStatus/PoliteStatus';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 export interface SearchUIProps
 	extends
@@ -160,6 +161,7 @@ export function SearchUI(props: SearchUIProps) {
 			ref={container}
 			sx={{ height: '100%', position: 'relative', background: (theme) => theme.palette.background.default }}
 		>
+			{!embedded && <SkipToMainContent />}
 			<PoliteStatus message={resultsStatus} />
 			<SiteSearchToolBar
 				onChange={handleSearchKeyword}
@@ -200,25 +202,33 @@ export function SearchUI(props: SearchUIProps) {
 				}}
 			>
 				{searchResults && searchResults.facets && (
-					<SiteSearchFilters
-						mode={mode}
-						sx={{ marginRight: '7px' }}
-						facets={searchResults.facets}
-						handleFilterChange={handleFilterChange}
-						sortBy={sortBy}
-						sortOrder={sortOrder}
-						checkedFilters={checkedFilters}
-						setCheckedFilters={onCheckedFiltersChanges}
-						clearFilters={clearFilters}
-						handleClearClick={clearFilter}
-						selectedPath={selectedPath}
-						setSelectedPath={onSelectedPathChanges}
-					/>
+					<Box
+						component={embedded ? 'div' : 'aside'}
+						aria-label={embedded ? undefined : formatMessage({ id: 'words.filters', defaultMessage: 'Filters' })}
+					>
+						<SiteSearchFilters
+							mode={mode}
+							embedded={embedded}
+							sx={{ marginRight: '7px' }}
+							facets={searchResults.facets}
+							handleFilterChange={handleFilterChange}
+							sortBy={sortBy}
+							sortOrder={sortOrder}
+							checkedFilters={checkedFilters}
+							setCheckedFilters={onCheckedFiltersChanges}
+							clearFilters={clearFilters}
+							handleClearClick={clearFilter}
+							selectedPath={selectedPath}
+							setSelectedPath={onSelectedPathChanges}
+						/>
+					</Box>
 				)}
 			</Drawer>
 			<Box
 				component="section"
+				{...(!embedded ? { component: 'main', id: STUDIO_MAIN_CONTENT_ID, tabIndex: -1 } : undefined)}
 				sx={[
+					!embedded && mainLandmarkSx,
 					(theme) => ({
 						height: 'calc(100% - 65px)', // 100% - toolbar height
 						margin: 'auto',
@@ -360,7 +370,7 @@ export function SearchUI(props: SearchUIProps) {
 				</Box>
 				<Box component="section" sx={{ flexGrow: 1, padding: '25px 30px', overflowY: 'scroll', position: 'relative' }}>
 					{error ? (
-						<ApiResponseErrorState error={error} />
+						<ApiResponseErrorState error={error} titleComponent={embedded ? undefined : 'h2'} />
 					) : (
 						<Grid
 							container
@@ -445,6 +455,7 @@ export function SearchUI(props: SearchUIProps) {
 										))
 									) : (
 										<EmptyState
+											titleComponent={embedded ? undefined : 'h2'}
 											title={formatMessage(translations.noResults)}
 											subtitle={formatMessage(translations.changeQuery)}
 										/>

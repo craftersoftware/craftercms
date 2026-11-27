@@ -46,6 +46,8 @@ interface SiteSearchFiltersProps {
 	sortBy?: string;
 	sortOrder?: string;
 	mode: string;
+	/** Set to false on the standalone Search page, where the h1 is the page title and the accordion titles are h2. */
+	embedded?: boolean;
 	checkedFilters: object;
 	selectedPath: string;
 	setSelectedPath(path: string): void;
@@ -175,6 +177,7 @@ export function SiteSearchFilters(props: SiteSearchFiltersProps) {
 		facets,
 		handleFilterChange,
 		mode,
+		embedded = true,
 		checkedFilters,
 		setCheckedFilters,
 		clearFilters,
@@ -190,6 +193,7 @@ export function SiteSearchFilters(props: SiteSearchFiltersProps) {
 		path: false
 	});
 	const contentTypes = useContentTypes();
+	const accordionSlotProps = embedded ? undefined : { heading: { component: 'h2' as const } };
 
 	let filterKeys: string[] = [];
 	let facetsLookupTable: LookupTable = {};
@@ -278,7 +282,12 @@ export function SiteSearchFilters(props: SiteSearchFiltersProps) {
 				</Button>
 			</Box>
 			<Divider sx={{ width: 'auto', margin: '0 10px' }} />
-			<Accordion expanded={expanded.sortBy} elevation={0} onChange={() => handleExpandClick('sortBy')}>
+			<Accordion
+				expanded={expanded.sortBy}
+				elevation={0}
+				slotProps={accordionSlotProps}
+				onChange={() => handleExpandClick('sortBy')}
+			>
 				<AccordionSummary expandIcon={<ExpandMoreIcon />}>
 					<Typography sx={{ display: 'flex', fontWeight: 600, alignItems: 'center' }}>
 						{formatMessage(messages.sortBy)}
@@ -294,7 +303,12 @@ export function SiteSearchFilters(props: SiteSearchFiltersProps) {
 					</>
 				</AccordionDetails>
 			</Accordion>
-			<Accordion expanded={expanded.path} elevation={0} onChange={() => handleExpandClick('path')}>
+			<Accordion
+				expanded={expanded.path}
+				elevation={0}
+				slotProps={accordionSlotProps}
+				onChange={() => handleExpandClick('path')}
+			>
 				<AccordionSummary expandIcon={<ExpandMoreIcon />}>
 					<Typography sx={{ display: 'flex', fontWeight: 600, alignItems: 'center' }}>
 						{formatMessage(messages.path)}
@@ -308,7 +322,13 @@ export function SiteSearchFilters(props: SiteSearchFiltersProps) {
 			{filterKeys.map((key: string) => {
 				const camelizedKey = camelize(key);
 				return (
-					<Accordion key={key} expanded={expanded[key] ?? false} elevation={0} onChange={() => handleExpandClick(key)}>
+					<Accordion
+						key={key}
+						expanded={expanded[key] ?? false}
+						elevation={0}
+						slotProps={accordionSlotProps}
+						onChange={() => handleExpandClick(key)}
+					>
 						<AccordionSummary expandIcon={<ExpandMoreIcon />}>
 							<Typography sx={{ display: 'flex', fontWeight: 600, alignItems: 'center' }}>
 								{camelizedKey in messages ? formatMessage(messages[camelizedKey]) : key}

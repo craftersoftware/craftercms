@@ -95,6 +95,17 @@ export function dashboardReady(scope: Locator): ReadyState {
 }
 
 /**
+ * The Search page, ready once its h1 title renders. Shared by the first load and the reloads that wait for the index.
+ * Below the h1 its error state is an h2, not the h3 of `errorState`. The error title sits directly in ErrorState's
+ * `section`; result card titles are h2 too (the item name), but inside the card header, so a card named "Error 404"
+ * is not an error.
+ */
+export const searchPageReady = (scope: Locator): ReadyState => ({
+	loaded: scope.getByRole('heading', { name: 'Search', level: 1 }),
+	error: scope.locator('section > h2', { hasText: /^Error\b/ })
+});
+
+/**
  * The project tools list, as shown by Project Tools and the tools panel's Project Tools dialog: the "Project Tools"
  * navigation landmark holding a list whose items are tool buttons. The landmark and its list render before the tools
  * arrive, so the signal is the first tool button.
