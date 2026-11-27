@@ -23,7 +23,6 @@
 		"ace-builds": "^1.45.2",
 		"bootstrap": "^5.3.8",
 		"css-loader": "^7.1.5",
-		"file-loader": "^6.2.0",
 		"jquery": "^3.7.1",
 		"jquery-ui": "^1.14.2",
 		"jquery-ui-css": "^1.11.5",

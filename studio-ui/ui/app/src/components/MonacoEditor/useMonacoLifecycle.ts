@@ -19,7 +19,6 @@ import { withMonaco } from '../../utils/system';
 import type Monaco from '../../models/Monaco';
 import { normalizeMonacoTheme } from './types';
 import { enforceMonacoKeyboardOptions } from '../editorKeyboard/monacoKeyboard';
-import './setupMonacoWorkers';
 type MonacoModel = ReturnType<Monaco['editor']['createModel']>;
 
 interface MonacoModelDefinition {

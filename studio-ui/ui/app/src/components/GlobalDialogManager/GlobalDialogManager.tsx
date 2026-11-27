@@ -38,11 +38,13 @@ import { EnhancedDialogProps } from '../EnhancedDialog';
 import { DialogStackItem } from '../../models/GlobalState';
 import DialogStackItemContainer from './DialogStackItemContainer';
 import { createCallback } from './createCallback';
+import { MountOnFirstOpen } from './MountOnFirstOpen';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
 
 // region const ... = lazy(() => import('...'));
-const ViewVersionDialog = lazy(() => import('../ViewVersionDialog'));
-const CompareVersionsDialog = lazy(() => import('../CompareVersionsDialog'));
-const HistoryDialog = lazy(() => import('../HistoryDialog'));
+const ViewVersionDialog = lazyWithRetry(() => import('../ViewVersionDialog'));
+const CompareVersionsDialog = lazyWithRetry(() => import('../CompareVersionsDialog'));
+const HistoryDialog = lazyWithRetry(() => import('../HistoryDialog'));
 const ItemMenu = lazy(() => import('../ItemActionsMenu'));
 const ItemMegaMenu = lazy(() => import('../ItemMegaMenu'));
 const AuthMonitor = lazy(() => import('../AuthMonitor'));
@@ -203,49 +205,67 @@ function GlobalDialogManager() {
 			))}
 			<Suspense fallback="">
 				{/* region History */}
-				<HistoryDialog
-					{...state.history}
-					versionsBranch={versionsBranch}
+				<MountOnFirstOpen
+					open={state.history.open}
 					onClose={createCallback(state.history.onClose, dispatch)}
 					onClosed={createCallback(state.history.onClosed, dispatch)}
-				/>
+				>
+					<HistoryDialog
+						{...state.history}
+						versionsBranch={versionsBranch}
+						onClose={createCallback(state.history.onClose, dispatch)}
+						onClosed={createCallback(state.history.onClosed, dispatch)}
+					/>
+				</MountOnFirstOpen>
 				{/* endregion */}
 
 				{/* region View Versions */}
-				<ViewVersionDialog
-					{...state.viewVersion}
-					rightActions={state.viewVersion.rightActions?.map((action) => ({
-						...action,
-						onClick: createCallback(action.onClick, dispatch)
-					}))}
-					leftActions={state.viewVersion.leftActions?.map((action) => ({
-						...action,
-						onClick: createCallback(action.onClick, dispatch)
-					}))}
-					contentTypesBranch={contentTypesBranch}
+				<MountOnFirstOpen
+					open={state.viewVersion.open}
 					onClose={createCallback(state.viewVersion.onClose, dispatch)}
 					onClosed={createCallback(state.viewVersion.onClosed, dispatch)}
-				/>
+				>
+					<ViewVersionDialog
+						{...state.viewVersion}
+						rightActions={state.viewVersion.rightActions?.map((action) => ({
+							...action,
+							onClick: createCallback(action.onClick, dispatch)
+						}))}
+						leftActions={state.viewVersion.leftActions?.map((action) => ({
+							...action,
+							onClick: createCallback(action.onClick, dispatch)
+						}))}
+						contentTypesBranch={contentTypesBranch}
+						onClose={createCallback(state.viewVersion.onClose, dispatch)}
+						onClosed={createCallback(state.viewVersion.onClosed, dispatch)}
+					/>
+				</MountOnFirstOpen>
 				{/* endregion */}
 
 				{/* region Compare Versions */}
-				<CompareVersionsDialog
-					{...state.compareVersions}
-					leftActions={state.compareVersions.leftActions?.map((action) => ({
-						...action,
-						onClick: createCallback(action.onClick, dispatch)
-					}))}
-					rightActions={state.compareVersions.rightActions?.map((action) => ({
-						...action,
-						onClick: createCallback(action.onClick, dispatch)
-					}))}
-					contentTypesBranch={contentTypesBranch}
-					selectedA={versionsBranch?.selected[0] ? versionsBranch.byId[versionsBranch.selected[0]] : null}
-					selectedB={versionsBranch?.selected[1] ? versionsBranch.byId[versionsBranch.selected[1]] : null}
-					versionsBranch={versionsBranch}
+				<MountOnFirstOpen
+					open={state.compareVersions.open}
 					onClose={createCallback(state.compareVersions.onClose, dispatch)}
 					onClosed={createCallback(state.compareVersions.onClosed, dispatch)}
-				/>
+				>
+					<CompareVersionsDialog
+						{...state.compareVersions}
+						leftActions={state.compareVersions.leftActions?.map((action) => ({
+							...action,
+							onClick: createCallback(action.onClick, dispatch)
+						}))}
+						rightActions={state.compareVersions.rightActions?.map((action) => ({
+							...action,
+							onClick: createCallback(action.onClick, dispatch)
+						}))}
+						contentTypesBranch={contentTypesBranch}
+						selectedA={versionsBranch?.selected[0] ? versionsBranch.byId[versionsBranch.selected[0]] : null}
+						selectedB={versionsBranch?.selected[1] ? versionsBranch.byId[versionsBranch.selected[1]] : null}
+						versionsBranch={versionsBranch}
+						onClose={createCallback(state.compareVersions.onClose, dispatch)}
+						onClosed={createCallback(state.compareVersions.onClosed, dispatch)}
+					/>
+				</MountOnFirstOpen>
 				{/* endregion */}
 
 				{/* region Auth Monitor */}

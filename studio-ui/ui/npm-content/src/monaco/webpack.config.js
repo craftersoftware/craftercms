@@ -40,8 +40,14 @@ module.exports = {
 				use: ['style-loader', 'css-loader']
 			},
 			{
+				// An asset module, not file-loader: file-loader emits JS (`export default __webpack_public_path__ + ...`), and
+				// webpack 5 also runs that rule for the `url()` of codicon.css, so the .ttf the CSS pointed at was a few bytes
+				// of JS instead of the font. The URL is resolved against output.publicPath.
 				test: /\.ttf$/,
-				use: ['file-loader']
+				type: 'asset/resource',
+				generator: {
+					filename: '[name].[contenthash][ext]'
+				}
 			}
 		]
 	},
