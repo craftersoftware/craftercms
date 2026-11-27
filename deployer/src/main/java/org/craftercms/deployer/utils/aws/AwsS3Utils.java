@@ -23,6 +23,8 @@ import software.amazon.awssdk.services.s3.S3Utilities;
 
 import java.net.URI;
 
+import static org.apache.commons.lang3.Strings.CS;
+
 /**
  * Provides utility aws-related functionality.
  */
@@ -48,7 +50,7 @@ public final class AwsS3Utils {
 	 * @return the parsed URL
 	 */
 	public static S3Uri parseS3Url(String url) {
-		String uri = HttpUtils.encodeUrlMacro(StringUtils.appendIfMissing(url, DELIMITER));
+		String uri = HttpUtils.encodeUrlMacro(CS.appendIfMissing(url, DELIMITER));
 		return S3_UTILITIES.parseUri(URI.create(uri));
 	}
 
@@ -60,7 +62,7 @@ public final class AwsS3Utils {
 	 * @return the S3 object key
 	 */
 	public static String getS3Key(String baseKey, String file) {
-		String path = StringUtils.appendIfMissing(baseKey, DELIMITER) + StringUtils.stripStart(file, DELIMITER);
+		String path = CS.appendIfMissing(baseKey, DELIMITER) + StringUtils.stripStart(file, DELIMITER);
 		// S3 key should not start with a delimiter
 		return StringUtils.stripStart(path, DELIMITER);
 	}
