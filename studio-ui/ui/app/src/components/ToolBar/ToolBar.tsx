@@ -45,6 +45,12 @@ const translations = defineMessages({
 	itemMenu: {
 		id: 'previewToolbar.itemMenu',
 		defaultMessage: 'Item menu'
+	},
+	moreLeftActions: {
+		defaultMessage: 'More left toolbar actions'
+	},
+	moreRightActions: {
+		defaultMessage: 'More right toolbar actions'
 	}
 });
 
@@ -141,7 +147,7 @@ export function ToolBar() {
 						onClick={() => dispatch(showToolsPanel ? closeToolsPanel() : openToolsPanel())}
 					/>
 				</Tooltip>
-				<ToolbarOverflow>
+				<ToolbarOverflow label={formatMessage(translations.moreLeftActions)}>
 					{renderWidgets(toolbar.leftSection?.widgets, { userRoles, overrideProps: { site, item } })}
 				</ToolbarOverflow>
 			</section>
@@ -151,7 +157,7 @@ export function ToolBar() {
 				</Suspense>
 			</section>
 			<section>
-				<ToolbarOverflow align="end">
+				<ToolbarOverflow align="end" label={formatMessage(translations.moreRightActions)}>
 					{renderWidgets(toolbar.rightSection?.widgets, { userRoles, overrideProps: { site, item } })}
 					<LauncherOpenerButton />
 				</ToolbarOverflow>

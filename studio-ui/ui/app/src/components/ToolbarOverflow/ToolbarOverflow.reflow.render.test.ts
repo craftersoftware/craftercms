@@ -58,7 +58,7 @@ let barWidth = 1000;
 Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
 	configurable: true,
 	get() {
-		return this.getAttribute('aria-label') === 'More toolbar actions' ? 40 : 100;
+		return this.getAttribute('aria-haspopup') === 'dialog' ? 40 : 100;
 	}
 });
 Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
@@ -100,7 +100,7 @@ afterEach(async () => {
 	barWidth = ALL_FIT;
 });
 
-async function renderBar(align: 'start' | 'end' = 'start', width = ALL_FIT, labels = ['A', 'B', 'C']) {
+async function renderBar(align: 'start' | 'end' = 'start', width = ALL_FIT, labels = ['A', 'B', 'C'], label?: string) {
 	barWidth = width;
 	const host = document.createElement('div');
 	document.body.appendChild(host);
@@ -117,7 +117,7 @@ async function renderBar(align: 'start' | 'end' = 'start', width = ALL_FIT, labe
 						{ value: intl as never },
 						React.createElement(
 							ToolbarOverflow,
-							{ align },
+							{ align, label },
 							nextLabels.map((label) =>
 								React.createElement('button', { key: label, type: 'button', 'aria-label': label })
 							)
@@ -338,5 +338,42 @@ describe('ToolbarOverflow with no items', () => {
 		await act(async () => {});
 		assert.notEqual(getComputedStyle(bar()).flexBasis, '308px');
 		assert.equal(getComputedStyle(bar()).flexBasis, 'auto');
+	});
+});
+
+describe('ToolbarOverflow accessible name', () => {
+	it('gives each bar its own name on the More button and on its menu', async () => {
+		const left = 'More left toolbar actions';
+		const right = 'More right toolbar actions';
+		await renderBar('start', NONE_FIT, ['A', 'B', 'C'], left);
+		await renderBar('end', NONE_FIT, ['D', 'E', 'F'], right);
+		await act(async () => {});
+		const names: string[] = [];
+		for (const label of [left, right]) {
+			const more = button(label);
+			assert.equal(more.getAttribute('aria-label'), label);
+			await act(async () => {
+				more.click();
+			});
+			await act(async () => {});
+			const controls = more.getAttribute('aria-controls');
+			assert.ok(controls, `${label} sets aria-controls while open`);
+			assert.equal(document.getElementById(controls)?.getAttribute('aria-label'), label);
+			names.push(more.getAttribute('aria-label'));
+			await act(async () => {
+				document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+				dialog()?.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+			});
+			await act(async () => {});
+		}
+		assert.notEqual(names[0], names[1]);
+	});
+
+	it('keeps the default name when no label is given', async () => {
+		await renderBar('start', NONE_FIT);
+		await act(async () => {});
+		assert.equal(button(MORE).getAttribute('aria-label'), MORE);
+		await openMore();
+		assert.equal(dialog()?.getAttribute('aria-label'), MORE);
 	});
 });
