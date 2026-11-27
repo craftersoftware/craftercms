@@ -102,6 +102,19 @@ interface SiteConfigurationManagementProps {
 	selectedConfigFileId?: string;
 }
 
+// Ace reserves the scrollbar space only while its vertical scrollbar is visible.
+function trackScrollbarWidth(editor: AceAjax.Editor, onChange: (width: number) => void) {
+	// `scrollBarV` is public in Ace but missing from the typings.
+	const renderer = editor.renderer as unknown as {
+		scrollBarV: { isVisible: boolean; getWidth(): number };
+		on(eventName: string, callback: () => void): void;
+	};
+	const update = () => onChange(renderer.scrollBarV.isVisible ? renderer.scrollBarV.getWidth() : 0);
+	renderer.on('scrollbarVisibilityChanged', update);
+	renderer.on('resize', update);
+	update();
+}
+
 export function SiteConfigurationManagement(props: SiteConfigurationManagementProps) {
 	const { embedded, showAppsButton, onSubmittingAndOrPendingChange, isSubmitting, selectedConfigFileId } = props;
 	const site = useActiveSiteId();
@@ -163,6 +176,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const [contentSize, setContentSize] = useState(0);
 	// Width of the Ace editor's vertical scrollbar (0 when hidden or when the OS uses overlay scrollbars).
 	const [editorScrollbarWidth, setEditorScrollbarWidth] = useState(0);
+	const [sampleEditorScrollbarWidth, setSampleEditorScrollbarWidth] = useState(0);
 
 	useMount(() => {
 		if (changesRecoveredOnMount) {
@@ -678,14 +692,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 			exec: () => onSave(),
 			readOnly: false
 		});
-		// Ace reserves the scrollbar space only while its vertical scrollbar is shown ($vScroll).
-		const renderer = editor.renderer as any;
-		const updateEditorScrollbarWidth = () =>
-			setEditorScrollbarWidth(renderer.$vScroll ? renderer.scrollBarV.getWidth() : 0);
-		renderer.on('scrollbarVisibilityChanged', updateEditorScrollbarWidth);
-		renderer.on('resize', updateEditorScrollbarWidth);
-		updateEditorScrollbarWidth();
+		trackScrollbarWidth(editor, setEditorScrollbarWidth);
 	};
+
+	const onSampleAceInit = (editor: AceAjax.Editor) => trackScrollbarWidth(editor, setSampleEditorScrollbarWidth);
 
 	return (
 		<Box
@@ -926,7 +936,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 												sx={{
 													position: 'absolute',
 													top: '100%',
-													right: `${editorScrollbarWidth}px`,
+													right: `${showSampleEditor ? sampleEditorScrollbarWidth : editorScrollbarWidth}px`,
 													zIndex: 2,
 													display: 'flex',
 													alignItems: 'center',
@@ -1039,6 +1049,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 												autoFocus={false}
 												readOnly={true}
 												value={selectedSampleConfigFileXml}
+												onInit={onSampleAceInit}
 											/>
 										) : (
 											<></>
