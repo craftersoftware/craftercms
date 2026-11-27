@@ -150,6 +150,7 @@ export function VersionList(props: VersionListProps) {
 										describeChild
 										title={version.comment}
 										slotProps={{
+											popper: { onClick: (e) => e.stopPropagation() },
 											tooltip: {
 												sx: {
 													maxWidth: 400,
