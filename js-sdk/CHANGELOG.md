@@ -17,7 +17,10 @@
 - Deprecated `getDescriptor` API (use `getItem` instead)
 - **Breaking:** `getItem` action payload changed to `{ url, config? }` in this release; 5.0.0 carries the change under a major version
 
-## @craftercms/classes4.4.1
+## @craftercms/content@4.4.1
+- Fix the published README for links to work on npmjs.com
+
+## @craftercms/classes@4.4.1
 - New `crafterConf.flatten` property which controls the `flatten` parameter of content services to recursively include linked content items
 
 ## 4.2.0
