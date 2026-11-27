@@ -163,9 +163,26 @@ describe('version list comment tooltip', () => {
 		assert.equal(tooltip.textContent, longComment);
 	});
 
-	it('renders no tooltip for a comment that fits until the row is interacted with', async () => {
-		await render(shortComment);
-		assert.equal(document.querySelector('[role="tooltip"]'), null);
+	it('does not open the tooltip for a comment that fits', async () => {
+		const host = await render(shortComment);
+		const comment = Array.from(host.querySelectorAll<HTMLElement>('span')).find(
+			(el) => el.textContent === shortComment
+		);
+		assert.ok(comment, 'comment element');
+		await hover(comment);
+		assert.equal(document.querySelector('[role="tooltip"]'), null, 'hover opened the tooltip');
+		await focusViaKeyboard(getRow(host));
+		assert.equal(document.querySelector('[role="tooltip"]'), null, 'keyboard focus opened the tooltip');
+	});
+	it('does not ripple the row on mousedown inside the tooltip', async () => {
+		const host = await render(longComment);
+		await hover(getCommentTarget(host));
+		const tooltip = document.querySelector<HTMLElement>('[role="tooltip"]');
+		assert.ok(tooltip, 'tooltip');
+		await act(async () => {
+			tooltip.firstElementChild?.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true }));
+		});
+		assert.equal(host.querySelectorAll('.MuiTouchRipple-child').length, 0, 'the row rippled');
 	});
 
 	it('renders no tooltip for an empty comment', async () => {
