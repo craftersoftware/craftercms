@@ -147,7 +147,6 @@ import type { DataSourceActionChoice, DataSourceSelection, ResolvedDataSourceAct
 import Alert from '@mui/material/Alert';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
 import { MenuList } from '@mui/material';
-import { showSystemNotification } from '../../../state/actions/system';
 import { useSnackbar } from 'notistack';
 
 const SortableList = lazy(() => import('../components/SortableList'));
@@ -256,7 +255,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	const { rootRef, remember, announcement } = useReorderFocus(value);
 	const { addButtonRef, fallbackRef, rememberEmpty, focusEmptyField } = useRestoreFocusWhenEmpty(value);
 	const rowKeys = useOccurrenceKeys(value);
-	const { closeSnackbar } = useSnackbar();
+	const { closeSnackbar, enqueueSnackbar } = useSnackbar();
 	const dismissMoveSnackbar = () => closeSnackbar(MOVE_TO_FIELD_SNACKBAR_KEY);
 	const onSortChange = (next: TItem<NodeSelectorItem>[]) => {
 		dismissMoveSnackbar();
@@ -831,6 +830,8 @@ function NodeSelector(props: NodeSelectorProps) {
 	]);
 	const closeMoveDialog = () => setMoveDialogIndex(null);
 	const moveUndoRefs = useUpdateRefs({ formsStackData, contentTypes, store, closeSnackbar });
+	// Closing the form unmounts this field. Undo would then run against a form that is gone, so drop the snackbar.
+	useEffect(() => () => moveUndoRefs.current.closeSnackbar(MOVE_TO_FIELD_SNACKBAR_KEY), [moveUndoRefs]);
 	const handleMoveToField = (target: NodeSelectorMoveTarget, targetIndex: number) => {
 		if (moveDialogIndex == null || !moveDialogItem || !contentTypes) return;
 		const documentStack = documentFormStack(formsStackData, stableForm);
@@ -886,51 +887,50 @@ function NodeSelector(props: NodeSelectorProps) {
 		const undoTargetIndex = source.index;
 		// Only the latest move can be undone: drop the previous Undo before showing a new one.
 		dismissMoveSnackbar();
-		dispatch(
-			showSystemNotification({
-				message: formatMessage(
-					{ defaultMessage: 'Moved {item} to {target}' },
-					{ item: getItemLabel(moveDialogItem), target: target.labelPath }
-				),
-				options: {
-					key: MOVE_TO_FIELD_SNACKBAR_KEY,
-					action: (snackbarKey) => (
-						<Button
-							size="small"
-							color="inherit"
-							onClick={() => {
-								const {
-									formsStackData: latestStack,
-									contentTypes: latestContentTypes,
+		// The Undo button is a function. enqueueSnackbar keeps it out of a Redux action, which cannot hold one.
+		enqueueSnackbar(
+			formatMessage(
+				{ defaultMessage: 'Moved {item} to {target}' },
+				{ item: getItemLabel(moveDialogItem), target: target.labelPath }
+			),
+			{
+				key: MOVE_TO_FIELD_SNACKBAR_KEY,
+				action: (snackbarKey) => (
+					<Button
+						size="small"
+						color="inherit"
+						onClick={() => {
+							const {
+								formsStackData: latestStack,
+								contentTypes: latestContentTypes,
+								store: latestStore,
+								closeSnackbar: close
+							} = moveUndoRefs.current;
+							if (latestContentTypes) {
+								const undone = undoNodeSelectorMove({
 									store: latestStore,
-									closeSnackbar: close
-								} = moveUndoRefs.current;
-								if (latestContentTypes) {
-									const undone = undoNodeSelectorMove({
-										store: latestStore,
-										documentStack: documentFormStack(latestStack, stableForm),
-										contentTypesById: latestContentTypes,
-										applied: { ...undoSource, item: applied.item },
-										source: { ...undoTarget, index: undoTargetIndex }
-									});
-									// The item is back in its original field. Focus its row there.
-									if (undone) {
-										requestMovedRowFocus(
-											latestStore,
-											latestStack,
-											{ ...undoTarget, index: undone.insertedIndex },
-											undone.item.key
-										);
-									}
+									documentStack: documentFormStack(latestStack, stableForm),
+									contentTypesById: latestContentTypes,
+									applied: { ...undoSource, item: applied.item },
+									source: { ...undoTarget, index: undoTargetIndex }
+								});
+								// The item is back in its original field. Focus its row there.
+								if (undone) {
+									requestMovedRowFocus(
+										latestStore,
+										latestStack,
+										{ ...undoTarget, index: undone.insertedIndex },
+										undone.item.key
+									);
 								}
-								close(snackbarKey);
-							}}
-						>
-							<FormattedMessage defaultMessage="Undo" />
-						</Button>
-					)
-				}
-			})
+							}
+							close(snackbarKey);
+						}}
+					>
+						<FormattedMessage defaultMessage="Undo" />
+					</Button>
+				)
+			}
 		);
 	};
 	return (
