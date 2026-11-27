@@ -799,6 +799,14 @@ function updatedConstraintType(raw: { type?: string }, update: { type?: string; 
 	return update.type || raw.type;
 }
 
+/** Count-limit constraints always write the storage `constraintType` (checkbox minSize → int). */
+function countLimitConstraintType(storage: ReturnType<typeof getCountLimitStorage>, name: string): string | undefined {
+	for (const bound of [storage?.min, storage?.max]) {
+		if (bound?.name === name && bound.constraintType) return bound.constraintType;
+	}
+	return undefined;
+}
+
 function valueFitsStoredType(storedType: string, value: unknown): boolean {
 	if (storedType === 'string') return true;
 	if (storedType === 'boolean') {
@@ -945,28 +953,43 @@ function convertFieldStructToXmlStruct(field: ContentTypeField): Required<Legacy
 		handledConstraints.map((item) => [item.name, item])
 	);
 	const countStorage = getCountLimitStorage(field.type);
-	const omittedConstraintNames = new Set<string>(countStorage?.stripConstraints ?? []);
-	for (const name of countLimitValidationKeys(countStorage)) {
-		if (!handledByName.has(name)) omittedConstraintNames.add(name);
-	}
+	// stripConstraints (e.g. repeat `required`) are always dropped. The blank-or-0 keep rule
+	// applies only to count-limit constraint names the editor is not writing back.
+	const stripConstraintNames = new Set<string>(countStorage?.stripConstraints ?? []);
+	const omittedCountConstraintNames = new Set<string>(
+		countLimitValidationKeys(countStorage).filter((name) => !handledByName.has(name))
+	);
 	const seenConstraintNames = new Set<string>();
 	const constraintList: Array<(typeof handledConstraints)[number] | LegacyFormDefinitionProperty> = [];
 	for (const raw of field.rawConstraints ?? []) {
 		if (!raw?.name) continue;
+		if (stripConstraintNames.has(raw.name)) continue;
 		// A count-limit the editor is not writing back. Keep the stored constraint when this save
 		// did not change it: a blank value or 0 already means no limit. A positive stored value
 		// with no editor value was cleared, so it is omitted.
-		if (omittedConstraintNames.has(raw.name) && !isUnchangedUnlimitedCount(raw.value)) continue;
+		if (omittedCountConstraintNames.has(raw.name) && !isUnchangedUnlimitedCount(raw.value)) continue;
 		const update = handledByName.get(raw.name);
 		// A cleared editor value must not bring the stored constraint back, or write type "undefined".
 		if (update && isClearedConstraintValue(update.value)) continue;
 		seenConstraintNames.add(raw.name);
 		constraintList.push(
-			update ? { ...raw, value: update.value, type: updatedConstraintType(raw, update) } : { ...raw }
+			update
+				? {
+						...raw,
+						value: update.value,
+						type: countLimitConstraintType(countStorage, raw.name) ?? updatedConstraintType(raw, update)
+					}
+				: { ...raw }
 		);
 	}
 	for (const constraint of handledConstraints) {
-		if (seenConstraintNames.has(constraint.name) || omittedConstraintNames.has(constraint.name)) continue;
+		if (
+			seenConstraintNames.has(constraint.name) ||
+			stripConstraintNames.has(constraint.name) ||
+			omittedCountConstraintNames.has(constraint.name)
+		) {
+			continue;
+		}
 		if (isClearedConstraintValue(constraint.value)) continue;
 		constraintList.push(constraint);
 	}

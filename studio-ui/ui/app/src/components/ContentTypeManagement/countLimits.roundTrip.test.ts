@@ -102,6 +102,51 @@ describe('repeat count-limit round trip', () => {
 		);
 	});
 
+	// Given a repeat with a blank or "0" required constraint, save still strips it. The blank-or-0 keep rule is only for count limits (#9318).
+	it('strips a blank or zero required constraint from a repeat', () => {
+		for (const requiredValue of ['', '0'] as const) {
+			const parsed = parseLegacyFormDefinition({
+				'content-type': '/component/social-media-widget',
+				title: 'Social',
+				description: '',
+				objectType: 'component',
+				sections: {
+					section: {
+						title: 'Main',
+						description: '',
+						defaultOpen: 'true',
+						fields: {
+							field: {
+								id: 'accounts_o',
+								title: 'Accounts',
+								description: '',
+								type: 'repeat',
+								minOccurs: '0',
+								maxOccurs: '*',
+								constraints: { constraint: { name: 'required', value: requiredValue, type: 'boolean' } },
+								properties: {
+									property: [property('minOccurs', '0'), property('maxOccurs', '*')]
+								},
+								fields: { field: { id: 'title_s', title: 'Title', description: '', type: 'input' } }
+							}
+						}
+					}
+				}
+			} as never);
+
+			const xml = prepareSerializeToXmlTypeObject(parsed);
+			const section = Array.isArray(xml.sections.section) ? xml.sections.section[0] : xml.sections.section;
+			const field = Array.isArray(section.fields.field) ? section.fields.field[0] : section.fields.field;
+			const constraints = field.constraints?.constraint;
+			const constraintList = constraints == null ? [] : Array.isArray(constraints) ? constraints : [constraints];
+			assert.equal(
+				constraintList.some((item) => item.name === 'required'),
+				false,
+				`required=${JSON.stringify(requiredValue)} should be stripped`
+			);
+		}
+	});
+
 	// Given a repeat with no stored limits, save writes the TB1 defaults: min '0' (int) and max '*' (string), as element and property.
 	it('writes TB1 defaults when the repeat limits are blank', () => {
 		const parsed = parseLegacyFormDefinition({
@@ -206,6 +251,46 @@ describe('checkbox group minSize round trip', () => {
 			saved.constraintList.some((item) => item.name === 'minCount'),
 			false
 		);
+	});
+
+	// Given a legacy TB2 minSize stored as type number, saving the type writes type int, whether minSize was edited or not (#9318 / #9288 AC6).
+	it('heals a legacy number type to int when the type is saved, edited or not', () => {
+		const parsed = parseLegacyFormDefinition({
+			'content-type': '/page/article',
+			title: 'Article',
+			description: '',
+			objectType: 'page',
+			sections: {
+				section: {
+					title: 'Main',
+					description: '',
+					defaultOpen: 'true',
+					fields: {
+						field: {
+							id: 'topics_o',
+							title: 'Topics',
+							description: '',
+							type: 'checkbox-group',
+							constraints: { constraint: { name: 'minSize', value: '2', type: 'number' } }
+						}
+					}
+				}
+			}
+		} as never);
+		assert.equal(parsed.fields.topics_o.rawConstraints?.find((item) => item.name === 'minSize')?.type, 'number');
+
+		for (const [edit, expected] of [
+			[undefined, 2],
+			[5, 5]
+		] as const) {
+			const values = createTypeFieldValuesObject(parsed.fields.topics_o);
+			if (edit !== undefined) values.minSize = edit;
+			const edited = reverseTypeFieldValuesObject(parsed.fields.topics_o, values, checkboxGroupDescriptor);
+			const type = { ...parsed, fields: { ...parsed.fields, topics_o: edited } };
+			const written = savedConstraint(type).constraintList.find((item) => item.name === 'minSize');
+			assert.equal(written?.value, expected);
+			assert.equal(written?.type, 'int', `minSize edit=${String(edit)} should save type int`);
+		}
 	});
 
 	// Given a stored 2 edited to 5, reopening shows 5. Clearing it to blank reopens blank and save omits minSize.
