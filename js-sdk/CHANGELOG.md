@@ -19,6 +19,9 @@
 ## @craftercms/content@4.4.1
 - Fix the published README for links to work on npmjs.com
 
+## @craftercms/content@4.4.1
+- Fix the published README for links to work on npmjs.com
+
 ## @craftercms/classes@4.4.1
 - New `crafterConf.flatten` property which controls the `flatten` parameter of content services to recursively include linked content items
 
