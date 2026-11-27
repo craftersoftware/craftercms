@@ -4,6 +4,9 @@
 ## @craftercms/redux@5.0.0
 - **Breaking:** `getItem` action payload is now an object with `url` and optional `config` properties (previously a string URL)
 
+## @craftercms/content@4.5.1
+- `fetchModelByPath` and `fetchModelByUrl` now return `Observable<ContentInstance | null>` and emit `null` for items without a descriptor
+
 ## @craftercms/content@4.5.0
 - Deprecated "Get Descriptor" API (use getItem instead)
 - `getDescriptor` now calls `getItem` and completes the descriptor from the item response (including `localId`)
