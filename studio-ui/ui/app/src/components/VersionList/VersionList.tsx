@@ -15,7 +15,7 @@
  */
 
 import { FormattedDateParts, FormattedMessage, FormattedTime, useIntl } from 'react-intl';
-import React, { useId } from 'react';
+import React, { useId, useState } from 'react';
 import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import Chip from '@mui/material/Chip';
@@ -72,6 +72,8 @@ export function VersionList(props: VersionListProps) {
 	const selectedLookup = createPresenceTable(selected);
 	const { formatMessage } = useIntl();
 	const versionLabelId = useId();
+	const [tooltipVersion, setTooltipVersion] = useState<string>(null);
+	const closeTooltip = (versionNumber: string) => setTooltipVersion((open) => (open === versionNumber ? null : open));
 	return (
 		<List
 			component="div"
@@ -91,6 +93,19 @@ export function VersionList(props: VersionListProps) {
 						component={ListItem}
 						divider={versions.length - 1 !== i}
 						onClick={() => onItemClick(version)}
+						onFocus={(e) => {
+							// Tooltip's own focus handling only covers its (non-focusable) child, so open it when the row is
+							// focused via keyboard.
+							if (e.target !== e.currentTarget) return;
+							let isFocusVisible = false;
+							try {
+								isFocusVisible = e.currentTarget.matches(':focus-visible');
+							} catch {
+								// Selector not supported
+							}
+							if (isFocusVisible) setTooltipVersion(version.versionNumber);
+						}}
+						onBlur={() => closeTooltip(version.versionNumber)}
 						sx={{ padding: '15px 48px 15px 20px' }}
 						className={isSelected && 'selected'}
 						secondaryAction={
@@ -149,6 +164,9 @@ export function VersionList(props: VersionListProps) {
 									<Tooltip
 										describeChild
 										title={version.comment}
+										open={tooltipVersion === version.versionNumber}
+										onOpen={() => setTooltipVersion(version.versionNumber)}
+										onClose={() => closeTooltip(version.versionNumber)}
 										slotProps={{
 											popper: { onClick: (e) => e.stopPropagation() },
 											tooltip: {
