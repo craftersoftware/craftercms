@@ -600,8 +600,10 @@ studio.db.password: ${env:MARIADB_PASSWD}
 # Format:
 # jdbc:DATABASE_PLATFORM;databaseName=DATABASE_NAME;create=true;user=DATABASE_USERNAME;password=DATABASE_USER_PASSWORD
 # Note that a relative path is not suitable for a production deployment
-studio.db.url: jdbc:mariadb://127.0.0.1:33306/crafter?user=crafter&password=crafter&socketTimeout=60000
-studio.db.scriptRunnerUrl: jdbc:mariadb://127.0.0.1:33306/crafter?user=crafter&password=crafter&socketTimeout=60000&allowMultiQueries=true
+# sslMode=disable disables TLS for the embedded server. An external TLS server must set sslMode
+# itself (e.g. verify-full, verify-ca, or trust, plus serverSslCert or trustStore).
+studio.db.url: jdbc:mariadb://127.0.0.1:33306/crafter?user=crafter&password=crafter&socketTimeout=60000&sslMode=disable
+studio.db.scriptRunnerUrl: jdbc:mariadb://127.0.0.1:33306/crafter?user=crafter&password=crafter&socketTimeout=60000&allowMultiQueries=true&sslMode=disable
 # Defines initial number of database connections in database connection pool
 studio.db.pool.initialConnections: 10
 # Defines maximum number of active database connections in database connection pool
@@ -633,7 +635,9 @@ studio.db.pool.timeBetweenEvictionRunsMillis: -1
 # for any reason, initializer needs to be turned on.
 studio.db.initializer.enabled: true
 # Connection string used to initialize database
-studio.db.initializer.url: jdbc:mariadb://127.0.0.1:33306?user=root&password=${env:MARIADB_ROOT_PASSWD}&socketTimeout=60000
+# sslMode=disable disables TLS for the embedded server. An external TLS server must set sslMode
+# itself (e.g. verify-full, verify-ca, or trust, plus serverSslCert or trustStore).
+studio.db.initializer.url: jdbc:mariadb://127.0.0.1:33306?user=root&password=${env:MARIADB_ROOT_PASSWD}&socketTimeout=60000&sslMode=disable
 # Create schema SQL script location
 studio.db.initializer.createSchemaScriptLocation: crafter/studio/database/createSchema.sql
 # Create database SQL script location
