@@ -57,6 +57,8 @@ export function AsDayMonthDateTime(props: FancyFormattedDateProps) {
 	);
 }
 
+const isTruncated = (el: Element | null) => Boolean(el && el.scrollWidth > el.clientWidth);
+
 interface VersionListProps {
 	versions: ItemHistoryEntry[];
 	selected?: string[];
@@ -103,7 +105,9 @@ export function VersionList(props: VersionListProps) {
 							} catch {
 								// Selector not supported
 							}
-							if (isFocusVisible) setTooltipVersion(version.versionNumber);
+							if (isFocusVisible && isTruncated(e.currentTarget.querySelector('.MuiListItemText-secondary'))) {
+								setTooltipVersion(version.versionNumber);
+							}
 						}}
 						onBlur={() => closeTooltip(version.versionNumber)}
 						sx={{ padding: '15px 48px 15px 20px' }}
@@ -165,7 +169,11 @@ export function VersionList(props: VersionListProps) {
 										describeChild
 										title={version.comment}
 										open={tooltipVersion === version.versionNumber}
-										onOpen={() => setTooltipVersion(version.versionNumber)}
+										onOpen={(e) => {
+											if (isTruncated((e.target as Element).closest('.MuiListItemText-secondary'))) {
+												setTooltipVersion(version.versionNumber);
+											}
+										}}
 										onClose={() => closeTooltip(version.versionNumber)}
 										slotProps={{
 											popper: { onClick: (e) => e.stopPropagation() },
