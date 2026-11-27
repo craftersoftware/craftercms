@@ -14,9 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import type { Atom } from 'jotai';
 import type LookupTable from '../../../models/LookupTable';
-import type { FieldValidityState } from './validators';
 import { XmlKeys } from './formConsts';
 
 /** A field the save refuses to write without, even as a draft. */
@@ -69,34 +67,6 @@ export function contentTypeDefinesInternalName(
 /** Not empty and not only whitespace. */
 export function isInternalNameFilled(value: unknown): boolean {
 	return (value?.toString() ?? '').trim() !== '';
-}
-
-/**
- * Current requirements from the form's atoms and the content type.
- * A missing file-name validity atom means the type has no file-name field, so that requirement is skipped.
- * `hasInternalNameField` comes from the content type, not from whether an atom exists. A type that defines
- * the field still requires it when the stored XML created no atom. The value is read from the atom when one exists.
- */
-export async function readMissingMinimumSaveRequirements(
-	store: { get<Value>(atom: Atom<Value>): Value },
-	atoms:
-		| {
-				validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>;
-				valueByFieldId: LookupTable<Atom<unknown>>;
-		  }
-		| null
-		| undefined,
-	flags: { isRepeatMode: boolean; isEmbedded: boolean; hasInternalNameField: boolean }
-): Promise<MinimumSaveRequirement[]> {
-	if (!atoms || flags.isRepeatMode) return [];
-	const fileNameAtom = atoms.validationByFieldId?.[XmlKeys.fileName];
-	const fileNameValid = flags.isEmbedded || !fileNameAtom ? true : (await store.get(fileNameAtom)).isValid;
-	const internalNameAtom = atoms.valueByFieldId?.[XmlKeys.internalName];
-	return missingMinimumSaveRequirements({
-		...flags,
-		fileNameValid,
-		internalName: internalNameAtom ? store.get(internalNameAtom) : undefined
-	});
 }
 
 export function sameMinimumSaveRequirements(

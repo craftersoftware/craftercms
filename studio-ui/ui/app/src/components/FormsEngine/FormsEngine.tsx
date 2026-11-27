@@ -1244,40 +1244,22 @@ function FormOrchestrator(props: FormsEngineProps) {
 			});
 	}, [isStackedForm, stackSummary.pending, stackSummary.submitting, updateSubmittingOrHasPendingChanges]);
 
-	// Live invalid ids. The first read is immediate; later edits wait out the pause in the hook,
-	// so the alert's count is not rewritten on every keystroke.
-	const localInvalid = useInvalidFieldIds(
-		atoms.validationByFieldId,
-		irrelevantFieldPaths,
-		repeat?.fieldId,
-		fieldUpdates$
-	);
-	const parentInvalid = useInvalidFieldIds(
-		parentAtoms?.validationByFieldId,
-		parentEntry?.formControllerState?.irrelevantFieldPaths,
-		undefined,
-		parentEntry?.fieldUpdates$
-	);
+	// Live invalid ids from the per-field ReadonlySet. The first seeded read is immediate; later edits wait
+	// out the display pause in the hook, so the alert's count is not rewritten on every keystroke.
+	const localInvalid = useInvalidFieldIds(stableFormContext, repeat?.fieldId);
+	const parentInvalid = useInvalidFieldIds(parentEntry, undefined);
 	// What the save refuses to write without. A selected-fields item form saves through its parent,
 	// so it reports the parent's requirements, by the parent's own mode.
-	const localMinimum = useMinimumSaveRequirements(
-		atoms,
-		{
-			isRepeatMode,
-			isEmbedded,
-			hasInternalNameField: contentTypeDefinesInternalName(contentType)
-		},
-		fieldUpdates$
-	);
-	const parentMinimum = useMinimumSaveRequirements(
-		itemMode === 'selected' ? parentAtoms : null,
-		{
-			isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
-			isEmbedded: isEmbeddedForm(parentEntry?.props ?? {}),
-			hasInternalNameField: contentTypeDefinesInternalName(parentEntry?.itemMeta.contentType)
-		},
-		parentEntry?.fieldUpdates$
-	);
+	const localMinimum = useMinimumSaveRequirements(atoms, {
+		isRepeatMode,
+		isEmbedded,
+		hasInternalNameField: contentTypeDefinesInternalName(contentType)
+	});
+	const parentMinimum = useMinimumSaveRequirements(itemMode === 'selected' ? parentAtoms : null, {
+		isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
+		isEmbedded: isEmbeddedForm(parentEntry?.props ?? {}),
+		hasInternalNameField: contentTypeDefinesInternalName(parentEntry?.itemMeta.contentType)
+	});
 	// region Workflow item updates
 	useAffectedPackagesRefetch(siteId, itemPath, (affectedPackages) =>
 		// Merge into the live lock record so a rename's path is not dropped.

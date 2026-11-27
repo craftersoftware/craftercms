@@ -93,6 +93,12 @@ export interface FormsEngineAtoms {
 	lockResult: PrimitiveAtom<FormsEngineEditContextProps>;
 	valueByFieldId: LookupTable<PrimitiveAtom<unknown>>;
 	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>;
+	/**
+	 * Fields that currently fail validation. Immutable set; the reference changes only when membership does.
+	 * Updated per field when that field's validation settles, same idea as
+	 * {@link StableFormContextProps.changedFieldIds}. Readers filter by relevance / parentPath.
+	 */
+	invalidFieldIds: PrimitiveAtom<ReadonlySet<string>>;
 	versionComment: PrimitiveAtom<string>;
 	collapseToC: AtomWithStorage; // Note: `collapseToC` is an atomWithStorage
 	useCollapsedToC: Atom<boolean>;

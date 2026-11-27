@@ -18,7 +18,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
 
-const { atom, createStore } = await import('jotai');
 const {
 	blockingFieldName,
 	firstBlockingFieldId,
@@ -26,16 +25,12 @@ const {
 	minimumRequirementsNotice,
 	isBlankCreateFileName,
 	missingMinimumSaveRequirements,
-	readMissingMinimumSaveRequirements,
 	embeddedMinimumSaveAlert,
 	fullFormMinimumSaveAlert,
 	saveButtonTip,
 	validationAlertVariant
 } = await import('./minimumSaveRequirements.ts');
 const { checkMinimumSaveRequirementsFulfilled } = await import('./validators.ts');
-
-const valid = { isValid: true, messages: [] };
-const invalid = { isValid: false, messages: [] };
 
 describe('minimum save requirements', () => {
 	it('needs a valid file name and an internal name on a full form', () => {
@@ -95,79 +90,6 @@ describe('minimum save requirements', () => {
 			}),
 			[]
 		);
-	});
-
-	it('reads the requirements from the form atoms', async () => {
-		const store = createStore();
-		const internalName = atom<unknown>('');
-		const fileName = atom(Promise.resolve(invalid));
-		const atoms = {
-			validationByFieldId: { 'file-name': fileName },
-			valueByFieldId: { 'internal-name': internalName }
-		} as never;
-		const full = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: true };
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), ['fileName', 'internalName']);
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, { ...full, isEmbedded: true }), [
-			'internalName'
-		]);
-		store.set(internalName as never, 'Home');
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), ['fileName']);
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, { ...full, isRepeatMode: true }), []);
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, null, full), []);
-	});
-
-	it('does not require internal-name when the type has no such field', async () => {
-		const store = createStore();
-		const full = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: false };
-		const validFileOnly = {
-			validationByFieldId: { 'file-name': atom(Promise.resolve(valid)) },
-			valueByFieldId: {}
-		} as never;
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, validFileOnly, full), []);
-		const neither = { validationByFieldId: {}, valueByFieldId: {} } as never;
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, neither, full), []);
-		const invalidFileOnly = {
-			validationByFieldId: { 'file-name': atom(Promise.resolve(invalid)) },
-			valueByFieldId: {}
-		} as never;
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, invalidFileOnly, full), ['fileName']);
-		assert.deepEqual(
-			await readMissingMinimumSaveRequirements(store, invalidFileOnly, {
-				isRepeatMode: false,
-				isEmbedded: true,
-				hasInternalNameField: false
-			}),
-			[]
-		);
-	});
-
-	it('requires internal-name when the type defines it and the form has no atom', async () => {
-		const store = createStore();
-		const atoms = {
-			validationByFieldId: { 'file-name': atom(Promise.resolve(valid)) },
-			valueByFieldId: {}
-		} as never;
-		assert.deepEqual(
-			await readMissingMinimumSaveRequirements(store, atoms, {
-				isRepeatMode: false,
-				isEmbedded: false,
-				hasInternalNameField: true
-			}),
-			['internalName']
-		);
-	});
-
-	it('follows a file name that becomes valid', async () => {
-		const store = createStore();
-		const name = atom('');
-		const atoms = {
-			validationByFieldId: { 'file-name': atom(async (get) => (get(name) ? valid : invalid)) },
-			valueByFieldId: { 'internal-name': atom<unknown>('Home') }
-		} as never;
-		const full = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: true };
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), ['fileName']);
-		store.set(name, 'home');
-		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), []);
 	});
 });
 

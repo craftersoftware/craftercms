@@ -60,7 +60,6 @@ import {
 	parentBodyHiddenForItemLaunch,
 	missedItemLaunch,
 	repeatItemsMissingWarning,
-	settleInvalidFieldRead,
 	itemLaunchVisibleChildren,
 	scopeToggleVisible,
 	repeatFormLock,
@@ -1256,29 +1255,6 @@ describe('selected item save', () => {
 			parentFieldOrder: ['title_s']
 		});
 		assert.equal(plan.action, 'saveParent');
-	});
-});
-
-describe('invalid field read', () => {
-	// A plugin validator rejected the current read. Report it and leave the ids already on screen.
-	it('reports a rejected validity read and keeps the last ids', () => {
-		assert.equal(settleInvalidFieldRead({ disposed: false, seq: 1, latest: 1, rejected: true }), 'report');
-	});
-
-	// A newer read already finished. This rejection must not replace those ids.
-	it('ignores a stale validity rejection', () => {
-		assert.equal(settleInvalidFieldRead({ disposed: false, seq: 1, latest: 2, rejected: true }), 'ignore');
-	});
-
-	// The reader unmounted. A late rejection must not update state.
-	it('ignores a validity rejection after the read is disposed', () => {
-		assert.equal(settleInvalidFieldRead({ disposed: true, seq: 1, latest: 1, rejected: true }), 'ignore');
-	});
-
-	// The matching successful read is the one that replaces the ids.
-	it('applies the current validity read', () => {
-		assert.equal(settleInvalidFieldRead({ disposed: false, seq: 2, latest: 2, rejected: false }), 'apply');
-		assert.equal(settleInvalidFieldRead({ disposed: false, seq: 1, latest: 2, rejected: false }), 'ignore');
 	});
 });
 
