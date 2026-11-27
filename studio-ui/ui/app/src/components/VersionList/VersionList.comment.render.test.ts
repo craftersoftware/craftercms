@@ -185,6 +185,40 @@ describe('version list comment tooltip', () => {
 		assert.equal(host.querySelectorAll('.MuiTouchRipple-child').length, 0, 'the row rippled');
 	});
 
+	it('scrolls a long comment with PageDown/PageUp and leaves the keys alone when it fits', async () => {
+		const host = await render(longComment);
+		const row = getRow(host);
+		await focusViaKeyboard(row);
+		const tooltip = document.querySelector<HTMLElement>('.MuiTooltip-tooltip');
+		assert.ok(tooltip, 'tooltip');
+		// jsdom has no layout: give the tooltip a 100px viewport over 300px of content.
+		let scrollTop = 0;
+		let scrollHeight = 300;
+		Object.defineProperty(tooltip, 'clientHeight', { configurable: true, get: () => 100 });
+		Object.defineProperty(tooltip, 'scrollHeight', { configurable: true, get: () => scrollHeight });
+		Object.defineProperty(tooltip, 'scrollTop', {
+			configurable: true,
+			get: () => scrollTop,
+			set: (value: number) => {
+				scrollTop = Math.max(0, Math.min(value, scrollHeight - 100));
+			}
+		});
+		const press = (key: string) => {
+			const event = new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+			act(() => {
+				row.dispatchEvent(event);
+			});
+			return event.defaultPrevented;
+		};
+		assert.equal(press('PageDown'), true, 'PageDown scrolls the tooltip');
+		assert.equal(scrollTop, 90);
+		assert.equal(press('PageUp'), true, 'PageUp scrolls the tooltip back');
+		assert.equal(scrollTop, 0);
+		assert.equal(press('PageUp'), false, 'PageUp at the top is left to the dialog');
+		scrollHeight = 100;
+		assert.equal(press('PageDown'), false, 'PageDown is left to the dialog when the comment fits');
+	});
+
 	it('renders no tooltip for an empty comment', async () => {
 		const host = await render('');
 		await focusViaKeyboard(getRow(host));
