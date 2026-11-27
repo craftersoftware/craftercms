@@ -19,55 +19,57 @@ import TextField from '@mui/material/TextField';
 import { siteIdMaxLength, siteInputMaxLength, siteNameMaxLength } from './utils';
 import React from 'react';
 import { renderSiteFormHelperText } from './BlueprintForm';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import { DuplicateSiteState, LookupTable, SiteState } from '../../models';
 
-const messages = defineMessages({
-	siteId: {
-		id: 'createSiteDialog.siteId',
-		defaultMessage: 'Project ID'
-	},
-	siteName: {
-		id: 'createSiteDialog.siteName',
-		defaultMessage: 'Project Name'
-	},
-	description: {
-		id: 'createSiteDialog.description',
-		defaultMessage: 'Description'
-	},
-	siteFormat: {
-		id: 'createSiteDialog.siteFormat',
-		defaultMessage: 'Max length: 50 characters, consisting of: lowercase letters, numbers & dash (-).'
-	},
-	idExist: {
-		id: 'createSiteDialog.idExist',
-		defaultMessage: 'The ID already exists.'
-	},
-	nameExist: {
-		id: 'createSiteDialog.nameExist',
-		defaultMessage: 'The name already exists.'
-	},
-	fieldMaxLength: {
+const messages = {
+	...defineMessages({
+		siteId: {
+			id: 'createSiteDialog.siteId',
+			defaultMessage: 'Project ID'
+		},
+		siteName: {
+			id: 'createSiteDialog.siteName',
+			defaultMessage: 'Project Name'
+		},
+		description: {
+			id: 'createSiteDialog.description',
+			defaultMessage: 'Description'
+		},
+		siteFormat: {
+			id: 'createSiteDialog.siteFormat',
+			defaultMessage: 'Max length: 50 characters, consisting of: lowercase letters, numbers & dash (-).'
+		},
+		idExist: {
+			id: 'createSiteDialog.idExist',
+			defaultMessage: 'The ID already exists.'
+		},
+		nameExist: {
+			id: 'createSiteDialog.nameExist',
+			defaultMessage: 'The name already exists.'
+		},
+		cantStart: {
+			id: 'createSiteDialog.cantStart',
+			defaultMessage: 'Project names may not start with zeros, dashes (-) or underscores (_).'
+		},
+		gitBranch: {
+			id: 'createSiteDialog.gitBranch',
+			defaultMessage: 'Git Branch'
+		},
+		gitBranchDescription: {
+			id: 'createSiteDialog.gitBranchDescription',
+			defaultMessage: 'Name of the branch this project will track. Pull operations will be done against this branch.'
+		}
+	}),
+	fieldMaxLength: defineMessage<{ readonly maxLength: MessageValue }>({
 		id: 'createSiteDialog.fieldMaxLength',
 		defaultMessage: 'Max length: {maxLength} characters.'
-	},
-	required: {
+	}),
+	required: defineMessage<{ readonly name: MessageValue }>({
 		id: 'createSiteDialog.required',
 		defaultMessage: '{name} is required.'
-	},
-	cantStart: {
-		id: 'createSiteDialog.cantStart',
-		defaultMessage: 'Project names may not start with zeros, dashes (-) or underscores (_).'
-	},
-	gitBranch: {
-		id: 'createSiteDialog.gitBranch',
-		defaultMessage: 'Git Branch'
-	},
-	gitBranchDescription: {
-		id: 'createSiteDialog.gitBranchDescription',
-		defaultMessage: 'Name of the branch this project will track. Pull operations will be done against this branch.'
-	}
-});
+	})
+};
 
 export interface BaseSiteFormProps {
 	inputs: SiteState | DuplicateSiteState;

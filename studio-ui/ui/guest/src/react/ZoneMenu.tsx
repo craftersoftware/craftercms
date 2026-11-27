@@ -67,7 +67,7 @@ import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import { showItemMegaMenu } from '@craftercms/studio-ui/state/actions/dialogs';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, MessageValue, useIntl } from 'react-intl';
 import { announceGuestStatus } from '../utils/guestAnnounce';
 import {
 	clearZoneOpenedFromKeyboard,
@@ -109,11 +109,19 @@ const zoneActionLabels = defineMessages({
 	cancelName: { id: 'zoneMenu.cancelName', defaultMessage: 'Cancel' }
 });
 
-const zoneMenuMessages = defineMessages({
-	actionForZone: { id: 'zoneMenu.actionForZone', defaultMessage: '{action}, {zone}' },
-	moved: { id: 'ice.moved', defaultMessage: 'Moved {label}.' },
-	untitledZone: { id: 'ice.untitledZone', defaultMessage: 'Content zone' }
-});
+const zoneMenuMessages = {
+	...defineMessages({
+		untitledZone: { id: 'ice.untitledZone', defaultMessage: 'Content zone' }
+	}),
+	actionForZone: defineMessage<{ readonly action: MessageValue; readonly zone: MessageValue }>({
+		id: 'zoneMenu.actionForZone',
+		defaultMessage: '{action}, {zone}'
+	}),
+	moved: defineMessage<{ readonly label: MessageValue }>({
+		id: 'ice.moved',
+		defaultMessage: 'Moved {label}.'
+	})
+};
 
 type ZoneAction = keyof typeof zoneActionLabels;
 

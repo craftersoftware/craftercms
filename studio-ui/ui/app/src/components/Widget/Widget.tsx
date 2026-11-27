@@ -19,7 +19,7 @@ import NonReactWidget from '../NonReactWidget/NonReactWidget';
 import { buildFileUrl, importPlugin } from '../../services/plugin';
 import { components } from '../../utils/constants';
 import EmptyState from '../EmptyState/EmptyState';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import ErrorState from '../ErrorState';
 import { isValidElementType } from 'react-is';
 import WidgetDescriptor from '../../models/WidgetDescriptor';
@@ -34,24 +34,26 @@ export interface WidgetProps extends WidgetDescriptor {
 	fallbackTitleComponent?: ElementType;
 }
 
-const messages = defineMessages({
-	componentNotFoundTitle: {
+const messages = {
+	...defineMessages({
+		componentNotFoundSubtitle: {
+			id: 'widgetComponent.componentNotFoundSubtitle',
+			defaultMessage: "Check ui config & make sure you've installed the plugins that contain the desired components."
+		},
+		pluginLoadFailedMessageTitle: {
+			id: 'widgetComponent.pluginLoadFailedMessageTitle',
+			defaultMessage: 'Plugin load failed'
+		}
+	}),
+	componentNotFoundTitle: defineMessage<{ readonly id: MessageValue }>({
 		id: 'widgetComponent.componentNotFoundTitle',
 		defaultMessage: 'Component {id} not found.'
-	},
-	componentNotFoundSubtitle: {
-		id: 'widgetComponent.componentNotFoundSubtitle',
-		defaultMessage: "Check ui config & make sure you've installed the plugins that contain the desired components."
-	},
-	pluginLoadFailedMessageTitle: {
-		id: 'widgetComponent.pluginLoadFailedMessageTitle',
-		defaultMessage: 'Plugin load failed'
-	},
-	pluginLoadFailedMessageBody: {
+	}),
+	pluginLoadFailedMessageBody: defineMessage<{ readonly id: MessageValue; readonly info: MessageValue }>({
 		id: 'widgetComponent.pluginLoadFailedMessageBody',
 		defaultMessage: 'With {info} & component id "{id}".'
-	}
-});
+	})
+};
 
 const cache: Record<string, ComponentType<WidgetProps>> = {};
 

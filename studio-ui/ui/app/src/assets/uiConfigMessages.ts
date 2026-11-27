@@ -14,8 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages } from 'react-intl';
+import { defineMessage, defineMessages, type MessageTag, type MessageValue } from 'react-intl';
 
+// Side-effect defineMessages calls for formatjs extraction (values come from site config / UI XML).
 defineMessages({
 	siteTools: {
 		id: 'siteTools.title',
@@ -44,10 +45,6 @@ defineMessages({
 	preview: {
 		id: 'words.preview',
 		defaultMessage: 'Preview'
-	},
-	site: {
-		id: 'launcher.siteSectionTitle',
-		defaultMessage: 'Project <muted>• {siteName}</muted>'
 	},
 	contentTypes: {
 		id: 'dropTargetsMessages.contentTypes',
@@ -125,4 +122,9 @@ defineMessages({
 		id: 'previewAudiencesPanel.nameHelpText',
 		defaultMessage: "Enter user's first and last name"
 	}
+});
+
+defineMessage<{ readonly muted: MessageTag; readonly siteName: MessageValue }>({
+	id: 'launcher.siteSectionTitle',
+	defaultMessage: 'Project <muted>• {siteName}</muted>'
 });

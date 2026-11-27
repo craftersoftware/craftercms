@@ -20,7 +20,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import palette from '../../styles/palette';
 import { validateActionPolicy } from '../../services/sites';
 import { checkPathExistence } from '../../services/content';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import { showSystemNotification } from '../../state/actions/system';
 import { pushErrorDialog } from '../../utils/system';
 import { useDispatch } from 'react-redux';
@@ -36,106 +36,108 @@ import type { DashboardOptions } from 'uppy';
 import { extractErrorPayload } from '../../utils/ajax';
 import { getFocusRingSx } from '../../styles/focusRing';
 
-const translations = defineMessages({
-	cancelPending: {
-		id: 'uppyDashboard.cancelPending',
-		defaultMessage: 'Cancel pending'
-	},
-	clearCompleted: {
-		id: 'uppyDashboard.clearCompleted',
-		defaultMessage: 'Clear completed'
-	},
-	clear: {
-		id: 'words.clear',
-		defaultMessage: 'Clear'
-	},
-	addMore: {
-		id: 'uppyDashboard.addMore',
-		defaultMessage: 'Add more'
-	},
-	rejectAll: {
-		id: 'uppyDashboard.rejectAll',
-		defaultMessage: 'Reject all changes'
-	},
-	acceptAll: {
-		id: 'uppyDashboard.acceptAll',
-		defaultMessage: 'Accept all changes'
-	},
-	validating: {
-		id: 'words.validating',
-		defaultMessage: 'Validating'
-	},
-	validateAndRetry: {
-		id: 'uppyDashboard.validateAndRetry',
-		defaultMessage: 'Accept changes and upload'
-	},
-	removeFile: {
-		id: 'uppyDashboard.removeFile',
-		defaultMessage: 'Remove file'
-	},
-	back: {
-		id: 'words.back',
-		defaultMessage: 'Back'
-	},
-	addingMoreFiles: {
-		id: 'uppyDashboard.addingMoreFiles',
-		defaultMessage: 'Adding more files'
-	},
-	renamingFromTo: {
-		id: 'uppyDashboard.renamingFromTo',
-		defaultMessage: "Renaming from %'{from}' to %'{to}'"
-	},
-	close: {
-		id: 'words.close',
-		defaultMessage: 'Close'
-	},
-	minimize: {
-		id: 'words.minimize',
-		defaultMessage: 'Minimize'
-	},
-	maxFiles: {
+const translations = {
+	...defineMessages({
+		cancelPending: {
+			id: 'uppyDashboard.cancelPending',
+			defaultMessage: 'Cancel pending'
+		},
+		clearCompleted: {
+			id: 'uppyDashboard.clearCompleted',
+			defaultMessage: 'Clear completed'
+		},
+		clear: {
+			id: 'words.clear',
+			defaultMessage: 'Clear'
+		},
+		addMore: {
+			id: 'uppyDashboard.addMore',
+			defaultMessage: 'Add more'
+		},
+		rejectAll: {
+			id: 'uppyDashboard.rejectAll',
+			defaultMessage: 'Reject all changes'
+		},
+		acceptAll: {
+			id: 'uppyDashboard.acceptAll',
+			defaultMessage: 'Accept all changes'
+		},
+		validating: {
+			id: 'words.validating',
+			defaultMessage: 'Validating'
+		},
+		validateAndRetry: {
+			id: 'uppyDashboard.validateAndRetry',
+			defaultMessage: 'Accept changes and upload'
+		},
+		removeFile: {
+			id: 'uppyDashboard.removeFile',
+			defaultMessage: 'Remove file'
+		},
+		back: {
+			id: 'words.back',
+			defaultMessage: 'Back'
+		},
+		addingMoreFiles: {
+			id: 'uppyDashboard.addingMoreFiles',
+			defaultMessage: 'Adding more files'
+		},
+		renamingFromTo: {
+			id: 'uppyDashboard.renamingFromTo',
+			defaultMessage: "Renaming from %'{from}' to %'{to}'"
+		},
+		close: {
+			id: 'words.close',
+			defaultMessage: 'Close'
+		},
+		minimize: {
+			id: 'words.minimize',
+			defaultMessage: 'Minimize'
+		},
+		confirmOverwrite: {
+			id: 'uppyDashboard.confirmOverwrite',
+			defaultMessage: 'Overwrite and upload'
+		},
+		proceed: {
+			defaultMessage: 'Start Uploads'
+		},
+		proceedSingle: {
+			defaultMessage: 'Start Upload'
+		},
+		browseFiles: {
+			defaultMessage: 'browse files'
+		},
+		browseFolders: {
+			defaultMessage: 'browse folders'
+		},
+		pathExistenceCheckFailed: {
+			id: 'uppyDashboard.pathExistenceCheckFailed',
+			defaultMessage: 'Unable to verify whether the file already exists'
+		}
+	}),
+	maxFiles: defineMessage<{ readonly maxFiles: MessageValue }>({
 		id: 'uppyDashboard.maxFiles',
 		defaultMessage: '{maxFiles} max.'
-	},
-	maxActiveUploadsReached: {
+	}),
+	maxActiveUploadsReached: defineMessage<{ readonly maxFiles: MessageValue }>({
 		id: 'uppyDashboard.maxActiveUploadsReached',
 		defaultMessage: '{maxFiles} maximum active uploads reached. Excess has been discarded.'
-	},
-	projectPoliciesNoComply: {
+	}),
+	projectPoliciesNoComply: defineMessage<{ readonly detail: MessageValue; readonly fileName: MessageValue }>({
 		defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
-	},
-	fileAlreadyExists: {
+	}),
+	fileAlreadyExists: defineMessage<{ readonly fileName: MessageValue }>({
 		id: 'uppyDashboard.fileAlreadyExists',
 		defaultMessage: 'A file with the name "{fileName}" already exists at this location.'
-	},
-	fileOverwriteRequired: {
+	}),
+	fileOverwriteRequired: defineMessage<{ readonly fileName: MessageValue }>({
 		id: 'uppyDashboard.fileOverwriteRequired',
 		defaultMessage: 'A file named "{fileName}" already exists. Do you want to overwrite it?'
-	},
-	confirmOverwrite: {
-		id: 'uppyDashboard.confirmOverwrite',
-		defaultMessage: 'Overwrite and upload'
-	},
-	proceed: {
-		defaultMessage: 'Start Uploads'
-	},
-	proceedSingle: {
-		defaultMessage: 'Start Upload'
-	},
-	browseFiles: {
-		defaultMessage: 'browse files'
-	},
-	browseFolders: {
-		defaultMessage: 'browse folders'
-	},
-	dropPasteBoth: {
+	}),
+	dropPasteBoth: defineMessage<{ readonly browseFiles: MessageValue; readonly browseFolders: MessageValue }>({
 		defaultMessage: 'Drop files here, {browseFiles} or {browseFolders}'
-	},
-	pathExistenceCheckFailed: {
-		id: 'uppyDashboard.pathExistenceCheckFailed',
-		defaultMessage: 'Unable to verify whether the file already exists'
-	}
-});
+	})
+};
 
 export function UppyDashboard(props: UppyDashboardProps) {
 	const { uppy, site, path, onClose, onMinimized, title, onPendingChanges, maxActiveUploads } = props;

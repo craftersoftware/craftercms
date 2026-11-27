@@ -14,21 +14,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { GraphiQL as GraphiQLComponent } from 'graphiql';
 import 'graphiql/style.css';
-import { explorerPlugin } from '@graphiql/plugin-explorer';
-import '@graphiql/plugin-explorer/style.css';
-import { buildClientSchema, getIntrospectionQuery, GraphQLSchema } from 'graphql';
+import { createTransport } from '@graphiql/toolkit';
 import GlobalAppToolbar from '../GlobalAppToolbar';
 import { FormattedMessage } from 'react-intl';
 import Box from '@mui/material/Box';
-import { toQueryString } from '../../utils/object';
 import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
 import { defaultQuery } from './utils';
 import useEnv from '../../hooks/useEnv';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import { GlobalStyles } from '@mui/material';
+import '../MonacoEditor/setupMonacoWorkers';
 
 export interface GraphiQLProps {
 	url?: string;
@@ -52,7 +50,6 @@ function GraphiQL(props: GraphiQLProps) {
 	// We don't want to update the initialQuery.
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	const initialQuery = useMemo(() => window.localStorage.getItem(`${storageKey}graphiql:query`) ?? defaultQuery, []);
-	const [schema, setSchema] = useState<GraphQLSchema>(null);
 	const storage = useMemo(
 		() =>
 			({
@@ -62,59 +59,24 @@ function GraphiQL(props: GraphiQLProps) {
 			}) as Storage,
 		[storageKey]
 	);
-	const graphQLFetcher = useMemo(() => {
-		const lowercaseMethod = method.toLowerCase();
-		const then = (response: Response) => {
-			try {
-				return response.json();
-			} catch (error) {
-				return response;
-			}
-		};
-		if (lowercaseMethod === 'get') {
-			return (graphQLParams, opts?) => {
-				return fetch(
-					`${url}${toQueryString({
-						query: encodeURIComponent(graphQLParams.query),
-						variables: encodeURIComponent(JSON.stringify(graphQLParams.variables ?? '{}'))
-					})}`,
-					{
-						method: 'get',
-						headers: { 'Content-Type': 'application/json' }
-					}
-				).then(then);
-			};
-		} else {
-			return (graphQLParams, opts?) => {
-				return fetch(url, {
-					method: 'post',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(graphQLParams)
-				}).then(then);
-			};
-		}
+	const transport = useMemo(() => {
+		const httpMethod = method.toLowerCase() === 'get' ? 'GET' : 'POST';
+		return createTransport({
+			url,
+			method: httpMethod,
+			// Skip OPTIONS discovery against the delivery endpoint.
+			supportedMethods: httpMethod === 'GET' ? ['GET', 'POST'] : ['POST']
+		});
 	}, [url, method]);
 	const onEditQuery = (newQuery: string) => {
 		window.localStorage.setItem(`${storageKey}graphiql:query`, newQuery);
 	};
-	const explorer = explorerPlugin({
-		showAttribution: false,
-		initialIsOpen: false
-	});
-
-	useEffect(() => {
-		graphQLFetcher({
-			query: getIntrospectionQuery()
-		}).then((result) => {
-			setSchema(buildClientSchema(result.data));
-		});
-	}, [graphQLFetcher]);
 
 	return (
 		<>
 			<GlobalStyles
 				styles={{
-					'[data-radix-popper-content-wrapper], react-portal [data-reach-tooltip], .graphiql-dialog': {
+					'[data-radix-popper-content-wrapper], .graphiql-dialog': {
 						zIndex: '1301 !important'
 					}
 				}}
@@ -135,44 +97,17 @@ function GraphiQL(props: GraphiQLProps) {
 				<Box
 					className="graphiql-container"
 					sx={{
-						height: 'calc(100% - 65px)',
+						height: embedded ? '100%' : 'calc(100% - 65px)',
 						position: 'relative',
-						'.title': {
-							display: 'none'
-						},
-						'.doc-explorer-title-bar, .history-title-bar': {
-							height: 'auto!important'
-						},
-						'.graphiql-plugin': {
-							'.docExplorerWrap': {
-								minWidth: '273px !important',
-								maxWidth: '100%'
-							},
-							'.doc-explorer-title-bar .doc-explorer-rhs': {
-								display: 'none'
-							},
-							'.graphiql-explorer-root': {
-								padding: '0 !important',
-								'& > div:first-child': {
-									overflow: 'auto !important'
-								},
-								'.graphiql-operation-title-bar span input': {
-									width: 'unset !important'
-								}
-							},
-							'.doc-explorer-contents': {
-								overflowY: 'hidden !important'
-							}
-						}
+						minHeight: 0
 					}}
 				>
 					<GraphiQLComponent
-						fetcher={graphQLFetcher}
-						schema={schema}
+						transport={transport}
 						initialQuery={initialQuery}
+						defaultQuery={defaultQuery}
 						storage={storage}
 						onEditQuery={onEditQuery}
-						plugins={[explorer]}
 					/>
 				</Box>
 			</Box>

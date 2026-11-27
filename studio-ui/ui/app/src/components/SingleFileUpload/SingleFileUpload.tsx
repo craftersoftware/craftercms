@@ -17,7 +17,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Uppy, XHRUpload, Form } from 'uppy';
 import ProgressBar from '@uppy/progress-bar';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import 'uppy/dist/uppy.css';
 import '@uppy/progress-bar/dist/style.css';
 import { getGlobalHeaders } from '../../utils/ajax';
@@ -38,35 +38,37 @@ import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
 import Box from '@mui/material/Box';
 import { pushErrorDialog } from '../../utils/system';
 
-const messages = defineMessages({
-	chooseFile: {
-		id: 'fileUpload.chooseFile',
-		defaultMessage: 'Choose File'
-	},
-	validatingFile: {
-		id: 'fileUpload.validatingFile',
-		defaultMessage: 'Validating File'
-	},
-	uploadingFile: {
-		id: 'fileUpload.uploadingFile',
-		defaultMessage: 'Uploading File'
-	},
-	uploadedFile: {
-		id: 'fileUpload.uploadedFile',
-		defaultMessage: 'Uploaded File'
-	},
-	selectFileMessage: {
-		id: 'fileUpload.selectFileMessage',
-		defaultMessage: 'Please select a file to upload'
-	},
-	policyError: {
+const messages = {
+	...defineMessages({
+		chooseFile: {
+			id: 'fileUpload.chooseFile',
+			defaultMessage: 'Choose File'
+		},
+		validatingFile: {
+			id: 'fileUpload.validatingFile',
+			defaultMessage: 'Validating File'
+		},
+		uploadingFile: {
+			id: 'fileUpload.uploadingFile',
+			defaultMessage: 'Uploading File'
+		},
+		uploadedFile: {
+			id: 'fileUpload.uploadedFile',
+			defaultMessage: 'Uploaded File'
+		},
+		selectFileMessage: {
+			id: 'fileUpload.selectFileMessage',
+			defaultMessage: 'Please select a file to upload'
+		}
+	}),
+	policyError: defineMessage<{ readonly detail: MessageValue; readonly fileName: MessageValue }>({
 		defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
-	},
-	overwriteConfirm: {
+	}),
+	overwriteConfirm: defineMessage<{ readonly fileName: MessageValue }>({
 		id: 'fileUpload.overwriteConfirm',
 		defaultMessage: 'A file named "{fileName}" already exists at this location. Do you want to overwrite it?'
-	}
-});
+	})
+};
 
 export interface FileUpload {
 	data: File;

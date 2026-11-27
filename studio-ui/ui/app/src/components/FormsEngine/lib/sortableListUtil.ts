@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessage, useIntl, type MessageValue } from 'react-intl';
 import { ListItemButtonProps } from '@mui/material/ListItemButton';
 
 export type KeyDownEvent = Parameters<ListItemButtonProps['onKeyDown']>[0];
@@ -113,9 +113,11 @@ export function sortableListActionProcessor<T = unknown>(
 	onChange(newList);
 }
 
-const reorderMessages = defineMessages({
-	moved: { defaultMessage: 'Moved {name} to position {position} of {total}' }
-});
+const movedMessage = defineMessage<{
+	readonly name: MessageValue;
+	readonly position: MessageValue;
+	readonly total: MessageValue;
+}>({ defaultMessage: 'Moved {name} to position {position} of {total}' });
 
 /** Time the live region stays empty before a repeated message is set again, as in FormValidationLiveRegion. */
 const REPEAT_ANNOUNCEMENT_DELAY = 40;
@@ -171,7 +173,7 @@ export function useReorderFocus<T>(list: T[]) {
 	const remember = (index: number, control: string, name?: string) => {
 		pendingRef.current = { index, control };
 		if (name !== undefined) {
-			announce(formatMessage(reorderMessages.moved, { name, position: index + 1, total: list.length }));
+			announce(formatMessage(movedMessage, { name, position: index + 1, total: list.length }));
 		}
 	};
 	return { rootRef, remember, announcement };

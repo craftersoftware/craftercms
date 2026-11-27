@@ -18,7 +18,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ApiResponse from '../../models/ApiResponse';
 import { fetchItemStates, setItemStates, setItemStatesByQuery, StatesToUpdate } from '../../services/workflow';
 import GlobalAppToolbar from '../GlobalAppToolbar';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessage, FormattedMessage, useIntl } from 'react-intl';
 import ItemStatesGridUI, { ItemStatesGridSkeletonTable } from '../ItemStatesGrid';
 import SetItemStateDialog from '../SetWorkflowStateDialog';
 import Button from '@mui/material/Button';
@@ -58,12 +58,12 @@ import { EmptyState } from '../EmptyState';
 import { pushErrorDialog } from '../../utils/system';
 import { extractErrorPayload } from '../../utils/ajax';
 
-const workflowStateManagementMessages = defineMessages({
-	statesUpdatedMessage: {
+const workflowStateManagementMessages = {
+	statesUpdatedMessage: defineMessage<{ readonly count: number | bigint }>({
 		id: 'workflowStateManagementMessages.statesUpdatedMessage',
 		defaultMessage: 'State for {count} {count, plural, one {item} other {items}} updated successfully'
-	}
-});
+	})
+};
 
 export interface WorkflowStateManagementProps {
 	embedded?: boolean;
