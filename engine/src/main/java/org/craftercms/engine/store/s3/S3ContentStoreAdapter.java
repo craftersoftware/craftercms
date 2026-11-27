@@ -560,6 +560,8 @@ public class S3ContentStoreAdapter extends AbstractCachedFileBasedContentStoreAd
 	protected boolean shouldCache(S3Context context, String key, long contentLength) {
 		String folderPrefix = context.getKey();
 		String path = CS.removeStart(stripStart(key, DELIMITER), stripStart(folderPrefix, DELIMITER));
+		// Patterns are relative to the site root and start with a single delimiter, with or without a base key
+		path = DELIMITER + stripStart(path, DELIMITER);
 
 		if (!RegexUtils.matchesAny(path, cacheAllowedPaths)) {
 			return false;
