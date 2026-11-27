@@ -64,7 +64,7 @@ export abstract class Messenger {
 		observerOrNext: ObserverOrNext<R>,
 		...operators: OperatorFunction<T, R>[]
 	): Subscription {
-		const pipe = this.messages$.pipe as (...ops: OperatorFunction<any, any>[]) => Observable<R>;
+		const pipe = this.messages$.pipe.bind(this.messages$) as (...ops: OperatorFunction<any, any>[]) => Observable<R>;
 		return pipe(...operators).subscribe(observerOrNext);
 	}
 
@@ -80,7 +80,9 @@ export abstract class Messenger {
 		} else {
 			ops.push(filter((message: Message) => message.topic === topic));
 		}
-		const pipe = this.messages$.pipe as (...ops: OperatorFunction<any, any>[]) => Observable<Message>;
+		const pipe = this.messages$.pipe.bind(this.messages$) as (
+			...ops: OperatorFunction<any, any>[]
+		) => Observable<Message>;
 		return pipe(...ops, ...operations).subscribe(subscriber);
 	}
 
