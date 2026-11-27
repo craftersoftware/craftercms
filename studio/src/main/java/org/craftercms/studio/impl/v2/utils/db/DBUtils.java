@@ -20,6 +20,7 @@ import org.craftercms.studio.impl.v2.utils.Wrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -89,9 +90,41 @@ public class DBUtils {
 										 final String transactionName,
 										 final Integer isolationLevel,
 										 final ThrowingSupplier<T> supplier) throws Exception {
+		return runInTransaction(transactionManager, transactionName, isolationLevel,
+				TransactionDefinition.PROPAGATION_REQUIRED, supplier);
+	}
+
+	/**
+	 * Execute a runnable in a savepoint of the current transaction.
+	 * If there is a current transaction, the runnable runs in a nested transaction (a savepoint). If it throws,
+	 * only the work done inside the runnable is rolled back, the current transaction stays usable, and the
+	 * exception is rethrown. If there is no current transaction, a new one is created.
+	 * The transaction manager must support nested transactions (for example, a
+	 * {@link org.springframework.jdbc.datasource.DataSourceTransactionManager}).
+	 *
+	 * @param transactionManager The transaction manager
+	 * @param transactionName    The name of the transaction
+	 * @param runnable           The runnable to execute
+	 * @throws Exception any exception thrown by the runnable
+	 */
+	public static void runInNestedTransaction(final PlatformTransactionManager transactionManager,
+											  final String transactionName,
+											  final ThrowingRunnable runnable) throws Exception {
+		runInTransaction(transactionManager, transactionName, null, TransactionDefinition.PROPAGATION_NESTED, () -> {
+			runnable.run();
+			return null;
+		});
+	}
+
+	private static <T> T runInTransaction(final PlatformTransactionManager transactionManager,
+										  final String transactionName,
+										  final Integer isolationLevel,
+										  final int propagationBehavior,
+										  final ThrowingSupplier<T> supplier) throws Exception {
 		Wrapper<Exception> exception = new Wrapper<>();
 		TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
 		transactionTemplate.setName(transactionName);
+		transactionTemplate.setPropagationBehavior(propagationBehavior);
 		if (isolationLevel != null) {
 			transactionTemplate.setIsolationLevel(isolationLevel);
 		}

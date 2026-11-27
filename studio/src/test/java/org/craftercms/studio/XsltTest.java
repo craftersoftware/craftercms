@@ -610,13 +610,14 @@ public class XsltTest {
 		"crafter/studio/upgrade/4.0.x/config/site-config/site-config-v4.0.1.2.xslt",
 		"crafter/studio/upgrade/4.2.x/config/site-config/site-config-v4.2.0.0.xslt",
 		"crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.0.xslt",
-		"crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.1.xslt"
+		"crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.1.xslt",
+		"crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.2.xslt"
 	};
 
 	/**
 	 * A cleaned version-10 external blueprint does not contain the blocks removed in 5.0.0.1.
-	 * Running every site-config template from version 10 must end at 5.0.0.1, keep the ftlh/ftlx
-	 * patterns added by 5.0.0.0, and must not put the removed blocks back.
+	 * Running every site-config template from version 10 must end at 5.0.0.2, keep the ftlh/ftlx
+	 * patterns added by 5.0.0.0, drop the legacy staging flag, and must not put the removed blocks back.
 	 * The version element itself is updated by the upgrade manager, not these templates.
 	 */
 	public void cleanedVersion10SiteConfigUpgradeChain() throws Exception {
@@ -624,14 +625,18 @@ public class XsltTest {
 		List<String> fromV10 = Arrays.asList(SITE_CONFIG_FROM_V10_TEMPLATES);
 
 		assertEquals(templatesFrom(config, SITE_CONFIG_PIPELINE, "10"), fromV10,
-			"version 10 must run each later site-config template, including 5.0.0.1");
-		assertEquals(finalVersion(config, SITE_CONFIG_PIPELINE, "10"), "5.0.0.1");
+			"version 10 must run each later site-config template, including 5.0.0.1 and 5.0.0.2");
+		assertEquals(finalVersion(config, SITE_CONFIG_PIPELINE, "10"), "5.0.0.2");
 		assertEquals(templatesFrom(config, SITE_CONFIG_PIPELINE, "5.0.0.0"),
+			fromV10.subList(fromV10.size() - 2, fromV10.size()),
+			"5.0.0.0 must run the 5.0.0.1 cleanup, then the 5.0.0.2 staging-flag removal");
+		assertEquals(finalVersion(config, SITE_CONFIG_PIPELINE, "5.0.0.0"), "5.0.0.2");
+		assertEquals(templatesFrom(config, SITE_CONFIG_PIPELINE, "5.0.0.1"),
 			List.of(SITE_CONFIG_FROM_V10_TEMPLATES[SITE_CONFIG_FROM_V10_TEMPLATES.length - 1]),
-			"5.0.0.0 must run only the 5.0.0.1 cleanup");
-		assertEquals(finalVersion(config, SITE_CONFIG_PIPELINE, "5.0.0.0"), "5.0.0.1");
-		assertTrue(templatesFrom(config, SITE_CONFIG_PIPELINE, "5.0.0.1").isEmpty(),
-			"sites already at 5.0.0.1 must not run another site-config step");
+			"5.0.0.1 must run only the staging-flag removal");
+		assertEquals(finalVersion(config, SITE_CONFIG_PIPELINE, "5.0.0.1"), "5.0.0.2");
+		assertTrue(templatesFrom(config, SITE_CONFIG_PIPELINE, "5.0.0.2").isEmpty(),
+			"sites already at 5.0.0.2 must not run another site-config step");
 
 		String upgraded = applyTemplates(readResource(SITE_CONFIG_V10_FIXTURE), SITE_CONFIG_FROM_V10_TEMPLATES);
 		Document document = parseXmlString(upgraded);
@@ -645,6 +650,8 @@ public class XsltTest {
 		assertEquals(document.getElementsByTagName("display-in-widget-patterns").getLength(), 0);
 		assertFalse(repository.hasAttribute("rootPrefix"));
 		assertTrue(patternGroupsNamed(document, "previewable-mimetypes").isEmpty());
+		assertEquals(document.getElementsByTagName("enable-staging-environment").getLength(), 0);
+		assertEquals(document.getElementsByTagName("published-repository").getLength(), 0);
 
 		assertEquals(patternTexts(document, "rendering-template"), List.of(
 			"/templates/([^<\"]+)\\.ftl",
@@ -831,9 +838,9 @@ public class XsltTest {
 	}
 
 	/**
-	 * New sites ship without the unused site-config blocks, so creation does not need the 5.0.0.0 to
-	 * 5.0.0.1 step to remove them. The four blueprints are already at 5.0.0.1. The sample is not a
-	 * versioned site file.
+	 * New sites ship without the unused site-config blocks and without the legacy staging flag, so
+	 * creation does not need the 5.0.0.0 to 5.0.0.2 steps to remove them. The four blueprints are
+	 * already at 5.0.0.2. The sample is not a versioned site file.
 	 */
 	public void shippedSiteConfigOmitsUnusedElements() throws Exception {
 		String[] blueprints = {
@@ -843,7 +850,7 @@ public class XsltTest {
 			"repo-bootstrap/global/blueprints/5000_headless_blog/config/studio/site-config.xml"
 		};
 		for (String path : blueprints) {
-			assertEquals(version(path), "5.0.0.1", path);
+			assertEquals(version(path), "5.0.0.2", path);
 			assertUnusedSiteConfigElementsAbsent(path);
 		}
 		assertUnusedSiteConfigElementsAbsent(
@@ -861,6 +868,8 @@ public class XsltTest {
 		for (int i = 0; i < repositories.getLength(); i++) {
 			assertFalse(((Element) repositories.item(i)).hasAttribute("rootPrefix"), path);
 		}
+		assertEquals(document.getElementsByTagName("enable-staging-environment").getLength(), 0, path);
+		assertEquals(document.getElementsByTagName("published-repository").getLength(), 0, path);
 	}
 
 	/**

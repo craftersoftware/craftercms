@@ -15,9 +15,15 @@
  */
 package org.craftercms.commons.aws;
 
+import java.util.concurrent.CompletionException;
+import java.util.function.Consumer;
+
 import org.junit.Test;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
 
 public class AwsUtilsTest {
 	@Test
@@ -81,5 +87,27 @@ public class AwsUtilsTest {
 		String expected = "base/key/path/to/object";
 		String result = AwsUtils.s3KeyFromPath(baseKey, path);
 		assertEquals(expected, result);
+	}
+
+	@Test
+	public void ignoreMissingObjectIgnoresUnwrappedNoSuchKeyException() {
+		AwsUtils.ignoreMissingObject().accept(NoSuchKeyException.builder().message("missing").build());
+	}
+
+	@Test
+	public void ignoreMissingObjectIgnoresNoSuchKeyExceptionWrappedInCompletionException() {
+		AwsUtils.ignoreMissingObject().accept(new CompletionException(NoSuchKeyException.builder().message("missing").build()));
+	}
+
+	@Test
+	public void ignoreMissingObjectRethrowsOtherErrors() {
+		Consumer<Throwable> handler = AwsUtils.ignoreMissingObject();
+		RuntimeException error = new IllegalStateException("copy failed");
+		CompletionException thrown = assertThrows(CompletionException.class, () -> handler.accept(error));
+		assertSame(error, thrown.getCause());
+
+		CompletionException wrapped = new CompletionException(error);
+		CompletionException thrownWrapped = assertThrows(CompletionException.class, () -> handler.accept(wrapped));
+		assertSame(wrapped, thrownWrapped.getCause());
 	}
 }

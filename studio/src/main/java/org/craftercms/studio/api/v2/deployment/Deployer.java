@@ -48,4 +48,37 @@ public interface Deployer {
 	 * @throws RestClientException if an error occurs while calling Deployer API
 	 */
 	void duplicateTargets(String sourceSiteId, String siteId);
+
+	/**
+	 * Create the staging delivery target for the site.
+	 * Implementations that do not provision a staging target do nothing.
+	 *
+	 * @param site the site
+	 * @return true when this call created the target, false when it already existed or this deployer does not create one
+	 * @throws RestClientException if an error occurs
+	 */
+	default boolean createStagingTarget(String site) throws RestClientException {
+		return false;
+	}
+
+	/**
+	 * Delete the staging delivery target for the site if one exists.
+	 * Implementations that do not provision a staging target do nothing.
+	 *
+	 * @param site the site
+	 * @throws RestClientException if an error occurs
+	 */
+	default void deleteStagingTarget(String site) throws RestClientException {
+	}
+
+	/**
+	 * Duplicate the staging delivery target from the source site.
+	 * Implementations that do not provision a staging target do nothing.
+	 *
+	 * @param sourceSiteId the site to duplicate from
+	 * @param siteId       the new site id
+	 * @throws RestClientException if an error occurs
+	 */
+	default void duplicateStagingTarget(String sourceSiteId, String siteId) throws RestClientException {
+	}
 }

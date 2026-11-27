@@ -56,6 +56,11 @@ public class CreateSiteFromMarketplaceRequest {
 
 	private String sandboxBranch;
 
+	/**
+	 * When true, staging is enabled for the new site. Staging cannot be disabled afterwards.
+	 */
+	private boolean enableStaging;
+
 	private String remoteName;
 
 	public String getBlueprintId() {
@@ -112,6 +117,14 @@ public class CreateSiteFromMarketplaceRequest {
 
 	public void setSandboxBranch(final String sandboxBranch) {
 		this.sandboxBranch = sandboxBranch;
+	}
+
+	public boolean isEnableStaging() {
+		return enableStaging;
+	}
+
+	public void setEnableStaging(boolean enableStaging) {
+		this.enableStaging = enableStaging;
 	}
 
 	public String getRemoteName() {

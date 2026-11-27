@@ -115,14 +115,17 @@ public final class AwsUtils {
 	}
 
 	/**
-	 * Convenience handler to ignore NoSuchKeyException. It will throw a CompletionException for any other exception type
+	 * Convenience handler to ignore NoSuchKeyException. It will throw a CompletionException for any other exception type.
+	 * The error may be wrapped in a CompletionException (as it is when received from a CompletableFuture), so the cause
+	 * is checked in that case.
 	 *
 	 * @return handler that ignores NoSuchKeyException
 	 */
 	@SuppressWarnings("unused")
 	public static Consumer<Throwable> ignoreMissingObject() {
 		return e -> {
-			if (!(e instanceof NoSuchKeyException)) {
+			Throwable cause = (e instanceof CompletionException && e.getCause() != null) ? e.getCause() : e;
+			if (!(cause instanceof NoSuchKeyException)) {
 				throw new CompletionException(e);
 			}
 		};

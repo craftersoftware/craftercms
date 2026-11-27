@@ -80,6 +80,16 @@ import { SiteToolsContext } from '../SiteTools/siteToolsContext';
 import { nanoid } from 'nanoid';
 import { popDialog } from '../../state/actions/dialogStack';
 import { pushConfirmDialog, pushErrorDialog } from '../../utils/system';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
+import Paper from '@mui/material/Paper';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import useSitesBranch from '../../hooks/useSitesBranch';
+import Checkbox from '@mui/material/Checkbox';
+import CircularProgress from '@mui/material/CircularProgress';
+import Link from '@mui/material/Link';
+import { enableStaging } from '../../services/sites';
+import { fetchSites } from '../../state/actions/sites';
 
 const SKELETON_ROW_COUNT = 15;
 
@@ -88,20 +98,52 @@ interface SiteConfigurationManagementProps {
 	showAppsButton?: boolean;
 	isSubmitting?: boolean;
 	onSubmittingAndOrPendingChange?(value: onSubmittingAndOrPendingChangeProps): void;
+	/** Config file id to select on load (e.g. `studio/site-config.xml`). */
+	selectedConfigFileId?: string;
+}
+
+// Ace reserves the scrollbar space only while its vertical scrollbar is visible.
+function trackScrollbarWidth(editor: AceAjax.Editor, onChange: (width: number) => void) {
+	// `scrollBarV` is public in Ace but missing from the typings.
+	const renderer = editor.renderer as unknown as {
+		scrollBarV: { isVisible: boolean; getWidth(): number };
+		on(eventName: string, callback: () => void): void;
+	};
+	const update = () => onChange(renderer.scrollBarV.isVisible ? renderer.scrollBarV.getWidth() : 0);
+	renderer.on('scrollbarVisibilityChanged', update);
+	renderer.on('resize', update);
+	update();
 }
 
 export function SiteConfigurationManagement(props: SiteConfigurationManagementProps) {
-	const { embedded, showAppsButton, onSubmittingAndOrPendingChange, isSubmitting } = props;
+	const { embedded, showAppsButton, onSubmittingAndOrPendingChange, isSubmitting, selectedConfigFileId } = props;
 	const site = useActiveSiteId();
+	const { byId: sitesById } = useSitesBranch();
+	const stagingEnabled = Boolean(sitesById?.[site]?.stagingEnabled);
 	const { username } = useActiveUser();
+	const [enableStagingConfirm, setEnableStagingConfirm] = useState({
+		open: false,
+		checked: false,
+		submitting: false
+	});
+	const [stagingInfoDialogOpen, setStagingInfoDialogOpen] = useState(false);
 	const sessionStorageKey = `craftercms.${username}.projectToolsConfigurationData.${site}`;
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
 	const { formatMessage } = useIntl();
 	const [environment, setEnvironment] = useState<string>();
 	const [files, setFiles] = useState<SiteConfigurationFileWithId[]>();
-	const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(
-		() => JSON.parse(sessionStorage.getItem(sessionStorageKey))?.selectedConfigFile ?? null
-	);
+	const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(() => {
+		const sessionFile = JSON.parse(sessionStorage.getItem(sessionStorageKey))?.selectedConfigFile ?? null;
+		if (!sessionFile) {
+			return null;
+		}
+		// Use the session file when opening the tool normally, or when it is the same file as selectedConfigFileId.
+		// If selectedConfigFileId points at a different file, skip restore here so sessionStorage stays available later.
+		if (!selectedConfigFileId || sessionFile.id === selectedConfigFileId) {
+			return sessionFile;
+		}
+		return null;
+	});
 	const [changesRecoveredOnMount] = useState<boolean>(() => selectedConfigFile !== null);
 	const ignoreEnv = selectedConfigFile?.path === 'site-policy-config.xml';
 	const [selectedConfigFileXml, setSelectedConfigFileXml] = useState(null);
@@ -132,6 +174,9 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		container: null
 	});
 	const [contentSize, setContentSize] = useState(0);
+	// Width of the Ace editor's vertical scrollbar (0 when hidden or when the OS uses overlay scrollbars).
+	const [editorScrollbarWidth, setEditorScrollbarWidth] = useState(0);
+	const [sampleEditorScrollbarWidth, setSampleEditorScrollbarWidth] = useState(0);
 
 	useMount(() => {
 		if (changesRecoveredOnMount) {
@@ -208,27 +253,34 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		if (site && environment !== UNDEFINED) {
 			fetchSiteConfigurationFiles(site, environment).subscribe({
 				next(files) {
-					setFiles(files.map((file) => ({ ...file, id: `${file.module}/${file.path}` })));
+					const configFiles = files.map((file) => ({ ...file, id: `${file.module}/${file.path}` }));
+					setFiles(configFiles);
+					if (selectedConfigFileId) {
+						setSelectedConfigFile(
+							(current) => current ?? configFiles.find((f) => f.id === selectedConfigFileId) ?? null
+						);
+					}
 				},
 				error({ response }) {
 					dispatch(pushErrorDialog({ props: { error: response.response } }));
 				}
 			});
 		}
-	}, [environment, site, dispatch]);
+	}, [environment, site, dispatch, selectedConfigFileId]);
 
 	useEffect(() => {
 		if (selectedConfigFile && environment) {
 			setConfigError(null);
 			const sessionData = JSON.parse(sessionStorage.getItem(sessionStorageKey));
-			if (sessionData?.content) {
+			const sessionMatchesSelection = sessionData?.selectedConfigFile?.id === selectedConfigFile.id;
+			if (sessionMatchesSelection && sessionData?.content) {
 				setSelectedConfigFileXml(sessionData.content);
 				setContentSize(sessionData.content.length);
 				setDisabledSaveButton(false);
 				sessionStorage.removeItem(sessionStorageKey);
 				setLoadingXml(false);
 			} else {
-				fetchConfigurationXML(
+				const subscription = fetchConfigurationXML(
 					site,
 					selectedConfigFile.path,
 					selectedConfigFile.module,
@@ -248,6 +300,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						setLoadingXml(false);
 					}
 				});
+				return () => subscription.unsubscribe();
 			}
 		}
 	}, [selectedConfigFile, environment, site, ignoreEnv, refs, sessionStorageKey]);
@@ -593,6 +646,47 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		id: 'siteConfigurationManagement.showConfigurationFiles',
 		defaultMessage: 'Show configuration files'
 	});
+	const isProjectConfigurationXml =
+		selectedConfigFile?.module === 'studio' && selectedConfigFile?.path === 'site-config.xml';
+
+	const onEnableStagingSwitch = (_: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
+		if (checked) {
+			setEnableStagingConfirm({ open: true, checked: false, submitting: false });
+		}
+	};
+
+	// Shared by the cancel button, Escape and backdrop click. Dismissal is ignored while enabling staging.
+	const onDismissEnableStagingConfirm = () => {
+		if (!enableStagingConfirm.submitting) {
+			setEnableStagingConfirm({ open: false, checked: false, submitting: false });
+		}
+	};
+
+	const onConfirmEnableStaging = () => {
+		setEnableStagingConfirm((state) => ({ ...state, submitting: true }));
+		dispatch(
+			showSystemNotification({
+				message: formatMessage({ defaultMessage: 'Enabling staging… this can take several minutes' })
+			})
+		);
+		enableStaging(site).subscribe({
+			next() {
+				dispatch(
+					batchActions([
+						showSystemNotification({
+							message: formatMessage({ defaultMessage: 'Staging enabled' })
+						}),
+						fetchSites()
+					])
+				);
+				setEnableStagingConfirm({ open: false, checked: false, submitting: false });
+			},
+			error({ response: { response } }) {
+				setEnableStagingConfirm((state) => ({ ...state, submitting: false }));
+				dispatch(pushErrorDialog({ props: { error: response } }));
+			}
+		});
+	};
 
 	const onAceInit = (editor: AceAjax.Editor) => {
 		editor.commands.addCommand({
@@ -601,7 +695,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 			exec: () => onSave(),
 			readOnly: false
 		});
+		trackScrollbarWidth(editor, setEditorScrollbarWidth);
 	};
+
+	const onSampleAceInit = (editor: AceAjax.Editor) => trackScrollbarWidth(editor, setSampleEditorScrollbarWidth);
 
 	return (
 		<Box
@@ -620,13 +717,13 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 				/>
 			)}
 			<ResizeableDrawer
-				belowToolbar
+				belowToolbar={!embedded}
 				open={openDrawer}
 				width={width}
 				sxs={{
 					drawerPaper: {
 						position: 'absolute',
-						...(embedded ? { top: 0 } : {})
+						...(embedded && { top: 0 })
 					}
 				}}
 				onWidthChange={setWidth}
@@ -795,8 +892,9 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						<>
 							<GlobalAppToolbar
 								sxs={{
-									appBar: { paddingRight: '14.4px' },
-									toolbar: { '& > section': {} }
+									appBar: { pr: 0, overflow: 'visible' },
+									toolbar: { pr: '0px !important', overflow: 'visible', '& > section': { overflow: 'visible' } },
+									rightContent: { overflow: 'visible' }
 								}}
 								showHamburgerMenuButton={false}
 								showAppsButton={false}
@@ -814,35 +912,88 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								subtitle={getTranslation(selectedConfigFile.description, translations, formatMessage)}
 								rightContent={
 									<>
-										<ButtonGroup variant="outlined" sx={{ marginRight: '15px' }}>
-											<SecondaryButton disabled={encrypting} onClick={onEncryptClick} loading={encrypting}>
-												{formatMessage(translations.encryptMarked)}
+										<Box sx={{ display: 'flex', alignItems: 'center', position: 'relative', pr: 2 }}>
+											<ButtonGroup variant="outlined" sx={{ marginRight: '15px' }}>
+												<SecondaryButton disabled={encrypting} onClick={onEncryptClick} loading={encrypting}>
+													{formatMessage(translations.encryptMarked)}
+												</SecondaryButton>
+												<Button
+													size="small"
+													onClick={onEncryptHelpClick}
+													aria-label={formatMessage({
+														id: 'siteConfigurationManagement.encryptionHelp',
+														defaultMessage: 'Encryption help'
+													})}
+												>
+													<HelpOutlineRoundedIcon />
+												</Button>
+											</ButtonGroup>
+											<SecondaryButton onClick={onViewSampleClick}>
+												{showSampleEditor ? (
+													<FormattedMessage id="siteConfigurationManagement.hideSample" defaultMessage="Hide Sample" />
+												) : (
+													<FormattedMessage id="siteConfigurationManagement.viewSample" defaultMessage="View Sample" />
+												)}
 											</SecondaryButton>
-											<Button
-												size="small"
-												onClick={onEncryptHelpClick}
-												aria-label={formatMessage({
-													id: 'siteConfigurationManagement.encryptionHelp',
-													defaultMessage: 'Encryption help'
-												})}
+										</Box>
+										{isProjectConfigurationXml && (
+											<Paper
+												elevation={0}
+												sx={{
+													position: 'absolute',
+													top: '100%',
+													right: `${showSampleEditor ? sampleEditorScrollbarWidth : editorScrollbarWidth}px`,
+													zIndex: 2,
+													display: 'flex',
+													alignItems: 'center',
+													py: 1,
+													px: 2.5,
+													borderRadius: 0,
+													borderBottomLeftRadius: 4,
+													bgcolor: 'background.paper',
+													borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+													borderLeft: (theme) => `1px solid ${theme.palette.divider}`,
+													boxShadow: 'none'
+												}}
 											>
-												<HelpOutlineRoundedIcon />
-											</Button>
-										</ButtonGroup>
-										<SecondaryButton onClick={onViewSampleClick}>
-											{showSampleEditor ? (
-												<FormattedMessage id="siteConfigurationManagement.hideSample" defaultMessage="Hide Sample" />
-											) : (
-												<FormattedMessage id="siteConfigurationManagement.viewSample" defaultMessage="View Sample" />
-											)}
-										</SecondaryButton>
+												{stagingEnabled ? (
+													<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+														<Typography color="textSecondary">
+															<FormattedMessage defaultMessage="Staging is enabled" />
+														</Typography>
+														<Tooltip title={<FormattedMessage defaultMessage="Learn more about staging" />}>
+															<IconButton
+																size="small"
+																aria-label={formatMessage({ defaultMessage: 'Staging info' })}
+																onClick={() => setStagingInfoDialogOpen(true)}
+															>
+																<InfoOutlinedIcon fontSize="small" />
+															</IconButton>
+														</Tooltip>
+													</Box>
+												) : (
+													<FormControlLabel
+														sx={{
+															mr: 0,
+															gap: 1,
+															'& .MuiFormControlLabel-label': { color: 'text.secondary' }
+														}}
+														control={
+															<Switch size="small" sx={{ ml: 0.5 }} checked={false} onChange={onEnableStagingSwitch} />
+														}
+														label={<FormattedMessage defaultMessage="Enable Staging" />}
+													/>
+												)}
+											</Paper>
+										)}
 									</>
 								}
 							/>
 							<Box
 								sx={{
 									display: 'flex',
-									flexGrow: 1
+									flexGrow: 1,
+									position: 'relative'
 								}}
 							>
 								<AceEditor
@@ -904,6 +1055,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 												autoFocus={false}
 												readOnly={true}
 												value={selectedSampleConfigFileXml}
+												onInit={onSampleAceInit}
 											/>
 										) : (
 											<></>
@@ -959,6 +1111,104 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 				</Box>
 			)}
 			<ConfirmDialog open={false} {...confirmDialogProps} />
+			<ConfirmDialog
+				open={enableStagingConfirm.open}
+				disableBackdropClick={enableStagingConfirm.submitting}
+				disableEscapeKeyDown={enableStagingConfirm.submitting}
+				body={
+					enableStagingConfirm.submitting ? (
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+							<CircularProgress size={24} />
+							<Typography>
+								<FormattedMessage defaultMessage="Enabling staging… this can take several minutes" />
+							</Typography>
+						</Box>
+					) : (
+						<>
+							<Typography>
+								<FormattedMessage
+									defaultMessage="Enable staging for “{siteId}”. This cannot be undone."
+									values={{ siteId: site }}
+								/>
+							</Typography>
+							<Box component="ul" sx={{ mt: 2, pl: 1, textAlign: 'left', listStylePosition: 'inside' }}>
+								<Typography>
+									<li>
+										<FormattedMessage defaultMessage="If the project is already published, live content and assets are copied into staging first. On large projects this can take several minutes and use additional storage." />
+									</li>
+									<li>
+										<FormattedMessage defaultMessage="With serverless delivery, a staging target and cloud storage are also provisioned." />
+									</li>
+									<li>
+										<FormattedMessage defaultMessage="Removing staging later means recreating the project." />
+									</li>
+								</Typography>
+							</Box>
+							<Alert severity="warning" icon={false} sx={{ mt: 3 }}>
+								<FormControlLabel
+									sx={{ textAlign: 'left' }}
+									control={
+										<Checkbox
+											color="primary"
+											checked={enableStagingConfirm.checked}
+											onChange={() => setEnableStagingConfirm((state) => ({ ...state, checked: !state.checked }))}
+										/>
+									}
+									label={<FormattedMessage defaultMessage="I understand enabling staging is irreversible." />}
+								/>
+							</Alert>
+						</>
+					)
+				}
+				okButtonText={<FormattedMessage defaultMessage="Enable Staging" />}
+				disableOkButton={!enableStagingConfirm.checked || enableStagingConfirm.submitting}
+				disableCancelButton={enableStagingConfirm.submitting}
+				onOk={onConfirmEnableStaging}
+				onCancel={onDismissEnableStagingConfirm}
+				onClose={onDismissEnableStagingConfirm}
+			/>
+			<ConfirmDialog
+				open={stagingInfoDialogOpen}
+				body={
+					<Box sx={{ textAlign: 'left' }}>
+						<Typography>
+							<FormattedMessage defaultMessage="Staging cannot be turned off later — removing it means recreating the project." />
+						</Typography>
+						<Box component="ul" sx={{ m: 0, mt: 1.5, p: 0, pl: '1.25em' }}>
+							<Typography>
+								<li>
+									<FormattedMessage defaultMessage="Staging publishing becomes available." />
+								</li>
+								<li>
+									<FormattedMessage defaultMessage="If the project is already published, live content and assets are copied into staging first. On large projects this can take several minutes and use additional storage." />
+								</li>
+								<li>
+									<FormattedMessage defaultMessage="With serverless delivery, a staging target and cloud storage are also provisioned." />
+								</li>
+							</Typography>
+						</Box>
+						<Typography sx={{ mt: 2 }}>
+							<FormattedMessage
+								defaultMessage="For more details, see the <a>staging documentation</a>."
+								values={{
+									a: (msg) => (
+										<Link
+											href="https://craftercms.com/docs/current/by-role/common/staging.html"
+											underline="hover"
+											target="_blank"
+											rel="noopener noreferrer"
+										>
+											{msg}
+										</Link>
+									)
+								}}
+							/>
+						</Typography>
+					</Box>
+				}
+				onOk={() => setStagingInfoDialogOpen(false)}
+				onClose={() => setStagingInfoDialogOpen(false)}
+			/>
 		</Box>
 	);
 }

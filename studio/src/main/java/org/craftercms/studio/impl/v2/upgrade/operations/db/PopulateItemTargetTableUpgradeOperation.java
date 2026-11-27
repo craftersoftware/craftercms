@@ -19,13 +19,15 @@ package org.craftercms.studio.impl.v2.upgrade.operations.db;
 import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.craftercms.commons.entitlements.validator.DbIntegrityValidator;
 import org.craftercms.commons.upgrade.exception.UpgradeException;
-import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
+import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.exception.repository.RepositoryException;
+import org.craftercms.studio.api.v2.service.config.ConfigurationService;
 import org.craftercms.studio.api.v2.service.site.SitesService;
 import org.craftercms.studio.api.v2.utils.GitRepositoryHelper;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
+import org.craftercms.studio.api.v2.utils.StudioUtils;
 import org.craftercms.studio.impl.v2.upgrade.StudioUpgradeContext;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
@@ -56,19 +58,22 @@ public class PopulateItemTargetTableUpgradeOperation extends DbScriptUpgradeOper
 	protected final SitesService sitesService;
 	protected final ServicesConfig servicesConfig;
 	protected final GitRepositoryHelper gitRepositoryHelper;
+	protected final ConfigurationService configurationService;
 
 	protected String spName;
 	protected String crafterSchemaName;
 
 	@ConstructorProperties({"studioConfiguration", "scriptFolder", "integrityValidator",
-			"siteService", "servicesConfig", "gitRepositoryHelper"})
+			"siteService", "servicesConfig", "gitRepositoryHelper", "configurationService"})
 	public PopulateItemTargetTableUpgradeOperation(StudioConfiguration studioConfiguration, String scriptFolder,
 												   DbIntegrityValidator integrityValidator, SitesService sitesService,
-												   ServicesConfig servicesConfig, GitRepositoryHelper gitRepositoryHelper) {
+												   ServicesConfig servicesConfig, GitRepositoryHelper gitRepositoryHelper,
+												   ConfigurationService configurationService) {
 		super(studioConfiguration, scriptFolder, integrityValidator);
 		this.sitesService = sitesService;
 		this.servicesConfig = servicesConfig;
 		this.gitRepositoryHelper = gitRepositoryHelper;
+		this.configurationService = configurationService;
 	}
 
 	@Override
@@ -90,7 +95,7 @@ public class PopulateItemTargetTableUpgradeOperation extends DbScriptUpgradeOper
 			if (site.getPublishedRepoCreated()) {
 				try {
 					populateItemTarget(context, site.getId(), site.getSiteId());
-				} catch (SiteNotFoundException | IOException | RepositoryException e) {
+				} catch (ServiceLayerException | IOException e) {
 					throw new UpgradeException(format("Failed to populate item_target table for site '%s'", site.getSiteId()), e);
 				}
 			}
@@ -107,11 +112,12 @@ public class PopulateItemTargetTableUpgradeOperation extends DbScriptUpgradeOper
 	 * @param site    the site id
 	 * @param siteId  the numeric site id
 	 */
-	private void populateItemTarget(final StudioUpgradeContext context, long siteId, String site) throws SiteNotFoundException, IOException, UpgradeException, RepositoryException {
+	private void populateItemTarget(final StudioUpgradeContext context, long siteId, String site) throws ServiceLayerException, IOException, UpgradeException, RepositoryException {
 		String liveTarget = servicesConfig.getLiveEnvironment(site);
 		Repository repository = gitRepositoryHelper.getRepository(site, PUBLISHED);
 		populateItemTarget(context, siteId, site, liveTarget, repository);
-		if (servicesConfig.isStagingEnvironmentEnabled(site)) {
+		// This step runs before site.staging_enabled exists. The flag still lives in site-config.xml.
+		if (StudioUtils.isLegacyStagingEnabled(site, studioConfiguration, configurationService)) {
 			String stagingTarget = servicesConfig.getStagingEnvironment(site);
 			populateItemTarget(context, siteId, site, stagingTarget, repository);
 		}

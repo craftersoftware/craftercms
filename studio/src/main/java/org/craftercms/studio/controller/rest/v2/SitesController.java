@@ -123,6 +123,14 @@ public class SitesController {
 		return result;
 	}
 
+	@PostMapping(value = "/{siteId}/enable_staging", produces = APPLICATION_JSON_VALUE)
+	public Result enableStaging(@ValidSiteId @PathVariable String siteId) throws ServiceLayerException {
+		sitesService.enableStaging(siteId);
+		var result = new Result();
+		result.setResponse(OK);
+		return result;
+	}
+
 	@PostMapping(value = "/{siteId}/unlock", produces = APPLICATION_JSON_VALUE)
 	public Result unlockSite(@ValidSiteId @PathVariable String siteId) throws SiteNotFoundException, InvalidSiteStateException {
 		sitesService.unlockSite(siteId);
@@ -159,7 +167,7 @@ public class SitesController {
 			throws ServiceLayerException {
 		sitesService.duplicate(sourceSiteId, request.getSiteId(),
 				request.getSiteName(), request.getDescription(),
-				request.getSandboxBranch(), request.isReadOnlyBlobStores());
+				request.getSandboxBranch(), request.isReadOnlyBlobStores(), request.isEnableStaging());
 
 		Result result = new Result();
 		result.setResponse(OK);

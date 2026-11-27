@@ -35,7 +35,6 @@ import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_ELEMENT_PLUGIN_FOLDER_PATTERN;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_ELEMENT_SITE_URLS;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_CONTENT_MONITORING;
-import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_ENABLE_STAGING_ENVIRONMENT;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_LIVE_ENVIRONMENT;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_PROTECTED_FOLDER_PATTERNS;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_PUBLISHED_REPOSITORY;
@@ -51,6 +50,8 @@ import org.craftercms.studio.api.v1.to.FacetRangeTO;
 import org.craftercms.studio.api.v1.to.FacetTO;
 import org.craftercms.studio.api.v1.to.RepositoryConfigTO;
 import org.craftercms.studio.api.v1.to.SiteConfigTO;
+import org.craftercms.studio.api.v2.dal.Site;
+import org.craftercms.studio.api.v2.dal.SiteDAO;
 import org.craftercms.studio.api.v2.service.config.ConfigurationService;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_ENVIRONMENT_ACTIVE;
@@ -103,6 +104,7 @@ public class ServicesConfigImpl implements ServicesConfig {
 	protected StudioConfiguration studioConfiguration;
 	protected ConfigurationService configurationService;
 	protected Cache<String, SiteConfigTO> configurationCache;
+	protected SiteDAO siteDao;
 
 	@Override
 	@Valid
@@ -210,15 +212,6 @@ public class ServicesConfigImpl implements ServicesConfig {
 					Node configNode = root.selectSingleNode("/site-config");
 					String name = configNode.valueOf("display-name");
 					siteConfig = new SiteConfigTO();
-					String stagingEnvironmentEnabledValue =
-						configNode.valueOf(SITE_CONFIG_XML_ELEMENT_PUBLISHED_REPOSITORY +
-							"/" + SITE_CONFIG_XML_ELEMENT_ENABLE_STAGING_ENVIRONMENT);
-					if (StringUtils.isEmpty(stagingEnvironmentEnabledValue)) {
-						siteConfig.setStagingEnvironmentEnabled(false);
-					} else {
-						siteConfig.setStagingEnvironmentEnabled(Boolean.parseBoolean(stagingEnvironmentEnabledValue));
-					}
-
 					String stagingEnvironment =
 						configNode.valueOf(SITE_CONFIG_XML_ELEMENT_PUBLISHED_REPOSITORY + "/" +
 							SITE_CONFIG_XML_ELEMENT_STAGING_ENVIRONMENT);
@@ -434,8 +427,11 @@ public class ServicesConfigImpl implements ServicesConfig {
 
 	@Override
 	public boolean isStagingEnvironmentEnabled(String site) throws SiteNotFoundException {
-		SiteConfigTO config = loadConfiguration(site);
-		return config.isStagingEnvironmentEnabled();
+		Site dbSite = siteDao.getSite(site);
+		if (dbSite == null) {
+			throw new SiteNotFoundException(site);
+		}
+		return dbSite.isStagingEnabled();
 	}
 
 	@Override
@@ -513,6 +509,10 @@ public class ServicesConfigImpl implements ServicesConfig {
 
 	public void setConfigurationService(ConfigurationService configurationService) {
 		this.configurationService = configurationService;
+	}
+
+	public void setSiteDao(SiteDAO siteDao) {
+		this.siteDao = siteDao;
 	}
 
 	@SuppressWarnings("unused")

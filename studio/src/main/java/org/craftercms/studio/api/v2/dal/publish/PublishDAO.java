@@ -267,6 +267,20 @@ public interface PublishDAO {
 	void updatePackage(@Param(PUBLISH_PACKAGE) final PublishPackage publishPackage);
 
 	/**
+	 * Set packages left PROCESSING back to READY so the publisher can pick them up after a restart.
+	 * <p>
+	 * The stored state becomes exactly {@code readyState}. Success and failure bits already on the package are
+	 * cleared. The queue selects {@code package_state = READY} exactly, so those bits cannot be kept or the package
+	 * would never be selected. The retry therefore publishes every target again, including one that already
+	 * succeeded. That republish is safe: the target tree is rebuilt from the package's sandbox commit, so the
+	 * paths are written again with the same content and the target ref moves to that commit.
+	 *
+	 * @param readyState      the ready package state
+	 * @param processingState the processing package state to match
+	 */
+	void resetProcessingPackages(@Param("readyState") long readyState, @Param("processingState") long processingState);
+
+	/**
 	 * Cancel all active (ready non-rejected) packages for a site and a target
 	 *
 	 * @param siteId the site id

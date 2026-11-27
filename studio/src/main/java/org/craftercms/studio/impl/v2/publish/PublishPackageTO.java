@@ -50,6 +50,13 @@ public class PublishPackageTO {
 		return targetStrategy.getFailedOnBits();
 	}
 
+	/**
+	 * Get the {@link PublishItem.PublishState} bits that mark an item as failed for this target
+	 */
+	public long getItemFailedState() {
+		return targetStrategy.getItemFailedState();
+	}
+
 	public long getCompletedWithErrorsOnBits() {
 		return targetStrategy.getCompletedWithErrorsOnBits();
 	}
@@ -103,6 +110,8 @@ public class PublishPackageTO {
 
 		long getFailedOnBits();
 
+		long getItemFailedState();
+
 		void setPublishedCommitId(PublishPackage publishPackage, String commitId);
 
 		long getCompletedWithErrorsOnBits();
@@ -130,6 +139,11 @@ public class PublishPackageTO {
 		@Override
 		public long getFailedOnBits() {
 			return LIVE_FAILED.value;
+		}
+
+		@Override
+		public long getItemFailedState() {
+			return PublishItem.PublishState.LIVE_FAILED.value;
 		}
 
 		@Override
@@ -180,6 +194,11 @@ public class PublishPackageTO {
 		@Override
 		public long getFailedOnBits() {
 			return STAGING_FAILED.value;
+		}
+
+		@Override
+		public long getItemFailedState() {
+			return PublishItem.PublishState.STAGING_FAILED.value;
 		}
 
 		@Override

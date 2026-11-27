@@ -74,6 +74,8 @@ public class ApiResponse {
 		"Requested site is not in the required state for this operation", StringUtils.EMPTY);
 	public static final ApiResponse SITE_BOOTSTRAP_NOT_COMPLETE = new ApiResponse(5003, "Site bootstrap not complete",
 			"Wait for the site bootstrap to complete before performing this operation", StringUtils.EMPTY);
+	public static final ApiResponse STAGING_ALREADY_ENABLED = new ApiResponse(5004, "Staging is already enabled",
+			"Staging cannot be disabled. Recreate the site to remove it", StringUtils.EMPTY);
 
 	// 6000 - 7000
 	public static final ApiResponse USER_NOT_FOUND = new ApiResponse(6000, "User not found",

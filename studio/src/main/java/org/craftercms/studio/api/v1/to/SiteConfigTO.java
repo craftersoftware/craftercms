@@ -37,8 +37,6 @@ public class SiteConfigTO implements Serializable {
 	 **/
 	protected RepositoryConfigTO repositoryConfig = null;
 
-	protected boolean stagingEnvironmentEnabled;
-
 	/**
 	 * staging environment
 	 **/
@@ -107,14 +105,6 @@ public class SiteConfigTO implements Serializable {
 
 	public void setLiveEnvironment(String liveEnvironment) {
 		this.liveEnvironment = liveEnvironment;
-	}
-
-	public boolean isStagingEnvironmentEnabled() {
-		return stagingEnvironmentEnabled;
-	}
-
-	public void setStagingEnvironmentEnabled(boolean stagingEnvironmentEnabled) {
-		this.stagingEnvironmentEnabled = stagingEnvironmentEnabled;
 	}
 
 	public Map<String, Float> getSearchFields() {

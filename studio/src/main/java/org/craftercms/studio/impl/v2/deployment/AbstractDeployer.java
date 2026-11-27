@@ -57,6 +57,7 @@ public abstract class AbstractDeployer implements Deployer {
 	protected static final String DISABLE_DEPLOY_CRON_TEMPLATE_PARAM = "disable_deploy_cron";
 	protected static final String SOURCE_TEMPLATE_PARAM = "source";
 	protected static final String REPO_URL_TEMPLATE_PARAM = "repo_url";
+	protected static final String REPO_BRANCH_TEMPLATE_PARAM = "repo_branch";
 	protected static final String LOCAL_REPO_PATH_TEMPLATE_PARAM = "local_repo_path";
 	protected static final String DEPLOYER_AUTHORIZATION_TOKEN_TEMPLATE_PARAM = "token";
 
@@ -79,10 +80,20 @@ public abstract class AbstractDeployer implements Deployer {
 								  boolean replace, boolean disableDeployCron, String localRepoPath,
 								  String repoUrl, HierarchicalConfiguration<ImmutableNode> additionalParams)
 			throws IllegalStateException, RestClientException {
+		doCreateTarget(site, environment, template, replace, disableDeployCron, localRepoPath, repoUrl, null, additionalParams);
+	}
+
+	protected void doCreateTarget(String site, String environment, String template,
+								  boolean replace, boolean disableDeployCron, String localRepoPath,
+								  String repoUrl, String repoBranch, HierarchicalConfiguration<ImmutableNode> additionalParams)
+			throws IllegalStateException, RestClientException {
 		String requestUrl = getCreateTargetUrl();
 		Map<String, Object> requestBody = getCreateTargetRequestBody(site, environment, template,
 				replace, disableDeployCron, localRepoPath,
 				repoUrl, additionalParams);
+		if (StringUtils.isNotEmpty(repoBranch)) {
+			requestBody.put(REPO_BRANCH_TEMPLATE_PARAM, repoBranch);
+		}
 		try {
 			RequestEntity<Map<String, Object>> requestEntity = RequestEntity.post(new URI(requestUrl))
 					.contentType(MediaType.APPLICATION_JSON)
@@ -234,9 +245,18 @@ public abstract class AbstractDeployer implements Deployer {
 	protected void doDuplicateTarget(String sourceSiteId, String siteId, String env, String template,
 									 boolean replace, boolean disableDeployCron, String localRepoPath,
 									 String repoUrl, HierarchicalConfiguration<ImmutableNode> additionalParams) throws RestClientException {
+		doDuplicateTarget(sourceSiteId, siteId, env, template, replace, disableDeployCron, localRepoPath, repoUrl, null, additionalParams);
+	}
+
+	protected void doDuplicateTarget(String sourceSiteId, String siteId, String env, String template,
+									 boolean replace, boolean disableDeployCron, String localRepoPath,
+									 String repoUrl, String repoBranch, HierarchicalConfiguration<ImmutableNode> additionalParams) throws RestClientException {
 		String requestUrl = getDuplicateTargetUrl(sourceSiteId, env);
-		DuplicateTargetRequest requestBody = new DuplicateTargetRequest(siteId,
-				getDuplicateTargetRequestBody(sourceSiteId, siteId, env, template, replace, disableDeployCron, localRepoPath, repoUrl, additionalParams));
+		Map<String, Object> templateParams = getDuplicateTargetRequestBody(sourceSiteId, siteId, env, template, replace, disableDeployCron, localRepoPath, repoUrl, additionalParams);
+		if (StringUtils.isNotEmpty(repoBranch)) {
+			templateParams.put(REPO_BRANCH_TEMPLATE_PARAM, repoBranch);
+		}
+		DuplicateTargetRequest requestBody = new DuplicateTargetRequest(siteId, templateParams);
 		RequestEntity<DuplicateTargetRequest> requestEntity = RequestEntity.post(URI.create(requestUrl))
 				.contentType(MediaType.APPLICATION_JSON)
 				.header(ManagementToken.HEADER_NAME, getAuthorizationToken())

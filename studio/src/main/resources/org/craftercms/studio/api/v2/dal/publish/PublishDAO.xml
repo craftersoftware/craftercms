@@ -216,6 +216,15 @@
 				AND s.site_id = #{siteId})
 	</select>
 
+	<!-- Replace the bitmap with READY. Success bits cannot be kept: the queue matches package_state = READY exactly.
+	     The retry republishes every target. Republishing a target that already succeeded is safe because publish
+	     rebuilds that target from the package's sandbox commit. -->
+	<update id="resetProcessingPackages">
+		UPDATE publish_package
+		SET package_state = #{readyState}
+		WHERE (package_state &amp; #{processingState}) &gt; 0
+	</update>
+
 	<update id="updatePackage" parameterType="org.craftercms.studio.api.v2.dal.publish.PublishPackage">
 		UPDATE publish_package
 		SET target                      = #{publishPackage.target},

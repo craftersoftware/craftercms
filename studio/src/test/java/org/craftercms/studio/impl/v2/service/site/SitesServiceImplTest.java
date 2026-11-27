@@ -78,20 +78,20 @@ public class SitesServiceImplTest {
 	@Test
 	public void duplicateNonExistentSiteTest() throws NoSuchMethodException {
 		Method method = SitesServiceImpl.class.getMethod("duplicate", String.class, String.class, String.class,
-			String.class, String.class, boolean.class);
+			String.class, String.class, boolean.class, boolean.class);
 		assertTrue(method.isAnnotationPresent(RequireSiteReady.class));
 	}
 
 	@Test
 	public void duplicateIntoAlreadyExistentSiteTest() {
 		assertThrows(SiteAlreadyExistsException.class, () ->
-			sitesService.duplicate(EXISTING_SITE_ID, EXISTING_SITE_ID, "site_name", "The new site", "main_branch", false));
+			sitesService.duplicate(EXISTING_SITE_ID, EXISTING_SITE_ID, "site_name", "The new site", "main_branch", false, false));
 	}
 
 	@Test
 	public void duplicateSiteTest() throws ServiceLayerException {
-		sitesService.duplicate(EXISTING_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false);
+		sitesService.duplicate(EXISTING_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false, true);
 
-		verify(sitesServiceInternal).duplicate(EXISTING_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false);
+		verify(sitesServiceInternal).duplicate(EXISTING_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false, true);
 	}
 }

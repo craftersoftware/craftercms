@@ -159,6 +159,7 @@ public final class StudioConstants {
 	public static final String SITE_SANDBOX_REPOSITORY_GIT_LOCK = "{site}_SANDBOX_REPOSITORY_GIT_LOCK";
 	public static final String SITE_PUBLISHING_LOCK = "{site}_PUBLISHING";
 	public static final String SITE_PUBLISHED_REPOSITORY_GIT_LOCK = "{site}_PUBLISHED_REPOSITORY_GIT_LOCK";
+	public static final String SITE_ENABLE_STAGING_LOCK = "{site}_ENABLE_STAGING_LOCK";
 	public static final String STUDIO_CLOCK_EXECUTOR_SITE_LOCK = "{site}_STUDIO_CLOCK_EXECUTOR_SITE_LOCK";
 	public static final String PUBLISH_PACKAGE_LOCK = "PUBLISH_PACKAGE_{packageId}";
 

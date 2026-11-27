@@ -18,22 +18,23 @@ package org.craftercms.studio.impl.v2.publish;
 
 import java.beans.ConstructorProperties;
 import java.io.IOException;
+import java.sql.Statement;
 import static java.lang.String.format;
 import static java.time.Instant.now;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import static java.util.Collections.emptyList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.ListUtils;
+import org.apache.ibatis.executor.BatchResult;
 import static org.apache.commons.lang3.Strings.CS;
-import org.apache.ibatis.session.ExecutorType;
-import org.apache.ibatis.session.SqlSession;
-import org.apache.ibatis.session.SqlSessionFactory;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.GeneralLockService;
@@ -56,9 +57,11 @@ import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.COMPLETED;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.READY;
+import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.event.publish.PublishErrorEvent;
 import org.craftercms.studio.api.v2.event.publish.PublishEvent;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
+import org.craftercms.studio.api.v2.event.site.SiteDeletingEvent;
 import org.craftercms.studio.api.v2.repository.ContentRepository;
 import org.craftercms.studio.api.v2.repository.PublishItemTO;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
@@ -69,17 +72,22 @@ import org.craftercms.studio.api.v2.task.TaskManager;
 import org.craftercms.studio.api.v2.task.TaskProgress;
 import org.craftercms.studio.api.v2.task.TaskProgress.Stage;
 import org.craftercms.studio.api.v2.utils.StudioUtils;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLockKey;
 import org.craftercms.studio.impl.v2.utils.DateUtils;
 import org.craftercms.studio.impl.v2.utils.PublishUtils;
 import org.craftercms.studio.impl.v2.utils.db.DBUtils;
 import org.craftercms.studio.model.task.PublishTask;
 import org.craftercms.studio.model.task.PublishTask.PublishTaskId;
 import org.jspecify.annotations.NonNull;
+import org.mybatis.spring.SqlSessionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.event.EventListener;
+import org.springframework.dao.DataIntegrityViolationException;
 import static org.springframework.data.util.Predicates.negate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -92,6 +100,10 @@ public class Publisher implements ApplicationEventPublisherAware {
 	private static final Logger logger = LoggerFactory.getLogger(Publisher.class);
 	// Format for transaction name: PUBLISH-{siteId}-{packageId}-{target}
 	private static final String PUBLISH_TRANSACTION_NAME_FORMAT = "PUBLISH-%s-%d-%s";
+	// Format for the name of the transaction that publishes a whole package: PUBLISH-PACKAGE-{siteId}-{packageId}
+	private static final String PUBLISH_PACKAGE_TRANSACTION_NAME_FORMAT = "PUBLISH-PACKAGE-%s-%d";
+	// Format for the name of the transaction that completes a package as failed: PUBLISH-FAILURE-{siteId}-{packageId}
+	private static final String PUBLISH_FAILURE_TRANSACTION_NAME_FORMAT = "PUBLISH-FAILURE-%s-%d";
 
 	private final SiteDAO siteDao;
 	private final PublishDAO publishDao;
@@ -104,11 +116,17 @@ public class Publisher implements ApplicationEventPublisherAware {
 	private final PlatformTransactionManager transactionManager;
 	private final ActivityStreamService activityService;
 	private final TaskManager taskManager;
-	private final SqlSessionFactory sqlSessionFactory;
+	private final Deployer deployer;
+	private final SqlSessionTemplate batchSqlSessionTemplate;
+	/**
+	 * Sites whose staging deployer target has already been accepted. A 409 from deployer is success, so remembering
+	 * the site avoids that round trip on later staging publishes.
+	 */
+	private final Set<String> ensuredStagingDeployerTargets = ConcurrentHashMap.newKeySet();
 
 	@ConstructorProperties({"siteDao", "publishDao", "auditService",
 		"contentRepository", "generalLockService", "servicesConfig", "itemTargetDAO", "transactionManager",
-		"activityService", "taskManager", "sqlSessionFactory"})
+		"activityService", "taskManager", "deployer", "batchSqlSessionTemplate"})
 	public Publisher(final SiteDAO siteDao, final PublishDAO publishDao,
 			 final AuditService auditService,
 			 final StudioBlobAwareContentRepository contentRepository,
@@ -118,7 +136,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 			 final PlatformTransactionManager transactionManager,
 			 final ActivityStreamService activityService,
 			 final TaskManager taskManager,
-			 final SqlSessionFactory sqlSessionFactory) {
+			 @Qualifier("allDeployers") final Deployer deployer,
+			 @Qualifier("batchSqlSessionTemplate") final SqlSessionTemplate batchSqlSessionTemplate) {
 		this.siteDao = siteDao;
 		this.publishDao = publishDao;
 		this.auditService = auditService;
@@ -129,7 +148,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 		this.transactionManager = transactionManager;
 		this.activityService = activityService;
 		this.taskManager = taskManager;
-		this.sqlSessionFactory = sqlSessionFactory;
+		this.deployer = deployer;
+		this.batchSqlSessionTemplate = batchSqlSessionTemplate;
 	}
 
 	@Async
@@ -180,8 +200,12 @@ public class Publisher implements ApplicationEventPublisherAware {
 		}
 	}
 
-	/*
-	 * Process a publish package
+	/**
+	 * Process a publish package. A package always completes: the package is marked {@code PROCESSING} first, and it
+	 * ends {@code COMPLETED} with the success or failure bits of each target, whatever happens in between. The
+	 * publish runs in a single transaction (see {@link #publishUnderPublishedRepoLock}). If anything escapes that
+	 * transaction, it is rolled back and the package is completed as failed in a new one (see
+	 * {@link #completeFailedPackage}). The original exception is rethrown after the package is completed.
 	 */
 	protected void doPublish(final PublishPackage publishPackage) throws ServiceLayerException {
 		long packageId = publishPackage.getId();
@@ -190,7 +214,6 @@ public class Publisher implements ApplicationEventPublisherAware {
 		publishDao.updatePackage(publishPackage);
 		TaskProgress<PublishTaskId, Long> taskProgress = taskManager.registerTask(new PublishTask(siteId, packageId));
 		taskProgress.start();
-		String activityOperation = null;
 		try {
 			Stage itemLoadStage = taskProgress.startStage("Loading items list");
 			publishDao.updatePublishItemsState(packageId, PublishItem.PublishState.PROCESSING.value, PublishItem.PublishState.PENDING.value);
@@ -198,54 +221,296 @@ public class Publisher implements ApplicationEventPublisherAware {
 			auditPublishOperation(publishPackage, OPERATION_PUBLISH_START);
 			itemLoadStage.complete();
 
-			switch (publishPackage.getPackageType()) {
-				case INITIAL_PUBLISH -> {
-					logger.debug("Processing initial publish package '{}' for site '{}'", packageId, siteId);
-					activityOperation = OPERATION_INITIAL_PUBLISH;
-					doInitialPublish(publishPackage);
-				}
-				case PUBLISH_ALL -> {
-					logger.debug("Processing publish-all package '{}' for site '{}'", packageId, siteId);
-					activityOperation = OPERATION_PUBLISH_ALL;
-					doPublishItemList(publishPackage, publishItems, this::doPublishAllTarget);
-				}
-				case ITEM_LIST -> {
-					logger.debug("Processing publish package '{}' for site '{}'", packageId, siteId);
-					activityOperation = OPERATION_ITEM_LIST_PUBLISHED;
-					doPublishItemList(publishPackage, publishItems, this::doPublishItemListTarget);
-				}
-				default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
-					publishPackage.getPackageType(), packageId, siteId));
-			}
+			String activityOperation = auditOperation(publishPackage.getPackageType(), packageId, siteId);
+			publishPackage(publishPackage, publishItems, activityOperation, taskProgress);
+		} catch (Exception e) {
+			completeFailedPackage(publishPackage, e);
+			throw e;
 		} finally {
-			Stage completeStage = taskProgress.startStage("Save completed package");
-			if (activityOperation != null) {
-				auditPublishOperation(publishPackage, activityOperation);
-				activityService.insertActivity(publishPackage.getSiteId(), publishPackage.getSubmitterId(), activityOperation, DateUtils.getCurrentTime(),
-					null, Long.toString(packageId));
-			}
-			eventPublisher.publishEvent(new PublishEvent(siteId));
-			publishPackage.setPublishedOn(now());
-			publishPackage.updatePackageState(COMPLETED.value, PROCESSING.value);
-			publishDao.updatePackage(publishPackage);
-			publishDao.updatePublishItemsState(packageId, 0, PublishItem.PublishState.PROCESSING.value);
-			completeStage.complete();
 			taskProgress.complete(publishPackage.getPackageState());
 		}
 	}
 
 	/**
-	 * Process a package that contains a list of items to publish (i.e. a package with type equal to either PUBLISH_ALL or ITEM_LIST)
+	 * Publish one package. Staging cannot be disabled, and a package for the staging target exists only while it is
+	 * on. When staging is on, the package publishes while holding the published-repo lock. A live package also
+	 * publishes to staging. When staging is off, the package is for live: it waits for enable-staging to finish and
+	 * reads the flag again under the published-repo lock, so a package that blocked while enable ran still publishes
+	 * to staging. The transaction that publishes the package is committed before the locks are released. After
+	 * the locks are released, the serverless staging target is created when the staging branch
+	 * exists. That call is skipped once deployer has accepted the target for the site. A deployer outage leaves
+	 * the completed Git publish in place.
+	 */
+	private void publishPackage(final PublishPackage publishPackage, final Collection<PublishItem> publishItems,
+				    final String activityOperation, final TaskProgress<PublishTaskId, Long> taskProgress)
+			throws ServiceLayerException {
+		String siteId = publishPackage.getSite().getSiteId();
+		if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+			publishUnderPublishedRepoLock(publishPackage, publishItems, siteId, true, activityOperation, taskProgress);
+		} else {
+			String enableLockKey = getEnableStagingLockKey(siteId);
+			generalLockService.lock(enableLockKey);
+			try {
+				publishUnderPublishedRepoLock(publishPackage, publishItems, siteId, false, activityOperation, taskProgress);
+			} finally {
+				generalLockService.unlock(enableLockKey);
+			}
+		}
+		ensureStagingDeployerTarget(siteId);
+	}
+
+	/**
+	 * Save the completed package: audit and activity, the package state and the publish items state. This runs in
+	 * the package transaction, so the package is completed together with the changes that were made to publish it.
+	 */
+	private void completePackage(final PublishPackage publishPackage, final String activityOperation,
+				     final TaskProgress<PublishTaskId, Long> taskProgress) {
+		long packageId = publishPackage.getId();
+		String siteId = publishPackage.getSite().getSiteId();
+		Stage completeStage = taskProgress.startStage("Save completed package");
+		auditPublishOperation(publishPackage, activityOperation);
+		activityService.insertActivity(publishPackage.getSiteId(), publishPackage.getSubmitterId(), activityOperation, DateUtils.getCurrentTime(),
+			null, Long.toString(packageId));
+		publishEventAfterCommit(new PublishEvent(siteId));
+		publishPackage.setPublishedOn(now());
+		publishPackage.updatePackageState(COMPLETED.value, PROCESSING.value);
+		publishDao.updatePackage(publishPackage);
+		publishDao.updatePublishItemsState(packageId, 0, PublishItem.PublishState.PROCESSING.value);
+		completeStage.complete();
+	}
+
+	/**
+	 * Complete a package whose publish transaction was rolled back. Nothing the failed transaction wrote is in the
+	 * database, so every target of the package is marked failed (replacing any outcome and published commit id that
+	 * the failed transaction left on the in-memory package) and the package is saved as completed in a new transaction. This method does
+	 * not throw. If the package cannot be saved, the error is logged and added as suppressed to {@code cause}.
+	 */
+	private void completeFailedPackage(final PublishPackage publishPackage, final Exception cause) {
+		long packageId = publishPackage.getId();
+		String siteId = publishPackage.getSite().getSiteId();
+		try {
+			String liveTarget = servicesConfig.getLiveEnvironment(siteId);
+			boolean livePackage = CS.equals(liveTarget, publishPackage.getTarget());
+			List<PublishPackageTO> failedTargets = new ArrayList<>();
+			if (!livePackage || servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+				failedTargets.add(getPublishPackageTO(publishPackage, false));
+			}
+			if (livePackage) {
+				failedTargets.add(getPublishPackageTO(publishPackage, true));
+			}
+			int errorCode = PublishUtils.translatePackageException(cause);
+			failedTargets.forEach(packageTO -> markTargetFailed(publishPackage, packageTO, errorCode));
+			publishPackage.setPublishedOn(now());
+			publishPackage.updatePackageState(COMPLETED.value, PROCESSING.value);
+
+			DBUtils.runInTransaction(transactionManager, format(PUBLISH_FAILURE_TRANSACTION_NAME_FORMAT, siteId, packageId), () -> {
+				publishDao.updatePackage(publishPackage);
+				for (PublishPackageTO packageTO : failedTargets) {
+					publishDao.updatePublishItemsState(packageId, packageTO.getItemFailedState(), 0);
+				}
+				publishDao.updatePublishItemsState(packageId, 0, PublishItem.PublishState.PROCESSING.value);
+				for (PublishPackageTO packageTO : failedTargets) {
+					finishTargetPublish(publishPackage, packageTO, liveTarget);
+				}
+			});
+			publishEventAfterCommit(new PublishErrorEvent(siteId, packageId, cause));
+			publishEventAfterCommit(new PublishEvent(siteId));
+		} catch (Exception e) {
+			if (e != cause) {
+				cause.addSuppressed(e);
+			}
+			logger.error("Failed to complete package '{}' for site '{}' as failed. The package may stay in the processing state",
+				packageId, siteId, cause);
+		}
+	}
+
+	/**
+	 * Mark a target of the package as failed, replacing its success outcome if it has one, and clear its published
+	 * commit id. The error is only set when the target was not already marked as failed, so the first failure keeps
+	 * its error code.
+	 */
+	private void markTargetFailed(final PublishPackage publishPackage, final PublishPackageTO packageTO, final int errorCode) {
+		long failedBits = packageTO.getFailedOnBits();
+		boolean alreadyFailed = (publishPackage.getPackageState() & failedBits) != 0;
+		publishPackage.updatePackageState(failedBits, packageTO.getSuccessOnBits() | packageTO.getCompletedWithErrorsOnBits());
+		packageTO.setPublishedCommitId(null);
+		if (!alreadyFailed) {
+			packageTO.setError(errorCode);
+		}
+	}
+
+	/**
+	 * Publish an event once the current transaction is committed, so listeners see the committed data. The event is
+	 * dropped if the transaction is rolled back. If there is no transaction, it is published immediately. A failing
+	 * listener does not fail the publish.
+	 */
+	private void publishEventAfterCommit(final Object event) {
+		DBUtils.runAfterCommit(() -> {
+			try {
+				eventPublisher.publishEvent(event);
+			} catch (Exception e) {
+				logger.error("Failed to publish event '{}'", event, e);
+			}
+		});
+	}
+
+	/**
+	 * Create the serverless staging target once the staging branch exists. {@code createStagingTarget} does not
+	 * replace an existing target, and an "already exists" response is success. After deployer accepts the target,
+	 * the site is remembered and later staging publishes skip the call. A timeout or outage is not remembered, so
+	 * the next staging publish tries again, and it does not fail the Git publish that already completed.
+	 * Site deletion forgets the site, so a recreated site creates the target again.
+	 */
+	private void ensureStagingDeployerTarget(String siteId) {
+		if (ensuredStagingDeployerTargets.contains(siteId)) {
+			return;
+		}
+		try {
+			if (!servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+				return;
+			}
+			String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
+			if (!contentRepository.publishedRepositoryExists(siteId)
+					|| !contentRepository.isTargetPublished(siteId, stagingBranch)) {
+				logger.debug("Staging branch '{}' is not published yet for site '{}'. The deployer target will be created after the branch is published",
+					stagingBranch, siteId);
+				return;
+			}
+			deployer.createStagingTarget(siteId);
+			ensuredStagingDeployerTargets.add(siteId);
+		} catch (Exception e) {
+			logger.error("Failed to create the staging deployer target for site '{}'. The next staging publish will try again",
+				siteId, e);
+		}
+	}
+
+	/**
+	 * Forget a remembered staging deployer target when site deletion starts. The target is removed with the site,
+	 * and a later site with the same id has to create it again.
+	 */
+	@EventListener
+	public void onSiteDeleting(SiteDeletingEvent event) {
+		ensuredStagingDeployerTargets.remove(event.getSiteId());
+	}
+
+	/**
+	 * Publish a package while holding the published-repo lock. When {@code stagingEnabled} is false, the flag is read
+	 * again while holding the lock.
+	 * <p>
+	 * The package is published and completed in a single transaction, which is committed before the lock is
+	 * released so that no one that takes the lock next sees uncommitted changes. If the transaction fails it is
+	 * rolled back and the exception is rethrown. Each target runs in a savepoint of this transaction
+	 * (see {@link #runTargetPublisher}).
+	 */
+	private void publishUnderPublishedRepoLock(final PublishPackage publishPackage,
+						   final Collection<PublishItem> publishItems, final String siteId,
+						   boolean stagingEnabled, final String activityOperation,
+						   final TaskProgress<PublishTaskId, Long> taskProgress) throws ServiceLayerException {
+		String publishedRepoLockKey = getPublishedRepoLockKey(siteId);
+		generalLockService.lock(publishedRepoLockKey);
+		try {
+			// Staging can only be enabled, never disabled, so recheck the flag only if it was false originally
+			if (!stagingEnabled) {
+				stagingEnabled = servicesConfig.isStagingEnvironmentEnabled(siteId);
+			}
+			final boolean publishToStaging = stagingEnabled;
+			try {
+				DBUtils.runInTransaction(transactionManager,
+					format(PUBLISH_PACKAGE_TRANSACTION_NAME_FORMAT, siteId, publishPackage.getId()),
+					() -> {
+						publishByType(publishPackage, publishItems, publishToStaging);
+						completePackage(publishPackage, activityOperation, taskProgress);
+					});
+			} catch (ServiceLayerException | RuntimeException e) {
+				throw e;
+			} catch (Exception e) {
+				throw new ServiceLayerException(format("Failed to publish package '%d' for site '%s'", publishPackage.getId(), siteId), e);
+			}
+		} finally {
+			generalLockService.unlock(publishedRepoLockKey);
+		}
+	}
+
+	private void publishByType(final PublishPackage publishPackage, final Collection<PublishItem> publishItems,
+				   final boolean stagingEnabled) throws ServiceLayerException {
+		String siteId = publishPackage.getSite().getSiteId();
+		long packageId = publishPackage.getId();
+		String stagingTarget = servicesConfig.getStagingEnvironment(siteId);
+		String liveTarget = servicesConfig.getLiveEnvironment(siteId);
+		if (stagingEnabled) {
+			try {
+				copyStagingBlobsFromLive(siteId);
+			} catch (Exception blobCopyFailure) {
+				failTargetsForBlobCopy(publishPackage, siteId, stagingTarget, liveTarget, blobCopyFailure);
+				return;
+			}
+		}
+		switch (publishPackage.getPackageType()) {
+			case INITIAL_PUBLISH -> {
+				logger.debug("Processing initial publish package '{}' for site '{}'", packageId, siteId);
+				doInitialPublish(publishPackage, stagingEnabled);
+			}
+			case PUBLISH_ALL -> {
+				logger.debug("Processing publish-all package '{}' for site '{}'", packageId, siteId);
+				doPublishItemList(publishPackage, publishItems, this::doPublishAllTarget, stagingEnabled);
+			}
+			case ITEM_LIST -> {
+				logger.debug("Processing publish package '{}' for site '{}'", packageId, siteId);
+				doPublishItemList(publishPackage, publishItems, this::doPublishItemListTarget, stagingEnabled);
+			}
+			default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
+				publishPackage.getPackageType(), packageId, siteId));
+		}
+	}
+
+	/**
+	 * Copy the live blob-store assets onto the staging branch before this package publishes. The copy is skipped
+	 * once {@code staging_blobs_copied} is set. Every package retries it while the flag is false, and nothing is
+	 * published until it succeeds. A failure, including a partial copy, leaves the flag false and fails both targets.
+	 */
+	private void copyStagingBlobsFromLive(String siteId) throws ServiceLayerException {
+		Site site = siteDao.getSite(siteId);
+		if (site == null || site.isStagingBlobsCopied()) {
+			return;
+		}
+		String liveBranch = servicesConfig.getLiveEnvironment(siteId);
+		String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
+		try {
+			if (!contentRepository.publishedRepositoryExists(siteId) || !contentRepository.isTargetPublished(siteId, stagingBranch)) {
+				siteDao.setStagingBlobsCopied(siteId, true);
+				return;
+			}
+			logger.info("Copy blobs for site '{}' from '{}' to '{}' before publishing the staging delta", siteId, liveBranch, stagingBranch);
+			contentRepository.copyBlobs(siteId, liveBranch, stagingBranch, stagingBranch);
+			siteDao.setStagingBlobsCopied(siteId, true);
+		} catch (IOException e) {
+			throw new ServiceLayerException(format("Failed to copy live blobs to staging for site '%s'", siteId), e);
+		}
+	}
+
+	private String auditOperation(final PublishPackage.PackageType packageType, final long packageId, final String siteId)
+			throws ServiceLayerException {
+		return switch (packageType) {
+			case INITIAL_PUBLISH -> OPERATION_INITIAL_PUBLISH;
+			case PUBLISH_ALL -> OPERATION_PUBLISH_ALL;
+			case ITEM_LIST -> OPERATION_ITEM_LIST_PUBLISHED;
+			default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
+				packageType, packageId, siteId));
+		};
+	}
+
+	/**
+	 * Process a package that contains a list of items to publish (i.e. a package with type equal to either PUBLISH_ALL or ITEM_LIST).
+	 * When {@code stagingEnabled} is true and the package target is live, staging is published first.
 	 */
 	protected void doPublishItemList(final PublishPackage publishPackage,
 					 final Collection<PublishItem> publishItems,
-					 final TargetPublisherFunction targetPublisher) throws SiteNotFoundException {
+					 final TargetPublisherFunction targetPublisher,
+					 final boolean stagingEnabled) throws SiteNotFoundException {
 		String siteId = publishPackage.getSite().getSiteId();
 		String target = publishPackage.getTarget();
-
 		boolean isLiveTarget = CS.equals(servicesConfig.getLiveEnvironment(siteId), target);
-
-		if (isLiveTarget && servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+		if (isLiveTarget && stagingEnabled) {
 			String stagingEnvironment = servicesConfig.getStagingEnvironment(siteId);
 			runTargetPublisher(publishPackage, publishItems, targetPublisher, false, stagingEnvironment);
 		}
@@ -254,31 +519,69 @@ public class Publisher implements ApplicationEventPublisherAware {
 
 	/**
 	 * Helper function to run the "target publisher" and handle exception.
-	 * On exception, it will update the package and its PublishItems with the target-aware failing state
+	 * The target publisher runs in a savepoint of the package transaction, so if it fails, the changes it made to the
+	 * database are rolled back and the package transaction continues.
+	 * On exception, it will update the package and its PublishItems with the target-aware failing state.
+	 * If the failure cannot be recorded, the exception propagates and the package transaction is rolled back.
 	 */
-	private void runTargetPublisher(final PublishPackage publishPackage,
+	protected void runTargetPublisher(final PublishPackage publishPackage,
 					final Collection<PublishItem> publishItems,
 					final TargetPublisherFunction targetPublisher,
 					final boolean isLiveTarget,
 					final String target) throws SiteNotFoundException {
 		PublishPackageTO packageTO = getPublishPackageTO(publishPackage, isLiveTarget);
+		String liveTarget = servicesConfig.getLiveEnvironment(publishPackage.getSite().getSiteId());
 		try {
-			runInTransaction(targetPublisher).run(packageTO, target, publishItems);
+			runInSavepoint(targetPublisher).run(packageTO, target, publishItems);
 		} catch (Exception e) {
-			logger.error("Failed to publish package '{}' to target '{}' for site '{}'", publishPackage.getId(), target, publishPackage.getSite().getSiteId(), e);
-			publishPackage.updatePackageState(packageTO.getFailedOnBits(), 0);
-			packageTO.setError(PublishUtils.translatePackageException(e));
-			publishDao.updatePackage(publishPackage);
-			publishDao.updatePublishItemsState(publishPackage.getId(), packageTO.getFailedOnBits(), 0);
-			eventPublisher.publishEvent(new PublishErrorEvent(publishPackage.getSite().getSiteId(), publishPackage.getId(), e));
+			recordTargetPublishFailure(publishPackage, packageTO, target, e);
 		} finally {
-			publishDao.updateItemStatesForCompletePackage(packageTO.getId(),
-				packageTO.getItemSuccessOnMask(),
-				packageTO.getItemSuccessOffMask(),
-				packageTO.getItemFailureOffMask(),
-				packageTO.getItemSuccessState(),
-				servicesConfig.getLiveEnvironment(publishPackage.getSite().getSiteId()));
+			finishTargetPublish(publishPackage, packageTO, liveTarget);
 		}
+	}
+
+	/**
+	 * A baseline blob-copy failure publishes nothing and leaves the items
+	 * unpublished. A live package is failed on
+	 * both targets. Any other package is failed only on staging.
+	 * The failure is recorded in the package transaction. If it cannot be recorded, the exception propagates and
+	 * {@link #doPublish} completes the package as failed.
+	 */
+	private void failTargetsForBlobCopy(final PublishPackage publishPackage, final String siteId,
+			final String stagingTarget, final String liveTarget, final Exception e) {
+		boolean livePackage = CS.equals(liveTarget, publishPackage.getTarget());
+		logger.error("Failed to copy live blobs to staging for site '{}'. The package will not be published", siteId,
+				e);
+		PublishPackageTO stagingPackage = getPublishPackageTO(publishPackage, false);
+		recordTargetPublishFailure(publishPackage, stagingPackage, stagingTarget, e);
+		finishTargetPublish(publishPackage, stagingPackage, liveTarget);
+		if (livePackage) {
+			PublishPackageTO livePackageTo = getPublishPackageTO(publishPackage, true);
+			recordTargetPublishFailure(publishPackage, livePackageTo, liveTarget, e);
+			finishTargetPublish(publishPackage, livePackageTo, liveTarget);
+		}
+	}
+
+	private void recordTargetPublishFailure(final PublishPackage publishPackage, final PublishPackageTO packageTO,
+						final String target, final Exception e) {
+		logger.error("Failed to publish package '{}' to target '{}' for site '{}'", publishPackage.getId(), target, publishPackage.getSite().getSiteId(), e);
+		// The target may have set a success outcome and a published commit id on the in-memory package before it
+		// failed. Its writes were rolled back, so neither is saved
+		publishPackage.updatePackageState(packageTO.getFailedOnBits(), packageTO.getSuccessOnBits() | packageTO.getCompletedWithErrorsOnBits());
+		packageTO.setPublishedCommitId(null);
+		packageTO.setError(PublishUtils.translatePackageException(e));
+		publishDao.updatePackage(publishPackage);
+		publishDao.updatePublishItemsState(publishPackage.getId(), packageTO.getItemFailedState(), 0);
+		publishEventAfterCommit(new PublishErrorEvent(publishPackage.getSite().getSiteId(), publishPackage.getId(), e));
+	}
+
+	private void finishTargetPublish(final PublishPackage publishPackage, final PublishPackageTO packageTO, final String liveTarget) {
+		publishDao.updateItemStatesForCompletePackage(packageTO.getId(),
+			packageTO.getItemSuccessOnMask(),
+			packageTO.getItemSuccessOffMask(),
+			packageTO.getItemFailureOffMask(),
+			packageTO.getItemSuccessState(),
+			liveTarget);
 	}
 
 	private PublishPackageTO getPublishPackageTO(final PublishPackage publishPackage, final boolean isLiveTarget) {
@@ -350,7 +653,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 			refStage.complete();
 		}
 		if (publishChangeSet.hasFailedItems()) {
-			eventPublisher.publishEvent(new PublishErrorEvent(siteId, packageId));
+			publishEventAfterCommit(new PublishErrorEvent(siteId, packageId));
 		}
 	}
 
@@ -411,11 +714,15 @@ public class Publisher implements ApplicationEventPublisherAware {
 		doPublishTarget(publishPackage, target, publishItems, contentRepository::publish);
 	}
 
-	private TargetPublisherFunction runInTransaction(TargetPublisherFunction publisher) {
+	/**
+	 * Wrap a target publisher so it runs in a savepoint of the current (package) transaction. If it throws, only the
+	 * changes it made are rolled back, and the exception is rethrown.
+	 */
+	private TargetPublisherFunction runInSavepoint(TargetPublisherFunction publisher) {
 		return (publishPackage,
 			publishingTarget,
 			publishItems) ->
-			DBUtils.runInTransaction(transactionManager,
+			DBUtils.runInNestedTransaction(transactionManager,
 				format(PUBLISH_TRANSACTION_NAME_FORMAT, publishPackage.getSite().getSiteId(), publishPackage.getId(), publishingTarget),
 				() -> publisher.run(publishPackage, publishingTarget, publishItems));
 	}
@@ -442,39 +749,51 @@ public class Publisher implements ApplicationEventPublisherAware {
 	}
 
 	/**
-	 * Process an initial publish package
+	 * Process an initial publish package. The caller has already read {@code stagingEnabled} while holding the
+	 * enable-staging and published-repo locks.
 	 */
-	private void doInitialPublish(final PublishPackage publishPackage) throws SiteNotFoundException {
+	private void doInitialPublish(final PublishPackage publishPackage, final boolean stagingEnabled) throws SiteNotFoundException {
 		String siteId = publishPackage.getSite().getSiteId();
 		long packageId = publishPackage.getId();
 		String liveTarget = servicesConfig.getLiveEnvironment(siteId);
-		boolean stagingEnabled = servicesConfig.isStagingEnvironmentEnabled(siteId);
 		String stagingTarget = servicesConfig.getStagingEnvironment(siteId);
-
 		Map<String, PublishItem> failedItems = new HashMap<>();
 		if (stagingEnabled) {
 			runTargetPublisher(publishPackage, emptyList(), (packageTO, target, __) -> doInitialPublishTarget(packageTO, target, failedItems, false),
 				false, stagingTarget);
 		}
-
 		runTargetPublisher(publishPackage, emptyList(), (packageTO, target, __) -> doInitialPublishTarget(packageTO, target, failedItems, true),
 			true, liveTarget);
 
 		if (failedItems.isEmpty()) {
 			cancelAllOutstandingPackages(publishPackage.getSite().getId());
 		} else {
-			try (SqlSession batchSqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH)) {
-				PublishDAO batchPublishDao = batchSqlSession.getMapper(PublishDAO.class);
-				// Insert failed items to publish_item table
-				batchPublishDao.insertInitialPublishItems(packageId, failedItems.values());
-				batchSqlSession.commit();
-			}
+			// Insert failed items to publish_item table. This must use the package transaction: a separate connection
+			// would block on the publish_package row, which this transaction has already updated
+			insertInitialPublishItems(packageId, failedItems.values());
 		}
 		// The items' states are updated after we have inserted the failed items into the publish_item table
 		if (stagingEnabled) {
 			updateStatesOnInitialPublish(publishPackage, stagingTarget, false);
 		}
 		updateStatesOnInitialPublish(publishPackage, liveTarget, true);
+	}
+
+	/**
+	 * Insert the failed items of an initial publish in a batch. The batch session joins the package transaction, so
+	 * the rows are committed or rolled back with the package. The statements are flushed before returning, so the
+	 * rows can be read by the next statements, and an insert error surfaces here and fails the package.
+	 */
+	private void insertInitialPublishItems(final long packageId, final Collection<PublishItem> publishItems) {
+		batchSqlSessionTemplate.getMapper(PublishDAO.class).insertInitialPublishItems(packageId, publishItems);
+		List<BatchResult> results = batchSqlSessionTemplate.flushStatements();
+		boolean failed = results.stream()
+			.flatMapToInt(result -> Arrays.stream(result.getUpdateCounts()))
+			.anyMatch(count -> count == Statement.EXECUTE_FAILED);
+		if (failed) {
+			throw new DataIntegrityViolationException(
+				format("Failed to insert the failed initial publish items of package '%d'", packageId));
+		}
 	}
 
 	private PublishItem getInitialPublishItem(final long packageId, final String path) {
@@ -508,7 +827,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 		publishDao.updatePackage(publishPackage);
 
 		if (initialPublishResult.hasFailedItems()) {
-			eventPublisher.publishEvent(new PublishErrorEvent(publishPackage.getSite().getSiteId(), publishPackage.getId()));
+			publishEventAfterCommit(new PublishErrorEvent(publishPackage.getSite().getSiteId(), publishPackage.getId()));
 		}
 	}
 

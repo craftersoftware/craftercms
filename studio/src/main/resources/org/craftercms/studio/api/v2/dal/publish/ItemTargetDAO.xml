@@ -71,6 +71,22 @@
 				       AND (pi.publish_state &amp; #{itemFailureState}) > 0)
 	</insert>
 
+	<delete id="deleteForTarget">
+		DELETE it
+		FROM item_target it
+			INNER JOIN item i ON i.id = it.item_id
+		WHERE i.site_id = #{siteId}
+		  AND it.target = #{target}
+	</delete>
+
+	<select id="targetExists" resultType="boolean">
+		SELECT COUNT(1) &gt; 0
+		FROM item_target it
+			INNER JOIN item i ON i.id = it.item_id
+		WHERE i.site_id = #{siteId}
+		  AND it.target = #{target}
+	</select>
+
 	<insert id="initStaging">
 		INSERT INTO item_target
 			(item_id, target, previous_path, last_published_on, published_commit_id)
