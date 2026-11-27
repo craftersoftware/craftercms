@@ -157,10 +157,13 @@ describe('version list comment tooltip', () => {
 
 	it('opens the tooltip when the row receives keyboard focus', async () => {
 		const host = await render(longComment);
-		await focusViaKeyboard(getRow(host));
+		const row = getRow(host);
+		assert.equal(row.getAttribute('aria-keyshortcuts'), null);
+		await focusViaKeyboard(row);
 		const tooltip = document.querySelector('[role="tooltip"]');
 		assert.ok(tooltip, 'tooltip');
 		assert.equal(tooltip.textContent, longComment);
+		assert.equal(row.getAttribute('aria-keyshortcuts'), 'PageUp PageDown');
 	});
 
 	it('does not open the tooltip for a comment that fits', async () => {
@@ -173,6 +176,7 @@ describe('version list comment tooltip', () => {
 		assert.equal(document.querySelector('[role="tooltip"]'), null, 'hover opened the tooltip');
 		await focusViaKeyboard(getRow(host));
 		assert.equal(document.querySelector('[role="tooltip"]'), null, 'keyboard focus opened the tooltip');
+		assert.equal(getRow(host).getAttribute('aria-keyshortcuts'), null);
 	});
 	it('does not ripple the row on mousedown inside the tooltip', async () => {
 		const host = await render(longComment);

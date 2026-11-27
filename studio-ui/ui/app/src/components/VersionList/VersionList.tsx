@@ -96,6 +96,7 @@ function VersionListItem(props: VersionListItemProps) {
 				}
 			}}
 			onBlur={() => setTooltipOpen(false)}
+			aria-keyshortcuts={tooltipOpen ? 'PageUp PageDown' : undefined}
 			onKeyDown={(e) => {
 				// The tooltip isn't focusable, so scroll a long comment from the row. Leave the key to the dialog when it can't move.
 				const tooltip = tooltipRef.current;
