@@ -18,9 +18,10 @@ import { getGlobalHeaders } from '../utils/ajax';
 import { Observable } from 'rxjs';
 import { toQueryString } from '../utils/object';
 import { dataUriToBlob, ensureSingleSlash } from '../utils/string';
-import { Uppy as Core, XHRUpload } from 'uppy';
 import { getRequestForgeryToken } from '../utils/auth';
 import { StandardAction } from '../models/StandardAction';
+import type { Uppy } from 'uppy';
+import { loadUppy } from './uppyLoader';
 
 // Kept separate from services/content so guests can import lock/fetchContentItem without Uppy.
 
@@ -99,30 +100,44 @@ export function uploadBlob(
 ): Observable<StandardAction> {
 	const qs = toQueryString({ [xsrfArgumentName]: getRequestForgeryToken() });
 	return new Observable((subscriber) => {
-		const uppy = new Core({ autoProceed: true });
+		let uppy: Uppy;
+		let unsubscribed = false;
+		// Uppy is only needed once something is uploaded, so it loads on the first upload.
+		loadUppy().then(
+			({ Uppy: Core, XHRUpload }) => {
+				try {
+					if (unsubscribed) return;
+					uppy = new Core({ autoProceed: true });
 
-		uppy.use(XHRUpload, { endpoint: `${uploadUrl}${qs}`, method: 'PUT', headers: getGlobalHeaders() });
+					uppy.use(XHRUpload, { endpoint: `${uploadUrl}${qs}`, method: 'PUT', headers: getGlobalHeaders() });
 
-		const fullPath = ensureSingleSlash(`${path}/${fileData.name}`);
-		uppy.setMeta({ ...uploadMeta, path: fullPath });
+					const fullPath = ensureSingleSlash(`${path}/${fileData.name}`);
+					uppy.setMeta({ ...uploadMeta, path: fullPath });
 
-		uppy.on('upload-success', (file, response) => {
-			subscriber.next({ type: 'complete', payload: response });
-			subscriber.complete();
-		});
+					uppy.on('upload-success', (file, response) => {
+						subscriber.next({ type: 'complete', payload: response });
+						subscriber.complete();
+					});
 
-		uppy.on('upload-progress', (file, progress) => {
-			subscriber.next({ type: 'progress', payload: { file, progress } });
-		});
+					uppy.on('upload-progress', (file, progress) => {
+						subscriber.next({ type: 'progress', payload: { file, progress } });
+					});
 
-		uppy.on('upload-error', (file, error, response) => {
-			subscriber.error(Object.assign({}, response, { error: response }));
-		});
+					uppy.on('upload-error', (file, error, response) => {
+						subscriber.error(Object.assign({}, response, { error: response }));
+					});
 
-		uppy.addFile({ name: fileData.name, type: fileData.type, data: fileData.blob });
+					uppy.addFile({ name: fileData.name, type: fileData.type, data: fileData.blob });
+				} catch (error) {
+					subscriber.error(error);
+				}
+			},
+			(error) => subscriber.error(error)
+		);
 
 		return () => {
-			uppy.cancelAll();
+			unsubscribed = true;
+			uppy?.cancelAll();
 		};
 	});
 }

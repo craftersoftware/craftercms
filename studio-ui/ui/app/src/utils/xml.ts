@@ -14,8 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import prettierXmlPlugin from '@prettier/plugin-xml';
-import { format } from 'prettier/standalone';
 import { nnou } from './object';
 import { XMLBuilder, XMLParser, X2jOptions } from 'fast-xml-parser';
 import { legacyUnescapeXml } from './string';
@@ -41,7 +39,12 @@ export interface BeautifyOptions {
 
 export function beautify(xml: string): Promise<string>;
 export function beautify(xml: string, options: Partial<BeautifyOptions>): Promise<string>;
-export function beautify(xml: string, options?: Partial<BeautifyOptions>): Promise<string> {
+export async function beautify(xml: string, options?: Partial<BeautifyOptions>): Promise<string> {
+	// Prettier and its XML plugin are large and only needed when beautifying, so they load on first use.
+	const [{ format }, { default: prettierXmlPlugin }] = await Promise.all([
+		import('prettier/standalone'),
+		import('@prettier/plugin-xml')
+	]);
 	return format(xml, {
 		tabWidth: 2,
 		printWidth: +Infinity,

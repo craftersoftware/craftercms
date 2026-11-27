@@ -128,13 +128,8 @@ import { renderFieldControl } from './lib/renderControl';
 import { createFormLockReleaseSession, prepareStackedFormPop, releaseLockToggleFailed } from './lib/unlockOnClose';
 import { FormValidationAnnouncerContext } from './lib/fieldA11y';
 import FormValidationLiveRegion, { type FormValidationLiveRegionHandle } from './components/FormValidationLiveRegion';
-import {
-	ContentTypeNotFoundError,
-	ItemNotFoundError,
-	stackFormCountAtom,
-	UnknownError,
-	XmlKeys
-} from './lib/formConsts';
+import { ContentTypeNotFoundError, ItemNotFoundError, UnknownError, XmlKeys } from './lib/formConsts';
+import { stackFormCountAtom } from './lib/stackFormCount';
 import FormLayout from './components/FormLayout';
 import TableOfContents, { FieldScopeNotice } from './components/TableOfContents';
 import CreateModeHeader from './components/CreateModeHeader';

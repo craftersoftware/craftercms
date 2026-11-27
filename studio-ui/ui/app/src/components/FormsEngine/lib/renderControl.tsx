@@ -29,6 +29,7 @@ import { ControlSkeleton } from '../components/ControlSkeleton';
 import { ContentTypeField } from '../../../models';
 import ContentType from '../../../models/ContentType';
 import FormsEngineField from '../components/FormsEngineField';
+import './hostMembersImpl';
 import { FormsEngineAtoms, StableFormContext, StableGlobalContext } from './formsEngineContext';
 import { useControlPluginModule } from './controlPluginLoader';
 import { getControlDataSourceBindings } from '../dataSources/bindings';

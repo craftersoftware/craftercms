@@ -547,6 +547,8 @@ export function removeViewGroupedTypes(user: string) {
 	window.localStorage.removeItem(`craftercms.${user}.viewGroupedTypes`);
 }
 
+export const DEFAULT_SNACKBAR_DURATION = 5000;
+
 const SNACKBAR_DURATION_CHANGED = 'craftercms:snackbarDurationChanged';
 export function subscribeSnackbarDuration(onStoreChange: () => void) {
 	window.addEventListener(SNACKBAR_DURATION_CHANGED, onStoreChange);

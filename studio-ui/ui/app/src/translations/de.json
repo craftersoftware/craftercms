@@ -1446,6 +1446,7 @@
 	"usoL4u": "Zu Schritt {step} wechseln",
 	"uUDyk/": "Suche freigegeben zulassen",
 	"UxTJRa": "Projekte",
+	"V+xkxd": "Dieser Dialog konnte nicht geladen werden. Überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
 	"validations.itemLocked": "Das Element ist bereits von {lockOwner}gesperrt. Bitte versuchen Sie es später erneut.",
 	"validations.maxCount": "Die maximale Anzahl von Elementen beträgt {maxCount}",
 	"validations.maxLength": "Maximale Länge erreicht({maxLength})",
