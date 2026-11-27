@@ -85,6 +85,7 @@ dependencies {
 	implementation libs.spring.data.commons
 	implementation libs.jackson.datatype.jsr310
 	implementation libs.jackson.databind
+	implementation enforcedPlatform(libs.netty.bom)
 	implementation libs.aws.sts
 	implementation libs.aws.s3
 	implementation libs.aws.elastictranscoder
@@ -123,7 +124,6 @@ dependencies {
 	implementation libs.httpclient5
 	implementation libs.jackson.annotations
 	implementation libs.jackson.core
-	implementation libs.jackson.databind
 	implementation libs.jackson.dataformat.xml
 	implementation("org.owasp.esapi:esapi:${libs.versions.esapi.get()}:jakarta")
 	implementation libs.xstream

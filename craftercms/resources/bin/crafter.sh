@@ -17,6 +17,7 @@
 ########################################################################################################################
 ################################################ GLOBALS ###############################################################
 REQUIRED_JAVA_VERSION=21
+MIN_JAVA_VERSION=21.0.13.1
 REQUIRED_GIT_VERSION=2.15.0
 
 ################################################ COMMONS ###############################################################
@@ -56,6 +57,43 @@ function isTailTomcat() {
   return 1
 }
 
+# Return 0 when actual is greater than or equal to minimum.
+# Compare dotted numeric components. A missing component is 0.
+# Ignore a suffix that starts with +, - or _, such as +build, -LTS or _N.
+function javaVersionAtLeast() {
+  local actual minimum actual_part minimum_part
+  actual="${1%%[+_-]*}"
+  minimum="${2%%[+_-]*}"
+
+  while [ -n "$actual" ] || [ -n "$minimum" ]; do
+    actual_part="${actual%%.*}"
+    minimum_part="${minimum%%.*}"
+
+    case "$actual" in
+      *.*) actual="${actual#*.}" ;;
+      *) actual="" ;;
+    esac
+    case "$minimum" in
+      *.*) minimum="${minimum#*.}" ;;
+      *) minimum="" ;;
+    esac
+
+    actual_part="${actual_part%%[!0-9]*}"
+    minimum_part="${minimum_part%%[!0-9]*}"
+    [ -n "$actual_part" ] || actual_part=0
+    [ -n "$minimum_part" ] || minimum_part=0
+
+    if [ "$actual_part" -gt "$minimum_part" ]; then
+      return 0
+    fi
+    if [ "$actual_part" -lt "$minimum_part" ]; then
+      return 1
+    fi
+  done
+
+  return 0
+}
+
 # shellcheck disable=SC2120
 function preFlightCheck() {
   cecho "Preflight check.\n" "info"
@@ -88,6 +126,13 @@ function preFlightCheck() {
 		exit 4
 	fi
 
+	# Older patch builds of the required major still start. Warn, and do not exit.
+	# An empty parse is skipped so the message is not printed with a blank version.
+	full_version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
+	if [[ -n "$full_version" ]] && ! javaVersionAtLeast "$full_version" "$MIN_JAVA_VERSION"; then
+		cecho "The detected JDK version $full_version should be upgraded to >= $MIN_JAVA_VERSION. Older JDK 21 builds have the Base64 intrinsic bug (JDK-8393212), so keep -XX:-UseBASE64Intrinsics until you upgrade.\n" "warning"
+	fi
+
 	# Check if JAVA_HOME is set, and set to the correct Java version
 	if [[ -n "$JAVA_HOME" ]] && [[ -x "$JAVA_HOME/bin/java" ]];  then
 		_java_in_javahome="$JAVA_HOME/bin/java"
@@ -100,6 +145,16 @@ function preFlightCheck() {
 	if [[ ! "$javahome_version" = "$version" ]]; then
 		cecho "The Java version in PATH doesn't match the Java version in JAVA_HOME, this means JAVA_HOME is not pointing to the right Java installation, please set JAVA_HOME to point to the Java version $REQUIRED_JAVA_VERSION and try again, aborting.\n" "error"
 		exit 6
+	fi
+
+	# Same warning for the JAVA_HOME JDK. Do not exit. Skip an empty parse, and
+	# skip when this is the same binary or the same version already checked above.
+	javahome_full_version=$("$_java_in_javahome" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
+	path_java=$(type -p java)
+	if [[ "$path_java" != "$_java_in_javahome" && "$javahome_full_version" != "$full_version" ]]; then
+		if [[ -n "$javahome_full_version" ]] && ! javaVersionAtLeast "$javahome_full_version" "$MIN_JAVA_VERSION"; then
+			cecho "The detected JDK version $javahome_full_version should be upgraded to >= $MIN_JAVA_VERSION. Older JDK 21 builds have the Base64 intrinsic bug (JDK-8393212), so keep -XX:-UseBASE64Intrinsics until you upgrade.\n" "warning"
+		fi
 	fi
 
 	# Check lsof
@@ -826,13 +881,17 @@ function createOpenSearchDocker() {
     cecho "Docker image $SEARCH_DOCKER_NAME found, unable to start. Please remove this image before starting.\n To remove the image, run: docker rm $SEARCH_DOCKER_NAME\n" "error"
     exit 21
   else
-    docker create -p $SEARCH_PORT:9200 -e "discovery.type=single-node" -e "DISABLE_SECURITY_PLUGIN=true" -v "$SEARCH_INDEXES_DIR":/usr/share/opensearch/data/ --name "$SEARCH_DOCKER_NAME" opensearchproject/opensearch:$searchVersion > /dev/null 2>&1
+    docker create -p $SEARCH_PORT:9200 -e "discovery.type=single-node" -e "DISABLE_SECURITY_PLUGIN=true" -e "OPENSEARCH_JAVA_OPTS=$OPENSEARCH_JAVA_OPTS" -v "$SEARCH_INDEXES_DIR":/usr/share/opensearch/data/ --name "$SEARCH_DOCKER_NAME" opensearchproject/opensearch:$searchVersion > /dev/null 2>&1
   fi
 }
 
 function destroyOpenSearchDocker() {
-  if ! [[ $( docker inspect "$SEARCH_DOCKER_NAME" > /dev/null 2>&1 ) ]]; then
-    docker rm "$SEARCH_DOCKER_NAME" > /dev/null 2>&1
+  # `docker rm` without -f leaves a running container in place, and the old
+  # inspect check discarded its own output. Force-remove so the port is released.
+  if docker inspect "$SEARCH_DOCKER_NAME" > /dev/null 2>&1; then
+    # `docker rm -f` SIGKILLs a running container. Stop first so OpenSearch can flush.
+    docker stop -t 30 "$SEARCH_DOCKER_NAME" > /dev/null 2>&1
+    docker rm -f "$SEARCH_DOCKER_NAME" > /dev/null 2>&1
   fi
 }
 
@@ -850,7 +909,7 @@ function startSearch() {
   isModuleRunning=$?
   if [ $isModuleRunning = 0 ]; then
     if ! [[ "$OPERATING_SYSTEM" == "Linux" ]]; then
-      mkdir -p SEARCH_INDEXES_DIR
+      mkdir -p "$SEARCH_INDEXES_DIR"
       createOpenSearchDocker
       DOCKER_ID=$( docker start "$SEARCH_DOCKER_NAME" )
       echo $DOCKER_ID > $SEARCH_PID
@@ -875,7 +934,7 @@ function debugSearch() {
   isModuleRunning=$?
   if [ $isModuleRunning = 0 ]; then
         if ! [[ "$OPERATING_SYSTEM" == "Linux" ]]; then
-          mkdir -p SEARCH_INDEXES_DIR
+          mkdir -p "$SEARCH_INDEXES_DIR"
           createOpenSearchDocker
           DOCKER_ID=$( docker start "$SEARCH_DOCKER_NAME" )
           echo $DOCKER_ID > $SEARCH_PID
@@ -887,9 +946,44 @@ function debugSearch() {
 
 function stopSearch() {
   if ! [[ "$OPERATING_SYSTEM" == "Linux" ]]; then
-   	banner "Stop Search"
-    docker stop $(cat $SEARCH_PID) > /dev/null 2>&1
+    # The pid file stores the container id from the checkout that ran `docker start`.
+    # It is often missing (another checkout started OpenSearch, or a previous stop
+    # deleted the pid without removing the container). The process listening on
+    # SEARCH_PORT is Docker itself, so do not kill that pid.
+    if ! docker info > /dev/null 2>&1; then
+      cecho "Docker is not running. If an OpenSearch container is still installed, start Docker and stop CrafterCMS again so it can be removed.\n" "warning"
+      return 0
+    fi
+
+    local published=""
+    if [ -n "$SEARCH_PORT" ]; then
+      published=$(docker ps -aq --filter "publish=${SEARCH_PORT}" 2>/dev/null || true)
+    fi
+
+    if [ ! -s "$SEARCH_PID" ] && ! docker inspect "$SEARCH_DOCKER_NAME" > /dev/null 2>&1 && [ -z "$published" ]; then
+      cecho "OpenSearch already shutdown\n" "warn"
+      return 0
+    fi
+
+    banner "Stop Search"
+    if [ -s "$SEARCH_PID" ]; then
+      docker stop -t 30 "$(cat "$SEARCH_PID")" > /dev/null 2>&1
+      docker rm -f "$(cat "$SEARCH_PID")" > /dev/null 2>&1
+    fi
     destroyOpenSearchDocker
+    # Only remove an OpenSearch image that is still publishing our port. Leave
+    # any other container bound to that port alone.
+    # shellcheck disable=SC2086
+    for id in $published; do
+      image=$(docker inspect --format '{{.Config.Image}}' "$id" 2>/dev/null || true)
+      case "$image" in
+        opensearchproject/opensearch|opensearchproject/opensearch:*)
+          docker stop -t 30 "$id" > /dev/null 2>&1
+          docker rm -f "$id" > /dev/null 2>&1
+          ;;
+      esac
+    done
+    rm -f "$SEARCH_PID"
   else
     pid=$(cat "$SEARCH_PID" 2>/dev/null)
   	stopModule "OpenSearch" "$SEARCH_PORT" "$SEARCH_PID" "kill \$0" "$pid"
@@ -1056,21 +1150,26 @@ isServiceRunning() {
   fi
 }
 
+# On macOS and Windows, OpenSearch is a Docker container. netstat can miss a
+# stopped container, and that container still blocks the next start. Always run
+# the Docker cleanup. On Linux, stop only when the port is in use.
+function stopSearchIfNeeded() {
+  if ! [[ "$OPERATING_SYSTEM" == "Linux" ]] || isServiceRunning "$SEARCH_PORT"; then
+    stopSearch
+  fi
+}
+
 function stop() {
   stopTomcat
   stopDeployer
-  if isServiceRunning $SEARCH_PORT; then
-    stopSearch
-  fi
+  stopSearchIfNeeded
 }
 
 function ctrl_c() {
   cecho "Term signal detected, stopping services...\n" "strong"
   stopTomcat
   stopDeployer
-  if isServiceRunning $SEARCH_PORT; then
-    stopSearch
-  fi
+  stopSearchIfNeeded
 }
 
 # shellcheck disable=SC2120

@@ -25,7 +25,6 @@ chown_dir() {
 
 # Generate host keys (if not mounted)
 ssh-keygen -t rsa -f $SSHD_HOME/ssh_host_rsa_key
-ssh-keygen -t dsa -f $SSHD_HOME/ssh_host_dsa_key
 ssh-keygen -t ecdsa -f $SSHD_HOME/ssh_host_ecdsa_key
 ssh-keygen -t ed25519 -f $SSHD_HOME/ssh_host_ed25519_key
 

@@ -11,7 +11,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-FROM alpine:3.21 AS main
+FROM alpine:3.24 AS main
 
 # Update & Upgrade existing packages
 RUN apk update && apk upgrade
