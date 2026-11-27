@@ -37,6 +37,7 @@ const {
 	createItemsStore,
 	fieldFor,
 	formPath,
+	mount,
 	mountTree,
 	profiled,
 	pushFormCalls,
@@ -51,6 +52,7 @@ const { Provider: JotaiProvider, createStore: createJotaiStore, atom, useAtom } 
 const { configureStore } = await import('@reduxjs/toolkit');
 const { StableGlobalContext, useStableGlobalContext } = await import('../lib/formsEngineContext');
 const { nodeSelectorFocusRequestAtom } = await import('../lib/nodeSelectorFocusRequest');
+const { SnackbarProvider, useSnackbar } = await import('notistack');
 
 afterEach(unmountAll);
 
@@ -702,6 +704,83 @@ describe('NodeSelector focus after Move to field when the destination is not on 
 		assert.deepEqual(keysOf(jotaiStore, embedded, 'children_o'), ['hero-a', 'hero-c']);
 		assert.ok(keysOf(jotaiStore, page, 'nodes_o').includes('hero-b'));
 		assert.equal(document.activeElement, rowLabelled(host, 'Hero C'));
+	});
+
+	/** Records `closeSnackbar`. The snackbar itself is not rendered in this tree. */
+	function CloseProbe(props: { closes: unknown[]; children: React.ReactNode }) {
+		const api = useSnackbar();
+		const real = api.closeSnackbar as typeof api.closeSnackbar & { probed?: boolean };
+		if (!real.probed) {
+			const wrapped = ((key?: unknown) => {
+				props.closes.push(key);
+				return real(key as never);
+			}) as typeof real;
+			wrapped.probed = true;
+			api.closeSnackbar = wrapped;
+		}
+		return props.children;
+	}
+
+	it('keeps Undo when another field unmounts and closes it when the source field unmounts', async () => {
+		const page = formEntry('page-1', pageType, 'nodes_o', [hero('hero-1', 'Hero One'), hero('hero-2', 'Hero Two')]);
+		page.atoms.valueByFieldId.other_o = atom([]) as never;
+		page.atoms.validationByFieldId.other_o = atom({ isValid: true }) as never;
+		const store = createStoreWithTypes();
+		const jotaiStore = createJotaiStore();
+		const closes: unknown[] = [];
+		const stack = [page];
+
+		function Selector(props: { fieldId: string }) {
+			const valueAtom = page.atoms.valueByFieldId[props.fieldId];
+			const [value, setValue] = useAtom(valueAtom as never) as [never[], (next: never) => void];
+			return React.createElement(NodeSelector as never, {
+				field: fieldFor(props.fieldId, 'node-selector'),
+				value,
+				setValue,
+				readonly: false,
+				autoFocus: false,
+				contentType: { id: '/component/thing', fields: {} }
+			});
+		}
+
+		function Fields(props: { source: boolean; other: boolean }) {
+			return React.createElement(
+				React.Fragment,
+				null,
+				props.source ? React.createElement(Selector, { fieldId: 'nodes_o' }) : null,
+				props.other ? React.createElement(Selector, { fieldId: 'other_o' }) : null
+			);
+		}
+
+		function Tree(props: { source: boolean; other: boolean }) {
+			return React.createElement(
+				SnackbarProvider,
+				null,
+				React.createElement(
+					CloseProbe,
+					{ closes },
+					React.createElement(
+						JotaiProvider,
+						{ store: jotaiStore },
+						React.createElement(
+							FormHost,
+							{ entry: page },
+							React.createElement(WithFormsStack, { stack }, React.createElement(Fields, props))
+						)
+					)
+				)
+			);
+		}
+
+		const { host, rerender } = await mount(store as never, React.createElement(Tree, { source: true, other: true }));
+		await moveViaDialog(host, 'Hero Two');
+		const afterMove = closes.length;
+
+		await rerender(React.createElement(Tree, { source: true, other: false }));
+		assert.equal(closes.length, afterMove);
+
+		await rerender(React.createElement(Tree, { source: false, other: false }));
+		assert.equal(closes.length, afterMove + 1);
 	});
 
 	it('focuses the field body when the move empties the field', async () => {
