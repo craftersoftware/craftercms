@@ -190,6 +190,18 @@ describe('useMinimumSaveRequirements', () => {
 		assert.deepEqual(latest(), ['internalName']);
 	});
 
+	it('follows a file name that becomes valid', async () => {
+		const form = createFormAtoms({ fileNameValid: false, internalName: 'Home' });
+		const { latest } = await renderHook(form, full);
+		assert.deepEqual(latest(), ['fileName']);
+
+		await act(async () => {
+			form.store.set(form.fileName, Promise.resolve({ isValid: true }));
+		});
+		await act(async () => pause(invalidFieldReadDebounceMs + 50));
+		assert.deepEqual(latest(), []);
+	});
+
 	it('keeps the same list when a re-read finds nothing new', async () => {
 		const form = createFormAtoms({ fileNameValid: true, internalName: '' });
 		const { latest } = await renderHook(form, full);
