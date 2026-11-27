@@ -1263,6 +1263,7 @@ function executeAction() {
       doUpgradeDB $2
     ;;
     upgradedb_if_needed)
+      warnIfExternalDb
       doUpgradeDBIfNeeded $2
     ;;
     status_engine)
