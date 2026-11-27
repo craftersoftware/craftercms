@@ -305,7 +305,6 @@ public class S3ContentStoreManifestProcessorTest {
 		when(client.headObject(any(HeadObjectRequest.class))).thenReturn(HeadObjectResponse.builder()
 			.contentType("application/gzip")
 			.metadata(Map.of(MANIFEST_COMMIT_ID_METADATA, PREVIOUS_COMMIT_ID.name())).build());
-		when(client.utilities()).thenReturn(S3Utilities.builder().region(Region.US_EAST_1).build());
 
 		S3ContentStoreManifestProcessor processor = processor(Path.of("/tmp/missing-manifest-repo"));
 		BaseConfiguration config = new BaseConfiguration();

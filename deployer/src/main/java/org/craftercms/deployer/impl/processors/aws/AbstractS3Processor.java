@@ -16,10 +16,8 @@
 package org.craftercms.deployer.impl.processors.aws;
 
 import org.apache.commons.configuration2.Configuration;
-import org.apache.commons.lang3.StringUtils;
 import org.craftercms.commons.aws.AwsUtils;
 import org.craftercms.commons.config.ConfigurationException;
-import org.craftercms.commons.http.HttpUtils;
 import org.craftercms.deployer.api.exceptions.DeployerException;
 import org.craftercms.deployer.impl.processors.AbstractMainDeploymentProcessor;
 import org.craftercms.deployer.utils.aws.AwsS3ClientBuilderConfigurer;
@@ -29,8 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import software.amazon.awssdk.services.s3.*;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
-
-import java.net.URI;
 
 import static org.craftercms.commons.config.ConfigUtils.getRequiredStringProperty;
 
@@ -78,8 +74,7 @@ public abstract class AbstractS3Processor extends AbstractMainDeploymentProcesso
 	@Override
 	protected void doInit(final Configuration config) throws ConfigurationException {
 		builderConfigurer = new AwsS3ClientBuilderConfigurer(config);
-		String uri = HttpUtils.encodeUrlMacro(StringUtils.appendIfMissing(getRequiredStringProperty(config, CONFIG_KEY_URL), DELIMITER));
-		s3Url = buildClient().utilities().parseUri(URI.create(uri));
+		s3Url = AwsS3Utils.parseS3Url(getRequiredStringProperty(config, CONFIG_KEY_URL));
 		// use true as default for backward compatibility
 		failDeploymentOnFailure = config.getBoolean(FAIL_DEPLOYMENT_CONFIG_KEY, true);
 	}
@@ -105,9 +100,7 @@ public abstract class AbstractS3Processor extends AbstractMainDeploymentProcesso
 	 * @return the full S3 key
 	 */
 	protected String getS3Key(String file) {
-		String path = StringUtils.appendIfMissing(getS3BaseKey(), DELIMITER) + StringUtils.stripStart(file, DELIMITER);
-		// S3 key should not start with a delimiter
-		return StringUtils.stripStart(path, DELIMITER);
+		return AwsS3Utils.getS3Key(getS3BaseKey(), file);
 	}
 
 	/**
