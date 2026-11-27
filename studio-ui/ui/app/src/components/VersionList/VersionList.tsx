@@ -176,7 +176,7 @@ export function VersionList(props: VersionListProps) {
 										}}
 										onClose={() => closeTooltip(version.versionNumber)}
 										slotProps={{
-											popper: { onClick: (e) => e.stopPropagation() },
+											popper: { onClick: (e) => e.stopPropagation(), onMouseDown: (e) => e.stopPropagation() },
 											tooltip: {
 												sx: {
 													maxWidth: 400,
