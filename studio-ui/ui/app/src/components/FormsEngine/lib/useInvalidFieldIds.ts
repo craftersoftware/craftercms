@@ -42,12 +42,11 @@ export function useInvalidFieldIds(entry: StableFormContextProps | null | undefi
 		let cancelled = false;
 		initial.current = true;
 		const { unsubscribe, ready } = watchInvalidFieldIds(jotai, entry.atoms);
-		// Cap the first read so a hung seed cannot leave `initial` true for the session.
-		const firstRead = Promise.race([
-			ready,
-			new Promise<void>((resolve) => window.setTimeout(resolve, invalidFieldReadDebounceMs))
-		]);
-		void firstRead.then(() => {
+		// Prefer a fully seeded set; fall back after the pause so a hung seed cannot freeze the alert.
+		const timedOut = new Promise<void>((resolve) => {
+			window.setTimeout(resolve, invalidFieldReadDebounceMs);
+		});
+		void Promise.race([ready, timedOut]).then(() => {
 			if (cancelled) return;
 			setIds(jotai.get(idsAtom));
 			initial.current = false;
