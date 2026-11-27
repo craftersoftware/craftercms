@@ -180,7 +180,6 @@ export function VersionList(props: VersionListProps) {
 											tooltip: {
 												sx: {
 													maxWidth: 400,
-													maxHeight: 240,
 													overflow: 'auto',
 													whiteSpace: 'pre-wrap',
 													wordBreak: 'break-word'
