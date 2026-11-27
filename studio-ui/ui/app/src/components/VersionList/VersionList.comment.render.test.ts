@@ -32,6 +32,12 @@ const { configureStore } = await import('@reduxjs/toolkit');
 const { VersionList } = await import('./VersionList.tsx');
 
 const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
+const formattedDates: string[] = [];
+const formatDateToParts = intl.formatDateToParts.bind(intl);
+intl.formatDateToParts = ((value, options) => {
+	formattedDates.push(new Date(value as string).toISOString());
+	return formatDateToParts(value, options);
+}) as typeof intl.formatDateToParts;
 const store = configureStore({
 	reducer: { uiConfig: (state = { locale: { localeCode: 'en-US', dateTimeFormatOptions: { hour12: true } } }) => state }
 });
@@ -57,7 +63,22 @@ afterEach(async () => {
 	});
 });
 
-async function render(comment: string, onItemClick: (version: unknown) => void = () => {}) {
+const makeVersion = (versionNumber: string, comment: string, modifiedDate = '2026-03-04T15:00:00.000Z') => ({
+	versionNumber,
+	modifiedDate,
+	comment,
+	author: { username: 'ada' },
+	committer: 'ada',
+	oldPath: '',
+	path: '/site/website/index.xml',
+	revertible: true
+});
+
+async function render(
+	comment: string,
+	onItemClick: (version: unknown) => void = () => {},
+	versions = [makeVersion('2', comment)]
+) {
 	const host = document.createElement('div');
 	document.body.appendChild(host);
 	const root = createRoot(host);
@@ -71,18 +92,7 @@ async function render(comment: string, onItemClick: (version: unknown) => void =
 					RawIntlProvider,
 					{ value: intl },
 					React.createElement(VersionList, {
-						versions: [
-							{
-								versionNumber: '2',
-								modifiedDate: '2026-03-04T15:00:00.000Z',
-								comment,
-								author: { username: 'ada' },
-								committer: 'ada',
-								oldPath: '',
-								path: '/site/website/index.xml',
-								revertible: true
-							}
-						],
+						versions,
 						selected: [],
 						onItemClick
 					} as never)
@@ -221,6 +231,18 @@ describe('version list comment tooltip', () => {
 		assert.equal(press('PageUp'), false, 'PageUp at the top is left to the dialog');
 		scrollHeight = 100;
 		assert.equal(press('PageDown'), false, 'PageDown is left to the dialog when the comment fits');
+	});
+
+	it('does not re-render other rows when one row opens its tooltip', async () => {
+		const otherDate = '2026-03-03T15:00:00.000Z';
+		const host = await render(longComment, () => {}, [
+			makeVersion('2', longComment),
+			makeVersion('1', 'Other', otherDate)
+		]);
+		formattedDates.length = 0;
+		await hover(getCommentTarget(host));
+		assert.ok(document.querySelector('[role="tooltip"]'), 'tooltip');
+		assert.equal(formattedDates.filter((date) => date === otherDate).length, 0, 'the other row re-rendered');
 	});
 
 	it('renders no tooltip for an empty comment', async () => {
