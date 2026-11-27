@@ -14,6 +14,7 @@
 
 ## @craftercms/redux@4.5.0
 - Deprecated `getDescriptor` API (use `getItem` instead)
+- **Breaking:** `getItem` action payload changed to `{ url, config? }` in this release; 5.0.0 carries the change under a major version
 
 ## @craftercms/content@4.4.1
 - Fix the published README for links to work on npmjs.com
