@@ -62,7 +62,6 @@ const isTruncated = (el: Element | null) => Boolean(el && el.scrollWidth > el.cl
 interface VersionListItemProps {
 	version: ItemHistoryEntry;
 	labelId: string;
-	divider: boolean;
 	isSelected: boolean;
 	isCurrent: boolean;
 	isLast: boolean;
@@ -74,15 +73,16 @@ interface VersionListItemProps {
 
 // Owns the tooltip's open state so hovering or focusing a row only re-renders that row.
 function VersionListItem(props: VersionListItemProps) {
-	const { version, labelId, divider, isSelected, isCurrent, isLast, isSelectMode, locale, onItemClick, onOpenMenu } =
-		props;
+	const { version, labelId, isSelected, isCurrent, isLast, isSelectMode, locale, onItemClick, onOpenMenu } = props;
 	const { formatMessage } = useIntl();
 	const [tooltipOpen, setTooltipOpen] = useState(false);
+	// Only announce PageUp/PageDown when the tooltip actually overflows; most truncated comments still fit in 40vh.
+	const [tooltipScrollable, setTooltipScrollable] = useState(false);
 	const tooltipRef = useRef<HTMLDivElement>(null);
 	return (
 		<ListItemButton
 			component={ListItem}
-			divider={divider}
+			divider={!isLast}
 			onClick={() => onItemClick(version)}
 			onFocus={(e) => {
 				// Tooltip's own focus handling only covers its (non-focusable) child, so open it when the row is
@@ -95,8 +95,11 @@ function VersionListItem(props: VersionListItemProps) {
 					setTooltipOpen(true);
 				}
 			}}
-			onBlur={() => setTooltipOpen(false)}
-			aria-keyshortcuts={tooltipOpen ? 'PageUp PageDown' : undefined}
+			onBlur={() => {
+				setTooltipOpen(false);
+				setTooltipScrollable(false);
+			}}
+			aria-keyshortcuts={tooltipScrollable ? 'PageUp PageDown' : undefined}
 			onKeyDown={(e) => {
 				// The tooltip isn't focusable, so scroll a long comment from the row. Leave the key to the dialog when it can't move.
 				const tooltip = tooltipRef.current;
@@ -167,7 +170,10 @@ function VersionListItem(props: VersionListItemProps) {
 									setTooltipOpen(true);
 								}
 							}}
-							onClose={() => setTooltipOpen(false)}
+							onClose={() => {
+								setTooltipOpen(false);
+								setTooltipScrollable(false);
+							}}
 							slotProps={{
 								popper: { onClick: (e) => e.stopPropagation(), onMouseDown: (e) => e.stopPropagation() },
 								tooltip: {
@@ -178,6 +184,12 @@ function VersionListItem(props: VersionListItemProps) {
 										overflow: 'auto',
 										whiteSpace: 'pre-wrap',
 										wordBreak: 'break-word'
+									}
+								},
+								transition: {
+									onEntered: () => {
+										const tooltip = tooltipRef.current;
+										setTooltipScrollable(Boolean(tooltip && tooltip.scrollHeight > tooltip.clientHeight));
 									}
 								}
 							}}
@@ -220,7 +232,6 @@ export function VersionList(props: VersionListProps) {
 					key={version.versionNumber}
 					version={version}
 					labelId={`${versionLabelId}-${i}`}
-					divider={versions.length - 1 !== i}
 					isSelected={Boolean(selectedLookup[version.versionNumber])}
 					isCurrent={current === version.versionNumber}
 					isLast={versions.length === i + 1}
