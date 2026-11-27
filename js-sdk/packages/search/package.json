@@ -38,10 +38,10 @@
     "@types/mocha": "^10.0.10",
     "chai": "^6.3.0",
     "mocha": "^12.0.3",
-    "nock": "^15.0.5",
-    "rollup": "^4.65.1",
+    "nock": "^15.0.6",
+    "rollup": "^4.68.8",
     "rollup-plugin-sourcemaps": "^0.6.3",
-    "terser": "^5.51.2",
+    "terser": "^5.51.4",
     "xhr-mock": "^2.5.1",
     "xhr2": "^0.2.1"
   }
