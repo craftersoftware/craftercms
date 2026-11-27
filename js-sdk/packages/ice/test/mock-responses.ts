@@ -15,28 +15,28 @@
  */
 
 export const model = {
-  craftercms: {
-    id: '8d7f21fa-5e09-00aa-8340-853b7db302da',
-    path: '/site/website/index.xml',
-    label: 'Home',
-    contentTypeId: '/page/page-home',
-    dateCreated: '2017-01-31T16:18:14.000Z',
-    dateModified: '2018-07-19T23:40:32.152Z',
-    disabled: false,
-    sourceMap: {
-      siteLogo: '/component/level-descriptor'
-    },
-    placeInNav: false,
-    orderInNav: -1
-  },
-  siteLogo: '/static-assets/images/crafer-video-logo-dark.svg',
-  site_Title_t: 'Home'
+	craftercms: {
+		id: '8d7f21fa-5e09-00aa-8340-853b7db302da',
+		path: '/site/website/index.xml',
+		label: 'Home',
+		contentTypeId: '/page/page-home',
+		dateCreated: '2017-01-31T16:18:14.000Z',
+		dateModified: '2018-07-19T23:40:32.152Z',
+		disabled: false,
+		sourceMap: {
+			siteLogo: '/component/level-descriptor'
+		},
+		placeInNav: false,
+		orderInNav: -1
+	},
+	siteLogo: '/static-assets/images/crafer-video-logo-dark.svg',
+	site_Title_t: 'Home'
 };
 
 export const iCEAttributes = {
-  'data-studio-ice': '',
-  'data-studio-ice-path': '/site/website/index.xml',
-  'data-studio-ice-label': 'Home',
-  'data-studio-component': '/site/website/index.xml',
-  'data-studio-component-path': '/site/website/index.xml'
+	'data-studio-ice': '',
+	'data-studio-ice-path': '/site/website/index.xml',
+	'data-studio-ice-label': 'Home',
+	'data-studio-component': '/site/website/index.xml',
+	'data-studio-component-path': '/site/website/index.xml'
 };
