@@ -49,7 +49,6 @@ import React, {
 	SyntheticEvent,
 	useEffect,
 	useMemo,
-	useRef,
 	useState
 } from 'react';
 import Menu from '@mui/material/Menu';
