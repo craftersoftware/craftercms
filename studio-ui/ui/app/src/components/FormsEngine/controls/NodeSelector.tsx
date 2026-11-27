@@ -49,6 +49,7 @@ import React, {
 	SyntheticEvent,
 	useEffect,
 	useMemo,
+	useRef,
 	useState
 } from 'react';
 import Menu from '@mui/material/Menu';
@@ -154,6 +155,7 @@ const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
 
 /** Shared so any NodeSelector can dismiss the Move snackbar (item often lands in another field). */
 const MOVE_TO_FIELD_SNACKBAR_KEY = 'formsEngine.moveToField';
+const moveSnackbarOwner: { current: object | null } = { current: null };
 
 /**
  * Asks the destination row to take focus after a move. Only the top form's selectors can: the forms below it are
@@ -830,8 +832,16 @@ function NodeSelector(props: NodeSelectorProps) {
 	]);
 	const closeMoveDialog = () => setMoveDialogIndex(null);
 	const moveUndoRefs = useUpdateRefs({ formsStackData, contentTypes, store, closeSnackbar });
-	// Closing the form unmounts this field. Undo would then run against a form that is gone, so drop the snackbar.
-	useEffect(() => () => moveUndoRefs.current.closeSnackbar(MOVE_TO_FIELD_SNACKBAR_KEY), [moveUndoRefs]);
+	// Undo runs against the form the move came from. Drop the snackbar only when the field that showed it unmounts.
+	const moveSnackbarOwnerToken = useRef({}).current;
+	useEffect(
+		() => () => {
+			if (moveSnackbarOwner.current !== moveSnackbarOwnerToken) return;
+			moveSnackbarOwner.current = null;
+			moveUndoRefs.current.closeSnackbar(MOVE_TO_FIELD_SNACKBAR_KEY);
+		},
+		[moveUndoRefs, moveSnackbarOwnerToken]
+	);
 	const handleMoveToField = (target: NodeSelectorMoveTarget, targetIndex: number) => {
 		if (moveDialogIndex == null || !moveDialogItem || !contentTypes) return;
 		const documentStack = documentFormStack(formsStackData, stableForm);
@@ -885,6 +895,7 @@ function NodeSelector(props: NodeSelectorProps) {
 		};
 		const undoTarget = { modelId: source.modelId, fieldId: source.fieldId };
 		const undoTargetIndex = source.index;
+		moveSnackbarOwner.current = moveSnackbarOwnerToken;
 		// Only the latest move can be undone: drop the previous Undo before showing a new one.
 		dismissMoveSnackbar();
 		// The Undo button is a function. enqueueSnackbar keeps it out of a Redux action, which cannot hold one.
