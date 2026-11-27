@@ -833,7 +833,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	const closeMoveDialog = () => setMoveDialogIndex(null);
 	const moveUndoRefs = useUpdateRefs({ formsStackData, contentTypes, store, closeSnackbar });
 	// Undo runs against the form the move came from. Drop the snackbar only when the field that showed it unmounts.
-	const moveSnackbarOwnerToken = useRef({}).current;
+	const [moveSnackbarOwnerToken] = useState(() => ({}));
 	useEffect(
 		() => () => {
 			if (moveSnackbarOwner.current !== moveSnackbarOwnerToken) return;
