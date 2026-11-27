@@ -1,6 +1,6 @@
 {
   "name": "@craftercms/ice",
-  "version": "4.3.1-next",
+  "version": "4.3.2-next",
   "description": "Crafter CMS in-context editing library",
   "main": "./bundles/ice.umd.js",
   "module": "./esm5/ice.js",
