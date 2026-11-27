@@ -262,15 +262,22 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		}
 	}, [environment, site, dispatch]);
 
+	// Tracks the requested selectedConfigFileId that has already been handled, so the selection is applied only once
+	// and an empty selection (e.g. after onCancel) is not overridden, keeping the file picker open.
+	const appliedSelectedConfigFileIdRef = useRef<string>(null);
 	useEffect(() => {
-		if (!selectedConfigFileId || !files?.length || selectedConfigFile) {
+		if (!selectedConfigFileId || !files?.length || appliedSelectedConfigFileIdRef.current === selectedConfigFileId) {
+			return;
+		}
+		appliedSelectedConfigFileIdRef.current = selectedConfigFileId;
+		if (refs.current.selectedConfigFile) {
 			return;
 		}
 		const file = files.find((f) => f.id === selectedConfigFileId);
 		if (file) {
 			setSelectedConfigFile(file);
 		}
-	}, [files, selectedConfigFileId, selectedConfigFile]);
+	}, [files, selectedConfigFileId, refs]);
 
 	useEffect(() => {
 		if (selectedConfigFile && environment) {
