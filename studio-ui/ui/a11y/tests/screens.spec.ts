@@ -130,6 +130,23 @@ test.describe('Project screens', () => {
 		await checkA11y(page, testInfo, 'site tools');
 	});
 
+	test('configuration', async ({ page }, testInfo) => {
+		await page.goto('/studio/site-config#/configuration');
+		const nav = page.getByRole('navigation', { name: 'Configuration files', exact: true });
+		await settle(page, 'configuration', {
+			loaded: nav.getByRole('button').first(),
+			error: errorState(page.locator('body'))
+		});
+		await expect.soft(nav.getByRole('note'), 'the environment banner is a note').toContainText('Environment');
+		await expect.soft(nav.getByRole('alert'), 'the environment banner must not be an alert').toHaveCount(0);
+		await checkA11y(page, testInfo, 'configuration');
+		// Nothing is selected on a fresh load, so pick a file to check the selection is exposed.
+		const firstFile = nav.getByRole('button').first();
+		await firstFile.click();
+		await expect(firstFile, 'the selected config file is the current item').toHaveAttribute('aria-current', 'true');
+		await expect(nav.locator('[aria-current="true"]'), 'only one config file is the current item').toHaveCount(1);
+	});
+
 	test('search', async ({ page }, testInfo) => {
 		await page.goto('/studio/search');
 		await settle(page, 'search', searchPageReady(page.locator('body')));

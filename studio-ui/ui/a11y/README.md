@@ -8,10 +8,11 @@ It is isolated from the Studio build: nothing here is part of the app bundle.
 > conformance (2.2 adds success criteria, and axe's `wcag22aa` tag is not enabled). It is also not a substitute for
 > manual keyboard and screen reader checks, and, run in Chromium, not cross-browser evidence.
 
-Screens: login, global app (projects, users), create project dialog, dashboard, site tools, search, preview, preview
-tools panel (every top level page), preview edit mode tools panel (every top level page), edit form and publish
-dialog. Each runs once for the `light` and once for the `dark` Playwright project (`prefers-color-scheme`), giving 12
-tests per theme and 24 in total. The preview iframe is excluded: it hosts the project's site, not Studio UI.
+Screens: login, global app (projects, users), create project dialog, dashboard, site tools, configuration, search,
+preview, preview tools panel (every top level page), preview edit mode tools panel (every top level page), edit form
+and publish dialog. Each runs once for the `light` and once for the `dark` Playwright project
+(`prefers-color-scheme`), giving 13 tests per theme and 26 in total. The preview iframe is excluded: it hosts the
+project's site, not Studio UI.
 
 ## Run
 
