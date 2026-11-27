@@ -666,6 +666,13 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		}
 	};
 
+	// Shared by the cancel button, Escape and backdrop click. Dismissal is ignored while enabling staging.
+	const onDismissEnableStagingConfirm = () => {
+		if (!enableStagingConfirm.submitting) {
+			setEnableStagingConfirm({ open: false, checked: false, submitting: false });
+		}
+	};
+
 	const onConfirmEnableStaging = () => {
 		setEnableStagingConfirm((state) => ({ ...state, submitting: true }));
 		dispatch(
@@ -1165,11 +1172,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 				disableOkButton={!enableStagingConfirm.checked || enableStagingConfirm.submitting}
 				disableCancelButton={enableStagingConfirm.submitting}
 				onOk={onConfirmEnableStaging}
-				onCancel={() => {
-					if (!enableStagingConfirm.submitting) {
-						setEnableStagingConfirm({ open: false, checked: false, submitting: false });
-					}
-				}}
+				onCancel={onDismissEnableStagingConfirm}
+				onClose={onDismissEnableStagingConfirm}
 			/>
 			<ConfirmDialog
 				open={stagingInfoDialogOpen}
