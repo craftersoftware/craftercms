@@ -93,7 +93,6 @@ export async function createIntlInstance(
 /**
  * Stored ids may use underscores or any case (es_es). Lookups use a canonical BCP 47 tag (es-ES).
  * An invalid id keeps the underscore swap. Returning "en" would store that plugin map in the English catalog.
- * The document lang falls back to "en" on its own, in studio-context.ftl.
  */
 export function toLanguageTag(id: string): string {
 	const replaced = id.replace(/_/g, '-');

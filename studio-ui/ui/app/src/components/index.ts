@@ -140,7 +140,6 @@ export * from './LauncherTile';
 export * from './LegacyConcierge';
 export * from './LegacyDashboardFrame';
 export * from './LegacyIFrame';
-export * from './LegacySiteToolsFrame';
 export * from './LoadingIconButton';
 export * from './LoadingState';
 export * from './LogConsole';

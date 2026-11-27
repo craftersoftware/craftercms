@@ -69,13 +69,6 @@
 		</file>
 		<file>
 			<module>studio</module>
-			<path>administration/site-config-tools.xml</path>
-			<title>confTabSiteConf</title>
-			<description>confTabSiteConfDesc</description>
-			<samplePath>sample-site-config-tools.xml</samplePath>
-		</file>
-		<file>
-			<module>studio</module>
 			<path>administration/config-list.xml</path>
 			<title>confTabConfigurations</title>
 			<description>confTabConfDesc</description>

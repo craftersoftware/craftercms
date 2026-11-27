@@ -20,11 +20,10 @@ import { join, sep } from 'node:path';
 import { ruleTickets } from '../allow-list';
 
 const repoRoot = join(__dirname, '../../../../../');
-const templatesRoot = join(repoRoot, 'studio-ui/templates/web');
 
 /**
  * Studio templates, Engine templates and the default site, Studio notification mail,
- * and deployer mail. TinyMCE v2 is vendored and out of scope.
+ * and deployer mail.
  */
 const templateRoots = [
 	'studio-ui/templates',
@@ -42,8 +41,7 @@ test('template documents set lang on the html element', () => {
 	for (const root of templateRoots) {
 		const files = readdirSync(join(repoRoot, root), { recursive: true })
 			.map(String)
-			.filter((file) => file.endsWith('.ftl') || file.endsWith('.html'))
-			.filter((file) => !file.split(sep).join('/').includes('tinymce/v2'));
+			.filter((file) => file.endsWith('.ftl') || file.endsWith('.html'));
 		for (const file of files) {
 			const relative = join(root, file);
 			const source = readFileSync(join(repoRoot, relative), 'utf8');
@@ -64,15 +62,6 @@ test('template documents set lang on the html element', () => {
 	expect(htmlLangEn.test('<html lang="en">')).toBe(true);
 	expect(htmlLangEn.test('<html data-lang="en">')).toBe(false);
 	expect(htmlLangEn.test('<html xml:lang="en">')).toBe(false);
-});
-
-test('studio-context writes a BCP 47 lang tag', () => {
-	const source = readFileSync(join(templatesRoot, 'common/page-fragments/studio-context.ftl'), 'utf8');
-	expect(source).toContain('Intl.getCanonicalLocales(languageTag)');
-	expect(source).toContain('/^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$/');
-	expect(source).toContain("languageTag = 'en'");
-	expect(source).toContain("$('html').attr('lang', languageTag)");
-	expect(source).toContain('CStudioAuthoringContext.lang = lang');
 });
 
 test('html-has-lang is not an allow-listed exception', () => {

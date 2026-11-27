@@ -235,10 +235,6 @@ export const contentTypesMessages = defineMessages({
 		id: 'contentType.fileManager',
 		defaultMessage: 'File Manager'
 	},
-	siteConfigLandingMessage: {
-		id: 'siteConfig.landingMessage',
-		defaultMessage: 'Please choose a tool from the left.'
-	},
 	insertExpressionMessage: {
 		id: 'siteConfig.insertExpressionMessage',
 		defaultMessage: 'Insert Expression'
@@ -258,14 +254,6 @@ export const contentTypesMessages = defineMessages({
 	controlNotAvailable: {
 		id: 'siteConfig.controlNotAvailable',
 		defaultMessage: 'Control not available'
-	},
-	loadModuleError: {
-		id: 'siteConfig.loadModuleError',
-		defaultMessage: 'Unable to load "{tool}". Check project tools configuration.'
-	},
-	toolNotFound: {
-		id: 'siteConfig.toolNotFound',
-		defaultMessage: '"{tool}" tool not found.'
 	},
 	dependsOn: {
 		defaultMessage: 'This property references "{dependency}"'
