@@ -389,33 +389,13 @@ export function getContentTypeDropTargets(
 	});
 }
 
-export type CreateMode = 'embedded' | 'shared' | 'sharedExisting';
+export type CreateMode = contentTypeUtils.ContentTypeCreateMode;
 
 /**
- * Checks if a content type is accepted (as shared, embedded or at-all) by a specific receiver field
- * @param receiverField {ContentTypeField}
- * @param contentTypeId {string}
- * @param createMode {embedded | shared | sharedExisting | Array<embedded | shared | sharedExisting>}
+ * Checks if a content type is accepted (as shared, embedded or at-all) by a specific receiver field.
+ * Shared with FormsEngine via `@craftercms/studio-ui/utils/contentType`.
  */
-export function isTypeAcceptedAsByField(
-	receiverField: ContentTypeField,
-	contentTypeId: string,
-	// shared == sharedNew, sharedExisting
-	createMode?: CreateMode | CreateMode[] | undefined
-): boolean {
-	const processCreateMode = (mode: CreateMode) =>
-		(mode === 'shared'
-			? receiverField?.validations?.allowedSharedContentTypes?.value
-			: mode === 'embedded'
-				? receiverField?.validations?.allowedEmbeddedContentTypes?.value
-				: mode === 'sharedExisting'
-					? receiverField?.validations?.allowedSharedExistingContentTypes?.value
-					: Object.keys(receiverField?.validations?.allowedContentTypes?.value ?? {})) ?? [];
-	let acceptedTypes: string[] = Array.isArray(createMode)
-		? createMode.flatMap((mode) => processCreateMode(mode))
-		: processCreateMode(createMode);
-	return acceptedTypes.some((typeId) => typeId === contentTypeId || typeId === '*');
-}
+export const isTypeAcceptedAsByField = contentTypeUtils.isTypeAcceptedAsByField;
 
 export function runDropTargetsValidations(dropTargets: ICERecord[]): LookupTable<LookupTable<ValidationResult>> {
 	const lookup = {};

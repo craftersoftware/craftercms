@@ -14,24 +14,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useItemMetaContext, useStableFormContext, useStableGlobalApiContext } from '../lib/formsEngineContext';
+import {
+	type StableFormContextProps,
+	useItemMetaContext,
+	useStableFormContext,
+	useStableGlobalApiContext,
+	useStableGlobalContext
+} from '../lib/formsEngineContext';
+import { useStore as useJotaiStore } from 'jotai';
 import { useFormItem } from '../lib/formItem';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
+import Button from '@mui/material/Button';
 import AddRounded from '@mui/icons-material/AddRounded';
-import DeleteOutlined from '@mui/icons-material/DeleteOutlined';
-import EditOutlined from '@mui/icons-material/EditOutlined';
 import HelpOutline from '@mui/icons-material/HelpOutlined';
 import SearchRounded from '@mui/icons-material/SearchRounded';
+import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import { FormsEngineField } from '../components/FormsEngineField';
-import { ControlProps } from '../types';
+import { ControlProps, type JotaiStore } from '../types';
 import type { ContentItem, MediaItem, Primitive } from '../../../models';
 import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemButton from '@mui/material/ListItemButton';
 import { FormattedMessage, useIntl } from 'react-intl';
-import LinkOffRoundedIcon from '@mui/icons-material/LinkOffRounded';
 import Tooltip from '@mui/material/Tooltip';
+import Divider from '@mui/material/Divider';
 import useContentTypes from '../../../hooks/useContentTypes';
 import React, {
 	lazy,
@@ -107,7 +114,6 @@ import type { SingleFileUploadDialogProps } from '../../SingleFileUploadDialog';
 import { showCodeEditorDialog } from '../../../state/actions/dialogs';
 import { getEditorMode, isAudio, isEditableAsset, isPdfDocument, isVideo } from '../../../utils/content';
 import { createComponentId, showContentFormAction } from '../../../utils/system';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import {
 	getEditorMode as getItemEditorMode,
 	isEditableViaFormEditor,
@@ -116,6 +122,15 @@ import {
 } from '../../PathNavigator/utils';
 import useSelection from '../../../hooks/useSelection';
 import { getFormContextPath, getValidationValue, isFieldReadOnly, showAlert } from '../lib/formUtils';
+import {
+	documentFormStack,
+	embeddedItemContentTypeId,
+	enumerateNodeSelectorMoveTargets,
+	type NodeSelectorMoveTarget
+} from '../lib/nodeSelectorMoveTargets';
+import { applyNodeSelectorMove, readValuesWithOpenForms, undoNodeSelectorMove } from '../lib/applyNodeSelectorMove';
+import { nodeSelectorFocusRequestAtom, useNodeSelectorFocusRequest } from '../lib/nodeSelectorFocusRequest';
+import MoveToFieldDialog from '../components/MoveToFieldDialog';
 import TypeList from '../../ContentTypeManagement/components/TypeList';
 import { SearchBar } from '../../SearchBar';
 import useDebouncedInput from '../../../hooks/useDebouncedInput';
@@ -132,9 +147,32 @@ import type { DataSourceActionChoice, DataSourceSelection, ResolvedDataSourceAct
 import Alert from '@mui/material/Alert';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
 import { MenuList } from '@mui/material';
+import { useSnackbar } from 'notistack';
 
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
+
+/** Shared so any NodeSelector can dismiss the Move snackbar (item often lands in another field). */
+const MOVE_TO_FIELD_SNACKBAR_KEY = 'formsEngine.moveToField';
+const moveSnackbarOwner: { current: object | null } = { current: null };
+
+/**
+ * Asks the destination row to take focus after a move. Only the top form's selectors can: the forms below it are
+ * covered by the stacked-form drawer, and the fields of an embedded item are only shown in that item's own form. Returns
+ * whether it asked, so the caller can keep focus somewhere else when it did not.
+ */
+function requestMovedRowFocus(
+	store: JotaiStore,
+	formsStackData: StableFormContextProps[],
+	destination: { modelId: string; fieldId: string; index: number },
+	key: string
+): boolean {
+	const top = formsStackData[formsStackData.length - 1];
+	const topModelId = top?.itemMeta?.id ?? top?.props?.update?.modelId;
+	if (topModelId == null || String(topModelId) !== destination.modelId) return false;
+	store.set(nodeSelectorFocusRequestAtom, { ...destination, key, at: Date.now() });
+	return true;
+}
 
 export type NodeSelectorProps = ControlProps<NodeSelectorItem[]>;
 
@@ -216,9 +254,14 @@ function NodeSelector(props: NodeSelectorProps) {
 	const [sortMode, setSortMode] = useState(false);
 	const useTouchSorting = useMemo(() => isTouchDevice(), []);
 	const { rootRef, remember, announcement } = useReorderFocus(value);
-	const { addButtonRef, fallbackRef, rememberEmpty } = useRestoreFocusWhenEmpty(value);
+	const { addButtonRef, fallbackRef, rememberEmpty, focusEmptyField } = useRestoreFocusWhenEmpty(value);
 	const rowKeys = useOccurrenceKeys(value);
-	const onSortChange = (next: TItem<NodeSelectorItem>[]) => setValue(next.map((item) => item.data));
+	const { closeSnackbar, enqueueSnackbar } = useSnackbar();
+	const dismissMoveSnackbar = () => closeSnackbar(MOVE_TO_FIELD_SNACKBAR_KEY);
+	const onSortChange = (next: TItem<NodeSelectorItem>[]) => {
+		dismissMoveSnackbar();
+		setValue(next.map((item) => item.data));
+	};
 	const handleCancelReorder = () => setSortMode(false);
 	const onReorder = () => setSortMode(true);
 	// Only the items this field shows. `value[].key` is looked up on view, and `include` drives the row state and display.
@@ -231,8 +274,22 @@ function NodeSelector(props: NodeSelectorProps) {
 		[value, rowKeys, itemsByPath]
 	);
 	const user = useActiveUser();
+	const canEditItem = (item: NodeSelectorItem) => {
+		const isEmbedded = Boolean(item.component);
+		const isComponent = isItemComponent(item);
+		const stored = itemsByPath[item.include];
+		const userCanEditStored =
+			stored?.availableActionsMap.edit && (stored.lockOwner == null || user.username === stored.lockOwner?.username);
+		return (
+			(isComponent && (isEmbedded || userCanEditStored)) ||
+			(!isComponent && isEditableAsset(item.key) && userCanEditStored)
+		);
+	};
 	const stableForm = useStableFormContext();
+	const { formsStackData } = useStableGlobalContext();
+	const store = useJotaiStore();
 	const { id, pathInSite } = useItemMetaContext();
+	useNodeSelectorFocusRequest({ modelId: id, fieldId: field.id, list: value, rootRef });
 	// Create forms have no store item (`getItem()` is null). See getFormContextPath.
 	const getContextItemPath = () =>
 		getFormContextPath({
@@ -248,6 +305,8 @@ function NodeSelector(props: NodeSelectorProps) {
 	const [createPickerChoice, setCreatePickerChoice] = useState<CreateDataSourcePickerData>(null);
 	const dispatch = useDispatch();
 	const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLButtonElement | null>(null);
+	const [itemMenu, setItemMenu] = useState<{ anchor: HTMLElement; index: number } | null>(null);
+	const [moveDialogIndex, setMoveDialogIndex] = useState<number | null>(null);
 	const contentTypes = useContentTypes();
 	const siteId = useActiveSiteId();
 	const authoringBase = useSelection((state) => state.env.authoringBase);
@@ -261,8 +320,8 @@ function NodeSelector(props: NodeSelectorProps) {
 			(dataSources?.actions ?? []).filter((action) => action.kind === 'create' && !action.MenuItem && !action.Dialog),
 		[dataSources?.actions]
 	);
-	const handleRemoveItem = (event: ReactMouseEvent, index: number) => {
-		event.stopPropagation();
+	const closeItemMenu = () => setItemMenu(null);
+	const handleRemoveItem = (index: number) => {
 		const nextValue = value.concat();
 		nextValue.splice(index, 1);
 		if (nextValue.length > 0) {
@@ -271,6 +330,7 @@ function NodeSelector(props: NodeSelectorProps) {
 		} else {
 			rememberEmpty();
 		}
+		dismissMoveSnackbar();
 		setValue(nextValue);
 	};
 	const handleViewItem = (event: { stopPropagation(): void }, index: number) => {
@@ -339,16 +399,24 @@ function NodeSelector(props: NodeSelectorProps) {
 						}
 					}
 
+					// Read the live field array: a move inside the open form can update this field and shift indices.
+					const fieldAtom = stableForm.atoms?.valueByFieldId?.[field.id];
+					const storedValue = fieldAtom ? store.get(fieldAtom) : null;
+					const currentValue = Array.isArray(storedValue) ? (storedValue as NodeSelectorItem[]) : value;
+					const currentIndex =
+						currentValue[index]?.key === item.key ? index : currentValue.findIndex((entry) => entry.key === item.key);
+					if (currentIndex === -1) return Promise.resolve({ close: true });
+
 					const newItem: NodeSelectorItem = {
-						// Keeps the item's other children and its attributes (e.g. `datasource`).
-						...item,
+						// Keeps the item's other properties (e.g. `datasource`) from the live item.
+						...currentValue[currentIndex],
 						key,
 						value: (values[XmlKeys.internalName] as string | undefined) ?? '',
 						[isEmbedded ? 'component' : 'include']: isEmbedded ? (values as LookupTable<Primitive>) : key,
 						disableFlattening
 					};
-					const nextValue = value.concat();
-					nextValue.splice(index, 1, newItem);
+					const nextValue = currentValue.concat();
+					nextValue.splice(currentIndex, 1, newItem);
 					setValue(nextValue);
 					return Promise.resolve({ close: true });
 				}
@@ -372,11 +440,14 @@ function NodeSelector(props: NodeSelectorProps) {
 			value,
 			index,
 			(newList) => {
-				if (!readonly) setValue(newList);
+				if (!readonly) {
+					dismissMoveSnackbar();
+					setValue(newList);
+				}
 			},
 			(itemIndex, edit) =>
-				// An item that can't be edited opens read-only, as the row click does. V always opens read-only.
-				// E edits only when the item and the field allow it.
+				// Row click, E, and the More menu Edit item all open writable when the item and field allow it.
+				// V always opens read-only. An item that can't be edited opens read-only for every path.
 				canBeEdited ? handleEditItem(e, itemIndex, edit && !readonly) : handleViewItem(e, itemIndex),
 			(nextIndex) => remember(nextIndex, 'row', itemLabel)
 		);
@@ -426,7 +497,10 @@ function NodeSelector(props: NodeSelectorProps) {
 			value,
 			allowDuplicates
 		);
-		if (newItems.length) setValue(validItems);
+		if (newItems.length) {
+			dismissMoveSnackbar();
+			setValue(validItems);
+		}
 		if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 	};
 	const executeDataSourceOption = (
@@ -471,6 +545,7 @@ function NodeSelector(props: NodeSelectorProps) {
 							value,
 							allowDuplicates
 						);
+						dismissMoveSnackbar();
 						setValue(validItems);
 						if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 					}
@@ -510,6 +585,7 @@ function NodeSelector(props: NodeSelectorProps) {
 							value,
 							allowDuplicates
 						);
+						dismissMoveSnackbar();
 						setValue(validItems);
 						if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 					}
@@ -552,6 +628,7 @@ function NodeSelector(props: NodeSelectorProps) {
 							value,
 							allowDuplicates
 						);
+						dismissMoveSnackbar();
 						setValue(validItems);
 						if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 						return Promise.resolve({ close: true });
@@ -592,6 +669,7 @@ function NodeSelector(props: NodeSelectorProps) {
 								value,
 								allowDuplicates
 							);
+							dismissMoveSnackbar();
 							setValue(validItems);
 							if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 						}
@@ -712,6 +790,159 @@ function NodeSelector(props: NodeSelectorProps) {
 		isAddDisabled && maxLimitReached
 			? formatMessage({ defaultMessage: 'Maximum amount of items reached for {fieldName}' }, { fieldName: field.name })
 			: formatMessage({ defaultMessage: 'Add items to {fieldName}' }, { fieldName: field.name });
+	const itemMenuEntry = itemMenu != null ? value[itemMenu.index] : null;
+	const itemMenuCanEdit = itemMenuEntry ? canEditItem(itemMenuEntry) : false;
+	const itemMenuOpensForEdit = itemMenuCanEdit && !readonly;
+	const itemMenuLabel = itemMenuEntry ? getItemLabel(itemMenuEntry) : '';
+	const moveDialogItem = moveDialogIndex != null ? value[moveDialogIndex] : null;
+	/** List of possible destinations for the move dialog. Calculated when moveDialogItem and index are present. */
+	const moveDialogTargets = useMemo(() => {
+		if (moveDialogItem == null || moveDialogIndex == null) return [];
+		const documentStack = documentFormStack(formsStackData, stableForm);
+		const rootForm = documentStack[0];
+		const rootAtoms = rootForm?.atoms?.valueByFieldId;
+		const rootContentType = rootForm?.itemMeta?.contentType;
+		const rootModelId = rootForm?.itemMeta?.id;
+		if (!rootAtoms || !rootContentType || !rootModelId || !contentTypes) return [];
+		const itemContentTypeId =
+			embeddedItemContentTypeId(moveDialogItem) ?? itemsByPath[moveDialogItem.include]?.contentTypeId;
+		if (!itemContentTypeId) return [];
+		return enumerateNodeSelectorMoveTargets({
+			item: moveDialogItem,
+			itemContentTypeId,
+			source: { modelId: id, fieldId: field.id, index: moveDialogIndex },
+			rootModelId,
+			rootValues: readValuesWithOpenForms(store, documentStack, rootContentType, contentTypes),
+			rootContentType,
+			contentTypesById: contentTypes,
+			formReadonly: readonly
+		});
+	}, [
+		moveDialogItem,
+		moveDialogIndex,
+		formsStackData,
+		stableForm,
+		itemsByPath,
+		id,
+		field.id,
+		store,
+		contentTypes,
+		readonly
+	]);
+	const closeMoveDialog = () => setMoveDialogIndex(null);
+	const moveUndoRefs = useUpdateRefs({ formsStackData, contentTypes, store, closeSnackbar });
+	// Undo runs against the form the move came from. Drop the snackbar only when the field that showed it unmounts.
+	const [moveSnackbarOwnerToken] = useState(() => ({}));
+	useEffect(
+		() => () => {
+			if (moveSnackbarOwner.current !== moveSnackbarOwnerToken) return;
+			moveSnackbarOwner.current = null;
+			moveUndoRefs.current.closeSnackbar(MOVE_TO_FIELD_SNACKBAR_KEY);
+		},
+		[moveUndoRefs, moveSnackbarOwnerToken]
+	);
+	const handleMoveToField = (target: NodeSelectorMoveTarget, targetIndex: number) => {
+		if (moveDialogIndex == null || !moveDialogItem || !contentTypes) return;
+		const documentStack = documentFormStack(formsStackData, stableForm);
+		const rootForm = documentStack[0];
+		const rootModelId = rootForm?.itemMeta?.id;
+		const rootContentType = rootForm?.itemMeta?.contentType;
+		if (!rootForm || !rootModelId || !rootContentType) return;
+		const source = { modelId: id, fieldId: field.id, index: moveDialogIndex };
+		const applied = applyNodeSelectorMove({
+			store,
+			rootForm,
+			item: moveDialogItem,
+			formsStackData: documentStack,
+			rootModelId,
+			rootContentType,
+			contentTypesById: contentTypes,
+			source,
+			target: { modelId: target.modelId, fieldId: target.fieldId },
+			targetIndex
+		});
+		if (!applied) return;
+		const focusRequested = requestMovedRowFocus(
+			store,
+			formsStackData,
+			{ modelId: target.modelId, fieldId: target.fieldId, index: applied.insertedIndex },
+			applied.item.key
+		);
+		if (!focusRequested) {
+			// The destination is not on screen, and the row that opened this dialog is gone. Keep focus in this field: on
+			// the item that holds the destination, else on the row that took the moved item's place.
+			const remaining = applied.sourceItems;
+			if (remaining.length) {
+				const holderIndex = remaining.findIndex((item) => item.key === target.modelId);
+				const index = holderIndex !== -1 ? holderIndex : Math.min(source.index, remaining.length - 1);
+				store.set(nodeSelectorFocusRequestAtom, {
+					modelId: id,
+					fieldId: field.id,
+					index,
+					key: remaining[index].key,
+					at: Date.now()
+				});
+			} else {
+				// Nothing is left to focus here. Wait for the dialog's focus trap to go, as the request does.
+				setTimeout(focusEmptyField, 0);
+			}
+		}
+		const undoSource = {
+			modelId: target.modelId,
+			fieldId: target.fieldId,
+			index: applied.insertedIndex
+		};
+		const undoTarget = { modelId: source.modelId, fieldId: source.fieldId };
+		const undoTargetIndex = source.index;
+		moveSnackbarOwner.current = moveSnackbarOwnerToken;
+		// Only the latest move can be undone: drop the previous Undo before showing a new one.
+		dismissMoveSnackbar();
+		// The Undo button is a function. enqueueSnackbar keeps it out of a Redux action, which cannot hold one.
+		enqueueSnackbar(
+			formatMessage(
+				{ defaultMessage: 'Moved {item} to {target}' },
+				{ item: getItemLabel(moveDialogItem), target: target.labelPath }
+			),
+			{
+				key: MOVE_TO_FIELD_SNACKBAR_KEY,
+				action: (snackbarKey) => (
+					<Button
+						size="small"
+						color="inherit"
+						onClick={() => {
+							const {
+								formsStackData: latestStack,
+								contentTypes: latestContentTypes,
+								store: latestStore,
+								closeSnackbar: close
+							} = moveUndoRefs.current;
+							if (latestContentTypes) {
+								const undone = undoNodeSelectorMove({
+									store: latestStore,
+									documentStack: documentFormStack(latestStack, stableForm),
+									contentTypesById: latestContentTypes,
+									applied: { ...undoSource, item: applied.item },
+									source: { ...undoTarget, index: undoTargetIndex }
+								});
+								// The item is back in its original field. Focus its row there.
+								if (undone) {
+									requestMovedRowFocus(
+										latestStore,
+										latestStack,
+										{ ...undoTarget, index: undone.insertedIndex },
+										undone.item.key
+									);
+								}
+							}
+							close(snackbarKey);
+						}}
+					>
+						<FormattedMessage defaultMessage="Undo" />
+					</Button>
+				)
+			}
+		);
+	};
 	return (
 		<>
 			<Menu
@@ -725,6 +956,86 @@ function NodeSelector(props: NodeSelectorProps) {
 				{menuOptions}
 				{customActionItems}
 			</Menu>
+			<Menu
+				anchorEl={itemMenu?.anchor}
+				open={Boolean(itemMenuEntry)}
+				onClose={closeItemMenu}
+				slotProps={{
+					list: {
+						'aria-label': formatMessage({ defaultMessage: 'Options for {item}' }, { item: itemMenuLabel })
+					}
+				}}
+			>
+				{itemMenuOpensForEdit ? (
+					<MenuItem
+						onClick={(e) => {
+							const index = itemMenu!.index;
+							closeItemMenu();
+							handleEditItem(e, index, true);
+						}}
+					>
+						<ListItemText>
+							<FormattedMessage defaultMessage="Edit" />
+						</ListItemText>
+					</MenuItem>
+				) : (
+					<MenuItem
+						onClick={(e) => {
+							const index = itemMenu!.index;
+							closeItemMenu();
+							if (itemMenuCanEdit) {
+								handleEditItem(e, index, false);
+							} else {
+								handleViewItem(e, index);
+							}
+						}}
+					>
+						<ListItemText>
+							<FormattedMessage defaultMessage="View" />
+						</ListItemText>
+					</MenuItem>
+				)}
+				{!readonly && (
+					<MenuItem
+						onClick={() => {
+							const index = itemMenu!.index;
+							closeItemMenu();
+							setMoveDialogIndex(index);
+						}}
+					>
+						<ListItemText>
+							<FormattedMessage defaultMessage="Move to field…" />
+						</ListItemText>
+					</MenuItem>
+				)}
+				{!readonly && [
+					<Divider key="remove-divider" />,
+					<MenuItem
+						key="remove-action"
+						onClick={() => {
+							const index = itemMenu!.index;
+							closeItemMenu();
+							handleRemoveItem(index);
+						}}
+						sx={{ color: 'error.main' }}
+					>
+						<ListItemText>
+							{itemMenuEntry?.component ? (
+								<FormattedMessage defaultMessage="Delete" />
+							) : (
+								<FormattedMessage defaultMessage="Unlink" />
+							)}
+						</ListItemText>
+					</MenuItem>
+				]}
+			</Menu>
+			<MoveToFieldDialog
+				open={moveDialogItem != null}
+				itemLabel={moveDialogItem ? getItemLabel(moveDialogItem) : ''}
+				targets={moveDialogTargets}
+				onClose={closeMoveDialog}
+				onAccept={handleMoveToField}
+			/>
 			<Dialog
 				open={pickerDialogOpen}
 				onClose={handleCloseDataSourcePickerDialog}
@@ -852,33 +1163,9 @@ function NodeSelector(props: NodeSelectorProps) {
 						<List dense ref={rootRef}>
 							{value.map((item, index) => {
 								const isEmbedded = Boolean(item.component);
-								const Icon = isEmbedded ? DeleteOutlined : LinkOffRoundedIcon;
-								const isComponent = isItemComponent(item);
-								const canBeEdited =
-									// Is a component and is embedded or is shared, and user can edit it (has edit action and is not locked)
-									(isComponent &&
-										(isEmbedded ||
-											(itemsByPath[item.include]?.availableActionsMap.edit &&
-												(itemsByPath[item.include]?.lockOwner == null ||
-													user.username === itemsByPath[item.include]?.lockOwner?.username)))) ||
-									// is an editable asset, and the user can edit it (has edit action and is not locked)
-									(!isComponent &&
-										isEditableAsset(item.key) &&
-										itemsByPath[item.include]?.availableActionsMap.edit &&
-										(itemsByPath[item.include]?.lockOwner == null ||
-											user.username === itemsByPath[item.include]?.lockOwner?.username));
+								const canBeEdited = canEditItem(item);
 								const itemLabel = getItemLabel(item);
-								// A component row opens its form read-only and the pencil edits it, so those are different
-								// actions. An asset row follows the form's mode, like the pencil. The View button (read-only
-								// field, or an item that cannot be edited) is the same action as the row, so it stays out of
-								// the tab order.
-								const opensForEdit = canBeEdited && !readonly;
-								const openLabel = opensForEdit
-									? formatMessage({ defaultMessage: 'Edit {item}' }, { item: itemLabel })
-									: formatMessage({ defaultMessage: 'View {item}' }, { item: itemLabel });
-								const removeLabel = isEmbedded
-									? formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemLabel })
-									: formatMessage({ defaultMessage: 'Unlink {item}' }, { item: itemLabel });
+								const optionsLabel = formatMessage({ defaultMessage: 'Options for {item}' }, { item: itemLabel });
 								return (
 									<Box
 										component="li"
@@ -896,8 +1183,9 @@ function NodeSelector(props: NodeSelectorProps) {
 											data-reorder-control="row"
 											sx={{ flex: 1, minWidth: 0 }}
 											onClick={(e) =>
-												// A component row opens its form read-only. An asset row follows the form's mode.
-												canBeEdited ? handleEditItem(e, index, !isComponent && !readonly) : handleViewItem(e, index)
+												// Row opens for edit when the item is editable and the field is not read-only;
+												// otherwise it opens read-only (View). Matches Repeat.
+												canBeEdited ? handleEditItem(e, index, !readonly) : handleViewItem(e, index)
 											}
 											onKeyDown={(e) => handleItemKeyDown(e, index, itemLabel, canBeEdited)}
 										>
@@ -935,6 +1223,7 @@ function NodeSelector(props: NodeSelectorProps) {
 															if (next == null) {
 																return;
 															}
+															dismissMoveSnackbar();
 															remember(next, 'up', itemLabel);
 															sortableListActionProcessor('up', false, value, index, setValue);
 														}}
@@ -951,6 +1240,7 @@ function NodeSelector(props: NodeSelectorProps) {
 															if (next == null) {
 																return;
 															}
+															dismissMoveSnackbar();
 															remember(next, 'down', itemLabel);
 															sortableListActionProcessor('down', false, value, index, setValue);
 														}}
@@ -959,33 +1249,18 @@ function NodeSelector(props: NodeSelectorProps) {
 													</ReorderMoveButton>
 												</>
 											)}
-											<Tooltip title={openLabel}>
-												<IconButton
-													size="small"
-													aria-label={openLabel}
-													tabIndex={opensForEdit ? undefined : -1}
-													onClick={(e) =>
-														opensForEdit
-															? handleEditItem(e, index, true)
-															: canBeEdited
-																? handleEditItem(e, index, false)
-																: handleViewItem(e, index)
-													}
-												>
-													{opensForEdit ? (
-														<EditOutlined fontSize="small" />
-													) : (
-														<VisibilityOutlinedIcon fontSize="small" />
-													)}
-												</IconButton>
-											</Tooltip>
-											{!readonly && (
-												<Tooltip title={removeLabel}>
-													<IconButton size="small" aria-label={removeLabel} onClick={(e) => handleRemoveItem(e, index)}>
-														<Icon fontSize="small" />
-													</IconButton>
-												</Tooltip>
-											)}
+											<IconButton
+												size="small"
+												aria-label={optionsLabel}
+												aria-haspopup="menu"
+												aria-expanded={itemMenu?.index === index}
+												onClick={(e) => {
+													e.stopPropagation();
+													setItemMenu({ anchor: e.currentTarget, index });
+												}}
+											>
+												<MoreVertRounded fontSize="small" />
+											</IconButton>
 										</Box>
 									</Box>
 								);

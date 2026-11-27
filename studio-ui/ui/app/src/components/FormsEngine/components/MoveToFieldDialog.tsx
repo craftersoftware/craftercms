@@ -1,0 +1,208 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+import Dialog from '@mui/material/Dialog';
+import { DialogHeader } from '../../DialogHeader';
+import { DialogBody } from '../../DialogBody';
+import { DialogFooter } from '../../DialogFooter';
+import SecondaryButton from '../../SecondaryButton';
+import PrimaryButton from '../../PrimaryButton';
+import { FormattedMessage, useIntl } from 'react-intl';
+import FormControl from '@mui/material/FormControl';
+import FormLabel from '@mui/material/FormLabel';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import { EmptyState } from '../../EmptyState';
+import { useId, useMemo, useState } from 'react';
+import InsertPositionPicker from '../../ContentTypeManagement/components/InsertPositionPicker';
+import type { NodeSelectorMoveTarget, NodeSelectorMoveTargetReason } from '../lib/nodeSelectorMoveTargets';
+import type { NodeSelectorItem } from '../controls/NodeSelector';
+
+export interface MoveToFieldDialogProps {
+	open: boolean;
+	itemLabel: string;
+	targets: NodeSelectorMoveTarget[];
+	onClose(): void;
+	/** Called when the user accepts a destination and insert position. */
+	onAccept?(target: NodeSelectorMoveTarget, targetIndex: number): void;
+}
+
+export type MoveToFieldDialogBodyProps = Omit<MoveToFieldDialogProps, 'open' | 'itemLabel'>;
+
+function targetKey(target: NodeSelectorMoveTarget): string {
+	return `${target.modelId}::${target.fieldId}`;
+}
+
+function reasonMessage(reason: NodeSelectorMoveTargetReason) {
+	switch (reason) {
+		case 'maxCount':
+			return <FormattedMessage defaultMessage="Field is full" />;
+		case 'duplicate':
+			return <FormattedMessage defaultMessage="Item is already in this field" />;
+		case 'readonly':
+			return <FormattedMessage defaultMessage="Field is read-only" />;
+	}
+}
+
+function itemPickerLabel(item: NodeSelectorItem): string {
+	return item.value || item.include || String(item.key);
+}
+
+export function MoveToFieldDialogBody(props: MoveToFieldDialogBodyProps) {
+	const { targets, onClose, onAccept } = props;
+	const { formatMessage } = useIntl();
+	const destinationLabelId = useId();
+	const enabledTargets = useMemo(() => targets.filter((target) => !target.disabled), [targets]);
+	const [selectedKey, setSelectedKey] = useState(() => (enabledTargets[0] ? targetKey(enabledTargets[0]) : ''));
+	const selectedTarget = targets.find((target) => targetKey(target) === selectedKey && !target.disabled) ?? null;
+	// Insert last by default, for the first destination and whenever the destination changes.
+	const [position, setPosition] = useState(() => enabledTargets[0]?.items.length ?? 0);
+
+	const positionItems = useMemo(
+		() =>
+			(selectedTarget?.items ?? []).map((item) => ({
+				id: String(item.key),
+				label: itemPickerLabel(item)
+			})),
+		[selectedTarget]
+	);
+
+	const handleAccept = () => {
+		if (!selectedTarget) return;
+		onAccept?.(selectedTarget, position);
+		onClose();
+	};
+
+	return (
+		<>
+			<DialogBody>
+				{targets.length === 0 ? (
+					<EmptyState
+						title={<FormattedMessage defaultMessage="No compatible fields" />}
+						subtitle={<FormattedMessage defaultMessage="There are no other fields that can accept this item." />}
+					/>
+				) : (
+					<Box
+						sx={{
+							display: 'flex',
+							flexDirection: { xs: 'column', md: 'row' },
+							gap: 2,
+							alignItems: 'stretch',
+							minHeight: { xs: 'auto', md: '40vh' },
+							minWidth: 0
+						}}
+					>
+						<Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+							<FormControl sx={{ width: '100%' }}>
+								<FormLabel id={destinationLabelId}>
+									<FormattedMessage defaultMessage="Destination field" />
+								</FormLabel>
+								<List
+									disablePadding
+									aria-labelledby={destinationLabelId}
+									sx={{ mt: 0.5, maxHeight: 280, overflow: 'auto' }}
+								>
+									{targets.map((target) => {
+										const key = targetKey(target);
+										return (
+											<ListItemButton
+												key={key}
+												disabled={target.disabled}
+												selected={selectedKey === key}
+												aria-pressed={selectedKey === key}
+												onClick={() => {
+													if (key === selectedKey) return;
+													setSelectedKey(key);
+													setPosition(target.items.length);
+												}}
+												sx={{ '&.Mui-selected': { backgroundImage: 'none' } }}
+											>
+												<ListItemText
+													primary={target.labelPath}
+													secondary={target.reason ? reasonMessage(target.reason) : undefined}
+												/>
+											</ListItemButton>
+										);
+									})}
+								</List>
+							</FormControl>
+						</Box>
+						<Box
+							sx={{
+								width: { xs: '100%', md: 300 },
+								flexShrink: { xs: 1, md: 0 },
+								minWidth: 0,
+								overflow: 'hidden',
+								borderLeftWidth: { xs: 0, md: 1 },
+								borderTopWidth: { xs: 1, md: 0 },
+								borderTopStyle: 'solid',
+								borderLeftStyle: 'solid',
+								borderColor: 'divider',
+								pl: { xs: 0, md: 2 },
+								pt: { xs: 2, md: 0 },
+								display: 'flex',
+								flexDirection: 'column',
+								gap: 1
+							}}
+						>
+							{!selectedTarget && (
+								<Typography variant="body2" color="text.secondary">
+									<FormattedMessage defaultMessage="Select a destination field to choose the insert position." />
+								</Typography>
+							)}
+							<InsertPositionPicker
+								items={positionItems}
+								value={position}
+								onChange={setPosition}
+								disabled={!selectedTarget}
+								emptyMode="firstOnly"
+								afterSelectLabel={formatMessage({ defaultMessage: 'Item to insert after' })}
+							/>
+						</Box>
+					</Box>
+				)}
+			</DialogBody>
+			<DialogFooter>
+				<SecondaryButton onClick={onClose}>
+					<FormattedMessage defaultMessage="Cancel" />
+				</SecondaryButton>
+				<PrimaryButton onClick={handleAccept} disabled={!selectedTarget}>
+					<FormattedMessage defaultMessage="Move" />
+				</PrimaryButton>
+			</DialogFooter>
+		</>
+	);
+}
+
+export function MoveToFieldDialog(props: MoveToFieldDialogProps) {
+	const { open, onClose, itemLabel, ...bodyProps } = props;
+	const titleId = useId();
+	return (
+		<Dialog open={open} onClose={onClose} fullWidth maxWidth="md" aria-labelledby={titleId}>
+			<DialogHeader
+				titleId={titleId}
+				title={<FormattedMessage defaultMessage="Move {item} to field" values={{ item: itemLabel }} />}
+				onCloseButtonClick={onClose}
+			/>
+			{open && <MoveToFieldDialogBody {...bodyProps} onClose={onClose} />}
+		</Dialog>
+	);
+}
+
+export default MoveToFieldDialog;

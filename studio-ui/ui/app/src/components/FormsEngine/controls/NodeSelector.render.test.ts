@@ -37,15 +37,22 @@ const {
 	createItemsStore,
 	fieldFor,
 	formPath,
+	mount,
 	mountTree,
 	profiled,
 	pushFormCalls,
+	siteId,
 	sourcePath,
 	unmountAll,
 	unrelatedPath,
 	updateItems
 } = await import('../lib/formItemTestHarness');
 const { default: NodeSelector } = await import('./NodeSelector');
+const { Provider: JotaiProvider, createStore: createJotaiStore, atom, useAtom } = await import('jotai');
+const { configureStore } = await import('@reduxjs/toolkit');
+const { StableGlobalContext, useStableGlobalContext } = await import('../lib/formsEngineContext');
+const { nodeSelectorFocusRequestAtom } = await import('../lib/nodeSelectorFocusRequest');
+const { SnackbarProvider, useSnackbar } = await import('notistack');
 
 afterEach(unmountAll);
 
@@ -170,6 +177,17 @@ describe('NodeSelector keyboard reorder', () => {
 		assert.equal(document.activeElement, rowLabelled(host, 'Alpha'));
 	});
 
+	async function unlinkViaMenu(host: HTMLElement, itemLabel: string) {
+		const options = host.querySelector<HTMLButtonElement>(`button[aria-label="Options for ${itemLabel}"]`);
+		assert.ok(options, `expected Options for ${itemLabel}`);
+		await act(async () => options.click());
+		const unlink = Array.from(document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+			(item) => item.textContent === 'Unlink'
+		);
+		assert.ok(unlink, 'expected Unlink in the item menu');
+		await act(async () => unlink.click());
+	}
+
 	it('ignores a modifier arrow and focuses the next row after a remove', async () => {
 		const { host, items } = await mountSelector([
 			[alpha, 'Alpha'],
@@ -184,9 +202,7 @@ describe('NodeSelector keyboard reorder', () => {
 			['Alpha', 'Beta', 'Gamma']
 		);
 		assert.equal(liveMessage(host), '');
-		const unlink = host.querySelector<HTMLButtonElement>('button[aria-label="Unlink Alpha"]');
-		assert.ok(unlink);
-		await act(async () => unlink.click());
+		await unlinkViaMenu(host, 'Alpha');
 		assert.deepEqual(
 			items().map((item) => item.value),
 			['Beta', 'Gamma']
@@ -195,12 +211,26 @@ describe('NodeSelector keyboard reorder', () => {
 		assert.equal(liveMessage(host), '');
 	});
 
+	it('focuses the previous row when the last row is removed through the menu', async () => {
+		const { host, items } = await mountSelector([
+			[alpha, 'Alpha'],
+			[beta, 'Beta'],
+			[gamma, 'Gamma']
+		]);
+		const betaRow = rowLabelled(host, 'Beta');
+		await unlinkViaMenu(host, 'Gamma');
+		assert.deepEqual(
+			items().map((item) => item.value),
+			['Alpha', 'Beta']
+		);
+		assert.equal(document.activeElement, betaRow);
+	});
+
 	it('focuses the field body after the last row is removed, because Add cannot take focus', async () => {
 		const { host } = await mountSelector([[alpha, 'Alpha']]);
 		const add = host.querySelector('[data-testid="AddRoundedIcon"]')?.closest('button') as HTMLButtonElement;
 		assert.equal(add.disabled, true);
-		const unlink = host.querySelector<HTMLButtonElement>('button[aria-label="Unlink Alpha"]');
-		await act(async () => unlink.click());
+		await unlinkViaMenu(host, 'Alpha');
 		assert.equal(rowsOf(host).length, 0);
 		assert.notEqual(document.activeElement, add);
 		assert.equal(document.activeElement?.getAttribute('tabindex'), '-1');
@@ -253,14 +283,14 @@ describe('NodeSelector E and V shortcuts', () => {
 		assert.equal(formDialogs().length, 2);
 	});
 
-	it('agrees with the row click: a component row opens read-only, E edits and V views', async () => {
+	it('agrees with the row click: a component row edits when allowed, E edits and V views', async () => {
 		const { host } = await mountMixed();
 		await act(async () => rowLabelled(host, 'Alpha').click());
 		await act(async () => press(rowLabelled(host, 'Alpha'), 'e'));
 		await act(async () => press(rowLabelled(host, 'Alpha'), 'v'));
 		assert.deepEqual(
 			pushFormCalls.map((call) => call.readonly),
-			[true, false, true]
+			[false, false, true]
 		);
 	});
 
@@ -273,6 +303,48 @@ describe('NodeSelector E and V shortcuts', () => {
 			[false, true]
 		);
 		assert.equal(formDialogs().length, 0, 'an editable item does not take the view dialog path');
+	});
+});
+
+describe('NodeSelector Move to field entry', () => {
+	it('offers Move to field… from the per-item More menu (keyboard-reachable menu item)', async () => {
+		const store = createItemsStore({
+			...baseItems(),
+			[sourcePath]: {
+				...included,
+				availableActionsMap: { edit: true }
+			}
+		});
+		const entry = createEntry(['nodes_o']);
+		const host = await mountTree(
+			store,
+			React.createElement(
+				FormHost,
+				{ entry },
+				React.createElement(NodeSelector as never, {
+					field: fieldFor('nodes_o', 'node-selector'),
+					value: [{ key: sourcePath, value: 'Source', include: sourcePath }],
+					setValue: () => undefined,
+					readonly: false,
+					autoFocus: false,
+					contentType: { id: '/component/thing', fields: {} }
+				})
+			)
+		);
+		const more = host.querySelector<HTMLButtonElement>('button[aria-label="Options for Source"]');
+		assert.ok(more);
+		assert.equal(more.getAttribute('aria-haspopup'), 'menu');
+		await act(async () => {
+			more.click();
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+		});
+		const menuTexts = Array.from(document.body.querySelectorAll('[role="menuitem"]')).map((item) => item.textContent);
+		assert.ok(
+			menuTexts.some((text) => (text ?? '').includes('Move to field')),
+			`Item More menu lists Move to field…; got: ${JSON.stringify(menuTexts)}`
+		);
 	});
 });
 
@@ -355,10 +427,10 @@ describe('NodeSelector saved component label', () => {
 				})
 			)
 		);
-		const edit = host.querySelector<HTMLButtonElement>('button[aria-label="Edit Hero"]');
-		assert.ok(edit);
+		const row = rowLabelled(host, 'Hero');
+		assert.ok(row);
 		await act(async () => {
-			edit.click();
+			row.click();
 		});
 		const opened = pushFormCalls.at(-1) as {
 			onSave?: (result: { values: Record<string, unknown> }) => Promise<unknown>;
@@ -368,5 +440,360 @@ describe('NodeSelector saved component label', () => {
 		assert.equal(next?.[0].value, '');
 		await opened.onSave({ values: { objectId: 'hero', 'file-name': 'hero.xml', 'internal-name': 'Hero title' } });
 		assert.equal(next?.[0].value, 'Hero title');
+	});
+
+	it('preserves items moved into this field while an embedded child form is open, even when shifted', async () => {
+		const store = createItemsStore({
+			...baseItems(),
+			[formPath]: { ...baseItems()[formPath], stateMap: {} }
+		});
+		const jotaiStore = createJotaiStore();
+		const entry = createEntry(['nodes_o']);
+		const child = { key: 'child-1', value: 'Child', component: { objectId: 'child-1', 'file-name': 'child-1.xml' } };
+		const moved = { key: 'feat-1', value: 'Feature', component: { objectId: 'feat-1', 'file-name': 'feat-1.xml' } };
+		jotaiStore.set(entry.atoms.valueByFieldId.nodes_o as never, [child] as never);
+		let next: Array<{ key: string; value?: string }> | undefined;
+		const host = await mountTree(
+			store,
+			React.createElement(
+				JotaiProvider,
+				{ store: jotaiStore },
+				React.createElement(
+					FormHost,
+					{ entry },
+					React.createElement(NodeSelector as never, {
+						field: fieldFor('nodes_o', 'node-selector'),
+						value: [child],
+						setValue: (value: Array<{ key: string; value?: string }>) => {
+							next = value;
+						},
+						readonly: false,
+						autoFocus: false,
+						contentType: { id: '/component/thing', fields: {} }
+					})
+				)
+			)
+		);
+		await act(async () => {
+			rowLabelled(host, 'Child').click();
+		});
+		// Simulate moving `moved` to index 0 of this same field while `child` is open, shifting `child` to index 1.
+		jotaiStore.set(entry.atoms.valueByFieldId.nodes_o as never, [moved, child] as never);
+
+		const opened = pushFormCalls.at(-1) as {
+			onSave?: (result: { values: Record<string, unknown> }) => Promise<unknown>;
+		};
+		assert.ok(opened?.onSave);
+		await opened.onSave({
+			values: { objectId: 'child-1', 'file-name': 'child-1.xml', 'internal-name': 'Child Updated' }
+		});
+		assert.deepEqual(
+			next?.map((item) => ({ key: item.key, value: item.value })),
+			[
+				{ key: 'feat-1', value: 'Feature' },
+				{ key: 'child-1', value: 'Child Updated' }
+			]
+		);
+	});
+});
+
+describe('NodeSelector focus request', () => {
+	async function mountWithRequest() {
+		const store = createItemsStore({
+			...baseItems(),
+			[alpha]: selectorItem(alpha, 'Alpha'),
+			[beta]: selectorItem(beta, 'Beta')
+		});
+		const jotaiStore = createJotaiStore();
+		const entry = createEntry(['nodes_o']);
+		let setItems: (items: Array<ReturnType<typeof node>>) => void = () => undefined;
+		function Selector() {
+			const [value, setValue] = React.useState([node(alpha, 'Alpha')]);
+			setItems = setValue;
+			return React.createElement(NodeSelector as never, {
+				field: fieldFor('nodes_o', 'node-selector'),
+				value,
+				setValue,
+				readonly: false,
+				autoFocus: false,
+				contentType: { id: '/component/thing', fields: {} }
+			});
+		}
+		const host = await mountTree(
+			store,
+			React.createElement(
+				JotaiProvider,
+				{ store: jotaiStore },
+				React.createElement(FormHost, { entry }, React.createElement(Selector))
+			)
+		);
+		const addBeta = () => act(async () => setItems([node(alpha, 'Alpha'), node(beta, 'Beta')]));
+		return { host, jotaiStore, addBeta, modelId: entry.itemMeta.id };
+	}
+
+	it('focuses the requested row once the moved item shows up in this field, then clears the request', async () => {
+		const { host, jotaiStore, addBeta, modelId } = await mountWithRequest();
+		jotaiStore.set(nodeSelectorFocusRequestAtom, { modelId, fieldId: 'nodes_o', index: 1, key: beta, at: Date.now() });
+		await addBeta();
+		// Focus is applied on a timer after the commit, so let it run.
+		await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+		assert.equal(document.activeElement, rowLabelled(host, 'Beta'));
+		assert.equal(jotaiStore.get(nodeSelectorFocusRequestAtom), null);
+	});
+
+	it('leaves a request for another field untouched', async () => {
+		const { host, jotaiStore, addBeta, modelId } = await mountWithRequest();
+		const request = { modelId, fieldId: 'other_o', index: 1, key: beta, at: Date.now() };
+		jotaiStore.set(nodeSelectorFocusRequestAtom, request);
+		await addBeta();
+		assert.notEqual(document.activeElement, rowLabelled(host, 'Beta'));
+		assert.deepEqual(jotaiStore.get(nodeSelectorFocusRequestAtom), request);
+	});
+});
+
+describe('NodeSelector focus after Move to field when the destination is not on screen', () => {
+	const heroType = '/component/hero';
+	const nsField = (id: string, name: string) => ({
+		id,
+		name,
+		type: 'node-selector',
+		sortable: false,
+		validations: {
+			allowedContentTypes: {
+				id: 'allowedContentTypes',
+				level: 'required',
+				value: { [heroType]: { embedded: true, shared: true } }
+			}
+		}
+	});
+	const pageType = { id: '/page/home', name: 'Home', type: 'page', fields: { nodes_o: nsField('nodes_o', 'Nodes') } };
+	const heroContentType = {
+		id: heroType,
+		name: 'Hero',
+		type: 'component',
+		fields: { children_o: nsField('children_o', 'Children') }
+	};
+	const hero = (key: string, label: string, children: unknown[] = []) => ({
+		key,
+		value: label,
+		component: { 'content-type': heroType, objectId: key, 'internal-name': label, children_o: children }
+	});
+
+	/** A form on the stack: its model, its content type, and the one node-selector field it holds. */
+	function formEntry(id: string, contentType: unknown, fieldId: string, items: unknown[], props: unknown = null) {
+		const entry = createEntry([fieldId]);
+		entry.atoms.valueByFieldId[fieldId] = atom(items) as never;
+		entry.itemMeta = { ...entry.itemMeta, id, contentType } as never;
+		entry.props = props as never;
+		return entry;
+	}
+
+	/** Same shape as the harness store, with the content types Move to field needs to list destinations. */
+	function createStoreWithTypes() {
+		const items = baseItems();
+		return configureStore({
+			reducer: {
+				sites: (state = { active: siteId }) => state,
+				uiConfig: (state = { locale: { localeCode: 'en-US' } }) => state,
+				env: (state = { authoringBase: '/studio' }) => state,
+				user: (state = { username: 'ann' }) => state,
+				content: (
+					state: { itemsByPath: typeof items; itemsBeingFetchedByPath: Record<string, boolean> } = {
+						itemsByPath: items,
+						itemsBeingFetchedByPath: {}
+					}
+				) => state,
+				contentTypes: (state = { byId: { [pageType.id]: pageType, [heroType]: heroContentType }, isFetching: false }) =>
+					state
+			},
+			middleware: (getDefault) => getDefault({ serializableCheck: false, immutableCheck: false })
+		});
+	}
+
+	/** Overrides FormHost's empty stack with the stack this move needs. */
+	function WithFormsStack(props: { stack: Array<ReturnType<typeof createEntry>>; children: React.ReactNode }) {
+		const global = useStableGlobalContext();
+		const value = React.useMemo(() => ({ ...global, formsStackData: props.stack }), [global, props.stack]);
+		return React.createElement(StableGlobalContext.Provider, { value: value as never }, props.children);
+	}
+
+	/** Mounts the selector of `entry`'s `fieldId`, bound to that field's atom the way the form binds it. */
+	async function mountField(entry: ReturnType<typeof createEntry>, stack: Array<typeof entry>, fieldId: string) {
+		const store = createStoreWithTypes();
+		const jotaiStore = createJotaiStore();
+		const valueAtom = entry.atoms.valueByFieldId[fieldId];
+		function Selector() {
+			const [value, setValue] = useAtom(valueAtom as never) as [never[], (next: never) => void];
+			return React.createElement(NodeSelector as never, {
+				field: fieldFor(fieldId, 'node-selector'),
+				value,
+				setValue,
+				readonly: false,
+				autoFocus: false,
+				contentType: { id: '/component/thing', fields: {} }
+			});
+		}
+		const host = await mountTree(
+			store as never,
+			React.createElement(
+				JotaiProvider,
+				{ store: jotaiStore },
+				React.createElement(
+					FormHost,
+					{ entry },
+					React.createElement(WithFormsStack, { stack }, React.createElement(Selector))
+				)
+			)
+		);
+		return { host, jotaiStore };
+	}
+
+	/** Item menu, Move to field…, pick `destination` (the first enabled one by default), Move, then let the dialog close. */
+	async function moveViaDialog(host: HTMLElement, itemLabel: string, destination?: string) {
+		const options = host.querySelector<HTMLButtonElement>(`button[aria-label="Options for ${itemLabel}"]`);
+		assert.ok(options, `expected Options for ${itemLabel}`);
+		await act(async () => options.click());
+		const menuItem = Array.from(document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')).find((item) =>
+			item.textContent?.includes('Move to field')
+		);
+		assert.ok(menuItem, 'expected Move to field… in the item menu');
+		await act(async () => menuItem.click());
+		const dialog = document.body.querySelector('[role="dialog"]');
+		assert.ok(dialog, 'expected the Move to field dialog');
+		if (destination) {
+			const choice = Array.from(dialog.querySelectorAll<HTMLElement>('.MuiListItemButton-root')).find(
+				(button) => button.textContent === destination
+			);
+			assert.ok(choice, `expected the destination ${destination}`);
+			await act(async () => choice.click());
+		}
+		const move = Array.from(dialog.querySelectorAll<HTMLButtonElement>('button')).find(
+			(button) => button.textContent === 'Move'
+		);
+		assert.ok(move);
+		await act(async () => move.click());
+		// The dialog's exit transition and the focus timer both have to run before focus can settle.
+		await act(async () => new Promise((resolve) => setTimeout(resolve, 600)));
+	}
+
+	const keysOf = (
+		jotaiStore: ReturnType<typeof createJotaiStore>,
+		entry: ReturnType<typeof createEntry>,
+		field: string
+	) => (jotaiStore.get(entry.atoms.valueByFieldId[field] as never) as Array<{ key: string }>).map((item) => item.key);
+
+	it('focuses the item that now holds the moved item when the destination is one of its fields', async () => {
+		const page = formEntry('page-1', pageType, 'nodes_o', [hero('hero-1', 'Hero One'), hero('hero-2', 'Hero Two')]);
+		const { host, jotaiStore } = await mountField(page, [page], 'nodes_o');
+
+		await moveViaDialog(host, 'Hero Two');
+
+		assert.deepEqual(keysOf(jotaiStore, page, 'nodes_o'), ['hero-1']);
+		assert.equal(rowLabelled(host, 'Hero Two'), undefined);
+		assert.equal(document.activeElement, rowLabelled(host, 'Hero One'));
+	});
+
+	it('focuses the row that took the moved item’s place when the destination is in the parent form', async () => {
+		const [a, b, c] = [hero('hero-a', 'Hero A'), hero('hero-b', 'Hero B'), hero('hero-c', 'Hero C')];
+		const page = formEntry('page-1', pageType, 'nodes_o', [hero('hero-1', 'Hero One', [a, b, c])]);
+		const embedded = formEntry('hero-1', heroContentType, 'children_o', [a, b, c], { update: { modelId: 'hero-1' } });
+		const { host, jotaiStore } = await mountField(embedded, [page, embedded], 'children_o');
+
+		await moveViaDialog(host, 'Hero B', 'Nodes');
+
+		assert.deepEqual(keysOf(jotaiStore, embedded, 'children_o'), ['hero-a', 'hero-c']);
+		assert.ok(keysOf(jotaiStore, page, 'nodes_o').includes('hero-b'));
+		assert.equal(document.activeElement, rowLabelled(host, 'Hero C'));
+	});
+
+	/** Records `closeSnackbar`. The snackbar itself is not rendered in this tree. */
+	function CloseProbe(props: { closes: unknown[]; children: React.ReactNode }) {
+		const api = useSnackbar();
+		const real = api.closeSnackbar as typeof api.closeSnackbar & { probed?: boolean };
+		if (!real.probed) {
+			const wrapped = ((key?: unknown) => {
+				props.closes.push(key);
+				return real(key as never);
+			}) as typeof real;
+			wrapped.probed = true;
+			api.closeSnackbar = wrapped;
+		}
+		return props.children;
+	}
+
+	it('keeps Undo when another field unmounts and closes it when the source field unmounts', async () => {
+		const page = formEntry('page-1', pageType, 'nodes_o', [hero('hero-1', 'Hero One'), hero('hero-2', 'Hero Two')]);
+		page.atoms.valueByFieldId.other_o = atom([]) as never;
+		page.atoms.validationByFieldId.other_o = atom({ isValid: true }) as never;
+		const store = createStoreWithTypes();
+		const jotaiStore = createJotaiStore();
+		const closes: unknown[] = [];
+		const stack = [page];
+
+		function Selector(props: { fieldId: string }) {
+			const valueAtom = page.atoms.valueByFieldId[props.fieldId];
+			const [value, setValue] = useAtom(valueAtom as never) as [never[], (next: never) => void];
+			return React.createElement(NodeSelector as never, {
+				field: fieldFor(props.fieldId, 'node-selector'),
+				value,
+				setValue,
+				readonly: false,
+				autoFocus: false,
+				contentType: { id: '/component/thing', fields: {} }
+			});
+		}
+
+		function Fields(props: { source: boolean; other: boolean }) {
+			return React.createElement(
+				React.Fragment,
+				null,
+				props.source ? React.createElement(Selector, { fieldId: 'nodes_o' }) : null,
+				props.other ? React.createElement(Selector, { fieldId: 'other_o' }) : null
+			);
+		}
+
+		function Tree(props: { source: boolean; other: boolean }) {
+			return React.createElement(
+				SnackbarProvider,
+				null,
+				React.createElement(
+					CloseProbe,
+					{ closes },
+					React.createElement(
+						JotaiProvider,
+						{ store: jotaiStore },
+						React.createElement(
+							FormHost,
+							{ entry: page },
+							React.createElement(WithFormsStack, { stack }, React.createElement(Fields, props))
+						)
+					)
+				)
+			);
+		}
+
+		const { host, rerender } = await mount(store as never, React.createElement(Tree, { source: true, other: true }));
+		await moveViaDialog(host, 'Hero Two');
+		const afterMove = closes.length;
+
+		await rerender(React.createElement(Tree, { source: true, other: false }));
+		assert.equal(closes.length, afterMove);
+
+		await rerender(React.createElement(Tree, { source: false, other: false }));
+		assert.equal(closes.length, afterMove + 1);
+	});
+
+	it('focuses the field body when the move empties the field', async () => {
+		const only = hero('hero-a', 'Hero A');
+		const page = formEntry('page-1', pageType, 'nodes_o', [hero('hero-1', 'Hero One', [only])]);
+		const embedded = formEntry('hero-1', heroContentType, 'children_o', [only], { update: { modelId: 'hero-1' } });
+		const { host } = await mountField(embedded, [page, embedded], 'children_o');
+
+		await moveViaDialog(host, 'Hero A', 'Nodes');
+
+		assert.equal(rowsOf(host).length, 0);
+		assert.notEqual(document.activeElement, document.body);
+		assert.equal(document.activeElement?.getAttribute('tabindex'), '-1');
+		assert.match(document.activeElement?.textContent ?? '', /No options are available for this control/);
 	});
 });
