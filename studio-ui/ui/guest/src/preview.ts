@@ -38,6 +38,6 @@ setTimeout(() => {
 	});
 }, 700);
 
-window.onbeforeunload = () => {
+window.addEventListener('pagehide', () => {
 	post(guestCheckOut.type);
-};
+});

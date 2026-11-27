@@ -246,8 +246,8 @@ export function initTinyMCE(
 
 			// Meant to avoid a hard refresh causing the item to stay locked. As more XB controls come to life,
 			// this may not be the best place to handle this.
-			const beforeUnloadFn = (event: BeforeUnloadEvent) => post(unlockItem({ path }));
-			window.addEventListener('beforeunload', beforeUnloadFn, { capture: true, passive: true });
+			const pageHideFn = () => post(unlockItem({ path }));
+			window.addEventListener('pagehide', pageHideFn, { capture: true, passive: true });
 
 			function save() {
 				const content = getContent();
@@ -286,7 +286,7 @@ export function initTinyMCE(
 					record.element.classList.add(emptyFieldClass);
 				}
 
-				window.removeEventListener('beforeunload', beforeUnloadFn, { capture: true });
+				window.removeEventListener('pagehide', pageHideFn, { capture: true });
 
 				// The timeout prevents clicking the edit menu to be shown when clicking out of an RTE
 				// with the intention to exit editing.

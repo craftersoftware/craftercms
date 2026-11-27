@@ -238,7 +238,7 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 			worker.port.start();
 			worker.port.postMessage(sharedWorkerConnect());
 			const unload = () => worker.port.postMessage(sharedWorkerDisconnect());
-			window.addEventListener('beforeunload', unload);
+			window.addEventListener('pagehide', unload);
 			const subscription = fromEvent<MessageEvent>(worker.port, 'message').subscribe((event) => {
 				if (event.data?.type) {
 					const { type, payload } = event.data;
@@ -261,7 +261,7 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 			return () => {
 				unload();
 				subscription.unsubscribe();
-				window.removeEventListener('beforeunload', unload);
+				window.removeEventListener('pagehide', unload);
 				worker.port.close();
 			};
 		}
@@ -474,15 +474,17 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 		}
 	}, [hasHost]);
 
-	// Check out (dismount, beforeunload)
+	// Check out (dismount, pagehide)
 	useEffect(() => {
 		// Notice this is not executed when the iFrame url is changed abruptly.
 		// This only triggers when navigation occurs from within the guest page.
+		// Use pagehide (not beforeunload) so non-navigating schemes like mailto:/tel:
+		// — which fire beforeunload without unloading the document — leave the connection up.
 		const handler = () => post(guestCheckOut({ path }));
-		window.addEventListener('beforeunload', handler, false);
+		window.addEventListener('pagehide', handler, false);
 		return () => {
 			post(guestCheckOut({ path }));
-			window.removeEventListener('beforeunload', handler);
+			window.removeEventListener('pagehide', handler);
 		};
 	}, [path]);
 

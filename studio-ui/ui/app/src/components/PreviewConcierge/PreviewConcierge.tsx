@@ -1652,8 +1652,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		if (priorState.current.site !== siteId) {
 			priorState.current.site = siteId;
 			if (guest) {
-				// Changing the site will force-reload the iFrame and 'beforeunload'
-				// event won't trigger withing; guest won't be submitting it's own checkout
+				// Changing the site will force-reload the iFrame and the 'pagehide'
+				// event won't trigger within; guest won't be submitting its own checkout
 				// in such cases. Clear uploads here since guestCheckOut is dispatched to
 				// Redux directly (not via the guest bus), so the bus handler won't run.
 				upToDateRefs.current.cancelActiveRteDataSourcePicker();
