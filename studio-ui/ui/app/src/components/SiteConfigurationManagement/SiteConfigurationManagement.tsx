@@ -102,6 +102,19 @@ interface SiteConfigurationManagementProps {
 	selectedConfigFileId?: string;
 }
 
+// Ace reserves the scrollbar space only while its vertical scrollbar is visible.
+function trackScrollbarWidth(editor: AceAjax.Editor, onChange: (width: number) => void) {
+	// `scrollBarV` is public in Ace but missing from the typings.
+	const renderer = editor.renderer as unknown as {
+		scrollBarV: { isVisible: boolean; getWidth(): number };
+		on(eventName: string, callback: () => void): void;
+	};
+	const update = () => onChange(renderer.scrollBarV.isVisible ? renderer.scrollBarV.getWidth() : 0);
+	renderer.on('scrollbarVisibilityChanged', update);
+	renderer.on('resize', update);
+	update();
+}
+
 export function SiteConfigurationManagement(props: SiteConfigurationManagementProps) {
 	const { embedded, showAppsButton, onSubmittingAndOrPendingChange, isSubmitting, selectedConfigFileId } = props;
 	const site = useActiveSiteId();
@@ -163,6 +176,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const [contentSize, setContentSize] = useState(0);
 	// Width of the Ace editor's vertical scrollbar (0 when hidden or when the OS uses overlay scrollbars).
 	const [editorScrollbarWidth, setEditorScrollbarWidth] = useState(0);
+	const [sampleEditorScrollbarWidth, setSampleEditorScrollbarWidth] = useState(0);
 
 	useMount(() => {
 		if (changesRecoveredOnMount) {
@@ -239,24 +253,20 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		if (site && environment !== UNDEFINED) {
 			fetchSiteConfigurationFiles(site, environment).subscribe({
 				next(files) {
-					setFiles(files.map((file) => ({ ...file, id: `${file.module}/${file.path}` })));
+					const configFiles = files.map((file) => ({ ...file, id: `${file.module}/${file.path}` }));
+					setFiles(configFiles);
+					if (selectedConfigFileId) {
+						setSelectedConfigFile(
+							(current) => current ?? configFiles.find((f) => f.id === selectedConfigFileId) ?? null
+						);
+					}
 				},
 				error({ response }) {
 					dispatch(pushErrorDialog({ props: { error: response.response } }));
 				}
 			});
 		}
-	}, [environment, site, dispatch]);
-
-	useEffect(() => {
-		if (!selectedConfigFileId || !files?.length || selectedConfigFile) {
-			return;
-		}
-		const file = files.find((f) => f.id === selectedConfigFileId);
-		if (file) {
-			setSelectedConfigFile(file);
-		}
-	}, [files, selectedConfigFileId, selectedConfigFile]);
+	}, [environment, site, dispatch, selectedConfigFileId]);
 
 	useEffect(() => {
 		if (selectedConfigFile && environment) {
@@ -645,6 +655,13 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		}
 	};
 
+	// Shared by the cancel button, Escape and backdrop click. Dismissal is ignored while enabling staging.
+	const onDismissEnableStagingConfirm = () => {
+		if (!enableStagingConfirm.submitting) {
+			setEnableStagingConfirm({ open: false, checked: false, submitting: false });
+		}
+	};
+
 	const onConfirmEnableStaging = () => {
 		setEnableStagingConfirm((state) => ({ ...state, submitting: true }));
 		dispatch(
@@ -678,14 +695,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 			exec: () => onSave(),
 			readOnly: false
 		});
-		// Ace reserves the scrollbar space only while its vertical scrollbar is shown ($vScroll).
-		const renderer = editor.renderer as any;
-		const updateEditorScrollbarWidth = () =>
-			setEditorScrollbarWidth(renderer.$vScroll ? renderer.scrollBarV.getWidth() : 0);
-		renderer.on('scrollbarVisibilityChanged', updateEditorScrollbarWidth);
-		renderer.on('resize', updateEditorScrollbarWidth);
-		updateEditorScrollbarWidth();
+		trackScrollbarWidth(editor, setEditorScrollbarWidth);
 	};
+
+	const onSampleAceInit = (editor: AceAjax.Editor) => trackScrollbarWidth(editor, setSampleEditorScrollbarWidth);
 
 	return (
 		<Box
@@ -926,7 +939,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 												sx={{
 													position: 'absolute',
 													top: '100%',
-													right: `${editorScrollbarWidth}px`,
+													right: `${showSampleEditor ? sampleEditorScrollbarWidth : editorScrollbarWidth}px`,
 													zIndex: 2,
 													display: 'flex',
 													alignItems: 'center',
@@ -1039,6 +1052,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 												autoFocus={false}
 												readOnly={true}
 												value={selectedSampleConfigFileXml}
+												onInit={onSampleAceInit}
 											/>
 										) : (
 											<></>
@@ -1147,11 +1161,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 				disableOkButton={!enableStagingConfirm.checked || enableStagingConfirm.submitting}
 				disableCancelButton={enableStagingConfirm.submitting}
 				onOk={onConfirmEnableStaging}
-				onCancel={() => {
-					if (!enableStagingConfirm.submitting) {
-						setEnableStagingConfirm({ open: false, checked: false, submitting: false });
-					}
-				}}
+				onCancel={onDismissEnableStagingConfirm}
+				onClose={onDismissEnableStagingConfirm}
 			/>
 			<ConfirmDialog
 				open={stagingInfoDialogOpen}
