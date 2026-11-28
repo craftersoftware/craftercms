@@ -22,7 +22,14 @@
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/tx https://www.springframework.org/schema/tx/spring-tx.xsd">
 
-	<bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource" depends-on="studioConfiguration" destroy-method="close">
+	<!-- Refuses to start against an external database unless studio.db.allowExternal is true -->
+	<bean id="embeddedDatabaseGuard" class="org.craftercms.studio.impl.v2.dal.EmbeddedDatabaseGuard"
+	      init-method="check" depends-on="studioConfiguration">
+		<constructor-arg ref="studioConfiguration"/>
+	</bean>
+
+	<bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource"
+	      depends-on="studioConfiguration,embeddedDatabaseGuard" destroy-method="close">
 		<property name="driverClassName"
 			  value="#{studioConfiguration.getProperty(T(org.craftercms.studio.api.v2.utils.StudioConfiguration).DB_DRIVER)}"/>
 		<property name="url"
@@ -54,7 +61,7 @@
 			  value="#{studioConfiguration.getProperty(T(org.craftercms.studio.api.v2.utils.StudioConfiguration).DB_POOL_TIME_BETWEEN_EVICTION_RUNS_MILLIS)}"/>
 	</bean>
 
-	<bean id="scriptRunnerDataSource" parent="dataSource">
+	<bean id="scriptRunnerDataSource" parent="dataSource" depends-on="studioConfiguration,embeddedDatabaseGuard">
 		<property name="url"
 			  value="#{studioConfiguration.getProperty(T(org.craftercms.studio.api.v2.utils.StudioConfiguration).SCRIPT_RUNNER_DB_URL)}"/>
 		<property name="jmxName" value="org.apache.dbcp:DataSource=studio.scriptRunnerDataSource"/>
@@ -194,7 +201,7 @@
 	</bean>
 
 	<bean id="studioMariaDBService" class="ch.vorburger.mariadb4j.springframework.MariaDB4jCoreSpringService"
-	      destroy-method="stop" depends-on="studioConfiguration">
+	      destroy-method="stop" depends-on="studioConfiguration,embeddedDatabaseGuard">
 		<property name="defaultBaseDir"
 			  value="#{studioConfiguration.getProperty(T(org.craftercms.studio.api.v2.utils.StudioConfiguration).DB_BASE_PATH)}"/>
 		<property name="defaultDataDir"

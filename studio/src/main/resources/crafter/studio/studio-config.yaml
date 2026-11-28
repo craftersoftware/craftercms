@@ -603,7 +603,11 @@ studio.publishingManager.indexFile: index.xml
 ##################################################
 ##                   Database                   ##
 ##################################################
-# Embedded database configuration
+# Crafter Studio uses its own embedded MariaDB. The studio.db.* connection settings must point to it.
+# External databases are deprecated and unsupported.
+# Allows Studio to start when a connection URL points to an external database.
+# DEPRECATED and unsupported: this setting will be removed in a future release. Migrate to the embedded database.
+studio.db.allowExternal: false
 # JDBC driver and Java class used for accessing crafter database
 studio.db.driver: org.mariadb.jdbc.Driver
 # Database schema name
@@ -612,10 +616,7 @@ studio.db.schema: crafter
 studio.db.user: ${env:MARIADB_USER}
 # Database password:
 studio.db.password: ${env:MARIADB_PASSWD}
-# Connection string used when connecting database with JDBC driver
-# Format:
-# jdbc:DATABASE_PLATFORM;databaseName=DATABASE_NAME;create=true;user=DATABASE_USERNAME;password=DATABASE_USER_PASSWORD
-# Note that a relative path is not suitable for a production deployment
+# Connection strings for the embedded database
 studio.db.url: jdbc:mariadb://127.0.0.1:33306/crafter?user=crafter&password=crafter&socketTimeout=60000
 studio.db.scriptRunnerUrl: jdbc:mariadb://127.0.0.1:33306/crafter?user=crafter&password=crafter&socketTimeout=60000&allowMultiQueries=true
 # Defines initial number of database connections in database connection pool

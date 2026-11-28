@@ -41,7 +41,18 @@ export SEARCH_HOST=${SEARCH_HOST:="localhost"}
 export SEARCH_PORT=${SEARCH_PORT:="@SEARCH_PORT@"}
 export DEPLOYER_HOST=${DEPLOYER_HOST:="localhost"}
 export DEPLOYER_PORT=${DEPLOYER_PORT:="@DEPLOYER_PORT@"}
-export MARIADB_HOST=${MARIADB_HOST:="127.0.0.1"}
+# Crafter Studio uses its own embedded MariaDB, so MARIADB_HOST is always the local host.
+# External databases are deprecated and unsupported: CRAFTER_DEPRECATED_EXTERNAL_DB_HOST points to one, and Studio also
+# requires 'studio.db.allowExternal: true' in studio-config-override.yaml. Both will be removed in a future release.
+if [ -n "$CRAFTER_DEPRECATED_EXTERNAL_DB_HOST" ]; then
+  export MARIADB_HOST="$CRAFTER_DEPRECATED_EXTERNAL_DB_HOST"
+elif [ -n "$MARIADB_HOST" ] && [ "$MARIADB_HOST" != "127.0.0.1" ] && [ "$MARIADB_HOST" != "localhost" ] && [ "$MARIADB_HOST" != "::1" ]; then
+  # Still honored for backward compatibility, will be removed in a future release
+  echo "WARN: Setting MARIADB_HOST to an external database host is deprecated. Use CRAFTER_DEPRECATED_EXTERNAL_DB_HOST instead. External databases are deprecated and unsupported." >&2
+  export MARIADB_HOST
+else
+  export MARIADB_HOST="127.0.0.1"
+fi
 export MARIADB_PORT=${MARIADB_PORT:="@MARIADB_PORT@"}
 export TOMCAT_HOST=${TOMCAT_HOST:="localhost"}
 export TOMCAT_HTTP_PORT=${TOMCAT_HTTP_PORT:="@TOMCAT_HTTP_PORT@"}

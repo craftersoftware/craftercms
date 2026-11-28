@@ -104,6 +104,10 @@ public interface StudioConfiguration {
 	String DB_BASE_PATH = "studio.db.basePath";
 	String DB_DATA_PATH = "studio.db.dataPath";
 	String DB_PORT = "studio.db.port";
+	/**
+	 * Allows Studio to start against an external database. Deprecated, will be removed in a future release.
+	 */
+	String DB_ALLOW_EXTERNAL = "studio.db.allowExternal";
 	String DB_SOCKET = "studio.db.socket";
 	String DB_MAX_CONNECTIONS = "studio.db.maxConnections";
 	String DB_MAX_ALLOWED_PACKET = "studio.db.maxAllowedPacket";

@@ -380,6 +380,19 @@ function banner() {
 	cecho "------------------------------------------------------------------------\n" "info"
 }
 
+# Warns when the database host isn't the local embedded database. External databases are deprecated and unsupported.
+# This is only a warning: Studio itself refuses to start unless 'studio.db.allowExternal: true' is set.
+function warnIfExternalDb() {
+  if [ -n "$MARIADB_HOST" ] && [ "$MARIADB_HOST" != "127.0.0.1" ] && [ "$MARIADB_HOST" != "localhost" ] && [ "$MARIADB_HOST" != "::1" ]; then
+    cecho "------------------------------------------------------------------------\n" "warning"
+    cecho "WARN: The database host is $MARIADB_HOST, an external database.\n" "warning"
+    cecho "External databases are deprecated and unsupported. Migrate to the embedded database.\n" "warning"
+    cecho "Crafter Studio will not start unless 'studio.db.allowExternal: true' is set in\n" "warning"
+    cecho "studio-config-override.yaml. This setting will be removed in a future release.\n" "warning"
+    cecho "------------------------------------------------------------------------\n" "warning"
+  fi
+}
+
 function runProcessOrHijackExisting() {
   pidFile=$1
   port=$2
@@ -1155,11 +1168,13 @@ function executeAction() {
   case $1 in
     debug)
       splash
+      warnIfExternalDb
       doUpgradeDBIfNeeded $2
       debug "$@"
     ;;
     start)
       splash
+      warnIfExternalDb
       doUpgradeDBIfNeeded $2
       start "$@"
     ;;
@@ -1208,11 +1223,13 @@ function executeAction() {
     ;;
     debug_tomcat)
       splash
+      warnIfExternalDb
       doUpgradeDBIfNeeded $2
       debugTomcat
     ;;
     start_tomcat)
       splash
+      warnIfExternalDb
       doUpgradeDBIfNeeded $2
       startTomcat start
     ;;
@@ -1234,15 +1251,19 @@ function executeAction() {
       status
     ;;
     backup)
+      warnIfExternalDb
       doBackup $2
     ;;
     restore)
+      warnIfExternalDb
       doRestore $2
     ;;
     upgradedb)
+      warnIfExternalDb
       doUpgradeDB $2
     ;;
     upgradedb_if_needed)
+      warnIfExternalDb
       doUpgradeDBIfNeeded $2
     ;;
     status_engine)

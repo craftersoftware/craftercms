@@ -68,7 +68,10 @@ studio.preview.repoUrl: ${env:CRAFTER_DATA_DIR}/repos/sites/{siteName}/sandbox
 ##################################################
 ##                   Database                   ##
 ##################################################
-# Crafter Studio uses an embedded MariaDB by default
+# Crafter Studio uses its own embedded MariaDB. Do not change these values
+# Allows Studio to start against an external database.
+# DEPRECATED and unsupported: this setting will be removed in a future release. Migrate to the embedded database.
+# studio.db.allowExternal: false
 # Crafter DB schema name
 studio.db.schema: ${env:MARIADB_SCHEMA}
 # Crafter DB connection string
@@ -77,8 +80,6 @@ studio.db.url: jdbc:mariadb://${env:MARIADB_HOST}:${env:MARIADB_PORT}/${env:MARI
 studio.db.scriptRunnerUrl: jdbc:mariadb://${env:MARIADB_HOST}:${env:MARIADB_PORT}/${env:MARIADB_SCHEMA}?user=${env:MARIADB_USER}&password=${env:MARIADB_PASSWD}&socketTimeout=${env:MARIADB_SOCKET_TIMEOUT}&allowMultiQueries=true
 # Connection string used to initialize database. This creates the `crafter` schema, the `crafter` user and/or upgrades the database
 studio.db.initializer.url: jdbc:mariadb://${env:MARIADB_HOST}:${env:MARIADB_PORT}?user=${env:MARIADB_ROOT_USER}&password=${env:MARIADB_ROOT_PASSWD}
-# Connection string if using a database with an already created schema and user (like AWS RDS)
-# studio.db.initializer.url: ${studio.db.url}
 # Port number for the embedded database (note this must match what's in the connection URLs in this config file)
 studio.db.port: ${env:MARIADB_PORT}
 # Data folder for the embedded database
