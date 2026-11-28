@@ -1,18 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<config>
-	<tools>
-		<tool>
-			<name>content-types</name>
-			<label>Content Types</label>
-			<datasources>
-				<datasource>
-					<name>dropTargets</name>
-					<icon>
-						<class>fa-object-group</class>
-					</icon>
-				</datasource>
+<siteUi>
+	<widget id="craftercms.components.ContentTypeManagement">
+		<configuration>
+			<dataSources>
+				<dataSource id="pages">
+					<icon id="@mui/icons-material/DescriptionOutlined"/>
+				</dataSource>
+				<!-- the new element should be added here -->
 				<myPlugin>test</myPlugin>
-			</datasources>
-		</tool>
-	</tools>
-</config>
+			</dataSources>
+		</configuration>
+	</widget>
+</siteUi>

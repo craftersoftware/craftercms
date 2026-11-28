@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+  ~ Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License version 3 as published by
@@ -40,8 +40,8 @@
 		</xsl:if>
 	</xsl:template>
 
-	<!-- If the plugin is not present add it -->
-	<xsl:template match="/config/tools/tool[name='content-types']/datasources">
+	<!-- Add the plugin entry to the Type Builder data-source catalog in ui.xml -->
+	<xsl:template match="//widget[@id='craftercms.components.ContentTypeManagement']/configuration/dataSources">
 		<xsl:copy>
 			<xsl:apply-templates select="node() | @*"/>
 
