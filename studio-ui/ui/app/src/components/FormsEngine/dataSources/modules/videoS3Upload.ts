@@ -32,7 +32,7 @@ export const videoS3UploadDataSourceModule: DataSourceModule = defineDataSourceM
 			getActions() {
 				return [
 					createExternalUploadAction({
-						label: `Upload - ${record.title}`,
+						title: record.title,
 						path,
 						profileId,
 						profileType: 'aws',

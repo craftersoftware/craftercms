@@ -32,7 +32,7 @@ export const imgS3UploadDataSourceModule: DataSourceModule = defineDataSourceMod
 			getActions() {
 				return [
 					createExternalUploadAction({
-						label: `Upload - ${record.title}`,
+						title: record.title,
 						path,
 						profileId,
 						profileType: 'aws',

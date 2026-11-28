@@ -30,7 +30,7 @@ export const imgDesktopUploadDataSourceModule: DataSourceModule = defineDataSour
 			getActions() {
 				return [
 					createUploadAction({
-						label: `Upload - ${record.title}`,
+						title: record.title,
 						path,
 						fileTypes: IMAGE_MIME_TYPES,
 						selection: 'asset'

@@ -32,7 +32,7 @@ export const webDavRepoDataSourceModule: DataSourceModule = defineDataSourceModu
 			getActions() {
 				return [
 					createExternalBrowseAction({
-						label: `Browse - ${record.title}`,
+						title: record.title,
 						path,
 						profileId,
 						profileType: 'webdav',

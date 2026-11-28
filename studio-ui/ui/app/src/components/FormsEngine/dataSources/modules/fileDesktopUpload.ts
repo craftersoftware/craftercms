@@ -31,7 +31,7 @@ export const fileDesktopUploadDataSourceModule: DataSourceModule = defineDataSou
 			getActions() {
 				return [
 					createUploadAction({
-						label: `Upload - ${record.title}`,
+						title: record.title,
 						path,
 						selection: 'item'
 					})

@@ -19,6 +19,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import FormsEngine, { FormsEngineProps } from './FormsEngine';
 import { dialogClasses } from '@mui/material/Dialog';
 import { FormsEngineDialogContext } from './lib/formsEngineContext';
+import { useIntl } from 'react-intl';
 
 export interface FormsEngineDialogProps extends EnhancedDialogProps {
 	formProps: FormsEngineProps;
@@ -27,6 +28,7 @@ export interface FormsEngineDialogProps extends EnhancedDialogProps {
 export function FormsEngineDialog(props: FormsEngineDialogProps) {
 	const { formProps, ...rest } = props;
 	const titleId = useId();
+	const { formatMessage } = useIntl();
 
 	const [disableEnforceFocus, setDisableEnforceFocus] = useState(false);
 	const stableFormsEngineDialogContextRef = useRef(undefined);
@@ -52,7 +54,7 @@ export function FormsEngineDialog(props: FormsEngineDialogProps) {
 			{...rest}
 			omitHeader
 			maxWidth="xl"
-			title="Content Form"
+			title={formatMessage({ defaultMessage: 'Content Form' })}
 			data-area-id="forms-engine-dialog-root"
 			disableEnforceFocus={disableEnforceFocus} // This allows TinyMCE popups to gain focus (e.g. code editor, needs focus to be able to type in it)
 		>

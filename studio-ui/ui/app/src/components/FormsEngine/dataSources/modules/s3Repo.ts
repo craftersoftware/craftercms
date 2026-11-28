@@ -32,7 +32,7 @@ export const s3RepoDataSourceModule: DataSourceModule = defineDataSourceModule({
 			getActions() {
 				return [
 					createExternalBrowseAction({
-						label: `Browse - ${record.title}`,
+						title: record.title,
 						path,
 						profileId,
 						profileType: 'aws',

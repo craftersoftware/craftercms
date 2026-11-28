@@ -48,7 +48,7 @@ export const imgRepositoryUploadDataSourceModule: DataSourceModule = defineDataS
 				if (useSearch) {
 					return [
 						createSearchAction({
-							label: `Search - ${record.title}`,
+							title: record.title,
 							path,
 							mimeTypes: IMAGE_MIME_TYPES,
 							selection: 'asset',
@@ -58,7 +58,7 @@ export const imgRepositoryUploadDataSourceModule: DataSourceModule = defineDataS
 				}
 				return [
 					createBrowseAction({
-						label: `Browse - ${record.title}`,
+						title: record.title,
 						path,
 						mimeTypes: IMAGE_MIME_TYPES,
 						selection: 'asset',

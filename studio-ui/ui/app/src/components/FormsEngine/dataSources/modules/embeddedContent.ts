@@ -34,7 +34,7 @@ export const embeddedContentDataSourceModule: DataSourceModule = defineDataSourc
 			getActions() {
 				return [
 					createCreateAction({
-						label: `Create - ${record.title}`,
+						title: record.title,
 						createTargets: [{ contentTypeId, strategy: 'embedded' }]
 					})
 				];
